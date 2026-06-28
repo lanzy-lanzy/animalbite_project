@@ -32,10 +32,10 @@
                class="fixed inset-y-0 left-0 z-50 w-64 bg-bruise-purple text-bone-white flex flex-col transition-all duration-300 lg:static lg:translate-x-0"
                :class="{ 'translate-x-0': mobileMenuOpen, '-translate-x-full': !sidebarOpen && !mobileMenuOpen }">
             <!-- Logo -->
-            <div class="flex items-center gap-3 px-5 py-4 border-b border-bone-white/10">
-                <div class="w-10 h-10 rounded-xl bg-blood-red flex items-center justify-center text-white text-lg font-bold">AB</div>
-                <div>
-                    <h1 class="text-sm font-bold text-bone-white leading-tight">ABTC System</h1>
+            <div class="h-16 flex items-center gap-3 px-5 border-b border-bone-white/10 shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-blood-red flex items-center justify-center text-white text-lg font-bold shrink-0">AB</div>
+                <div class="min-w-0">
+                    <h1 class="text-sm font-bold text-bone-white leading-tight truncate">ABTC System</h1>
                     <p class="text-xs text-bone-white/60">Management System</p>
                 </div>
             </div>
@@ -128,7 +128,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             {% if request.user.is_authenticated %}
             <!-- Topbar -->
-            <header class="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center justify-between shadow-sm">
+            <header class="h-16 bg-white border-b border-gray-200 px-4 lg:px-6 flex items-center justify-between shadow-sm shrink-0">
                 <div class="flex items-center gap-3">
                     <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 lg:block hidden">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>

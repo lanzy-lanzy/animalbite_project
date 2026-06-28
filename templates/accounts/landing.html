@@ -1,0 +1,627 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ABTC Management System — A modern platform for Animal Bite Treatment Centers. Track bite cases, manage vaccinations, monitor inventory, and generate reports with confidence.">
+    <title>ABTC System — Animal Bite Treatment Center Management</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.169.0/build/three.module.js"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            --blood-red: #8A0303;
+            --flesh-beige: #D9A679;
+            --bruise-purple: #4B2C4F;
+            --bone-white: #E8E4D9;
+            --predator-black: #1A1A1A;
+            --venom-green: #3A6B35;
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Figtree', system-ui, sans-serif;
+            background: var(--predator-black);
+            color: var(--bone-white);
+            overflow-x: hidden;
+        }
+        h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Three.js canvas */
+        #bg-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Reveal helpers */
+        .reveal { opacity: 0; transform: translateY(40px); }
+        .char { display: inline-block; opacity: 0; transform: translateY(60%) rotate(8deg); }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(120deg, #E8E4D9 0%, #D9A679 45%, #8A0303 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Navbar */
+        .nav-glass {
+            background: rgba(26, 26, 26, 0.55);
+            backdrop-filter: blur(16px) saturate(160%);
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            border-bottom: 1px solid rgba(232, 228, 217, 0.08);
+        }
+        .nav-link {
+            position: relative;
+            color: rgba(232, 228, 217, 0.7);
+            transition: color .2s ease;
+        }
+        .nav-link:hover { color: #E8E4D9; }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            left: 0; bottom: -6px;
+            height: 2px; width: 0;
+            background: var(--blood-red);
+            transition: width .25s ease;
+        }
+        .nav-link:hover::after { width: 100%; }
+
+        /* Glow button */
+        .btn-glow {
+            box-shadow: 0 0 0 0 rgba(138, 3, 3, 0.5);
+            transition: box-shadow .3s ease, transform .2s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 12px 40px -8px rgba(138, 3, 3, 0.7);
+            transform: translateY(-2px);
+        }
+
+        /* Feature card */
+        .feature-card {
+            position: relative;
+            background: rgba(75, 44, 79, 0.18);
+            border: 1px solid rgba(232, 228, 217, 0.08);
+            backdrop-filter: blur(8px);
+            transition: transform .3s ease, border-color .3s ease, background .3s ease;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(138, 3, 3, 0.25), transparent 55%);
+            opacity: 0;
+            transition: opacity .35s ease;
+            pointer-events: none;
+        }
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(138, 3, 3, 0.5);
+            background: rgba(75, 44, 79, 0.32);
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-icon {
+            width: 3rem; height: 3rem;
+            border-radius: 0.85rem;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, rgba(138,3,3,0.85), rgba(75,44,79,0.85));
+            color: #E8E4D9;
+        }
+
+        /* Step number ring */
+        .step-num {
+            font-family: 'Space Grotesk', sans-serif;
+            background: linear-gradient(180deg, #E8E4D9, #8A0303);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Scroll indicator */
+        .scroll-dot {
+            animation: scrollDot 1.8s ease-in-out infinite;
+        }
+        @keyframes scrollDot {
+            0%, 100% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(12px); opacity: .3; }
+        }
+
+        /* Marquee divider */
+        .grain {
+            background-image: radial-gradient(rgba(232,228,217,0.06) 1px, transparent 1px);
+            background-size: 22px 22px;
+        }
+
+        /* Respect reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .reveal, .char { opacity: 1 !important; transform: none !important; }
+            html { scroll-behavior: auto; }
+            .scroll-dot { animation: none; }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- 3D Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Vignette overlay so content stays legible -->
+    <div class="fixed inset-0 z-0 pointer-events-none" style="background: radial-gradient(ellipse at 50% 0%, transparent 0%, rgba(26,26,26,0.55) 55%, rgba(26,26,26,0.92) 100%);"></div>
+
+    <!-- ============ NAVBAR ============ -->
+    <header id="navbar" class="fixed top-0 inset-x-0 z-50 transition-all duration-300">
+        <nav class="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+            <a href="#top" class="flex items-center gap-3 group">
+                <span class="w-10 h-10 rounded-xl bg-blood-red flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blood-red/30 group-hover:scale-105 transition-transform">AB</span>
+                <span class="font-display font-semibold text-bone-white tracking-tight hidden sm:block">ABTC <span class="text-bone-white/50 font-normal">System</span></span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#workflow" class="nav-link">Workflow</a>
+                <a href="#security" class="nav-link">Security</a>
+                <a href="{% url 'accounts:login' %}" class="nav-link">Sign in</a>
+            </div>
+
+            <a href="{% url 'accounts:login' %}" class="btn-glow inline-flex items-center gap-2 bg-blood-red text-white text-sm font-semibold px-4 py-2 rounded-xl">
+                Get started
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </a>
+        </nav>
+    </header>
+
+    <!-- ============ HERO ============ -->
+    <section id="top" class="relative z-10 min-h-screen flex items-center pt-28 pb-20">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8 w-full">
+            <div class="max-w-3xl">
+                <div id="hero-badge" class="reveal inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-bone-white/15 bg-bone-white/5 text-xs text-bone-white/70 mb-6">
+                    <span class="w-1.5 h-1.5 rounded-full bg-venom-green animate-pulse"></span>
+                    Municipal Health Office · Animal Bite Treatment Center
+                </div>
+
+                <h1 id="hero-title" class="font-display font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]">
+                    <span class="block">Track every bite.</span>
+                    <span class="block gradient-text">Protect every life.</span>
+                </h1>
+
+                <p id="hero-sub" class="reveal mt-6 text-lg text-bone-white/70 max-w-xl">
+                    A unified platform for Animal Bite Treatment Centers — manage patients, bite cases,
+                    vaccination schedules, and vaccine inventory in one secure, audit-ready system.
+                </p>
+
+                <div id="hero-cta" class="reveal mt-9 flex flex-wrap items-center gap-4">
+                    <a href="{% url 'accounts:login' %}" class="btn-glow inline-flex items-center gap-2 bg-blood-red text-white font-semibold px-6 py-3.5 rounded-xl text-sm">
+                        Sign in to dashboard
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </a>
+                    <a href="#features" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-semibold text-bone-white border border-bone-white/20 hover:bg-bone-white/5 transition-colors">
+                        Explore features
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <a href="#stats" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-bone-white/50 hover:text-bone-white transition-colors">
+            <span class="text-[11px] uppercase tracking-widest">Scroll</span>
+            <span class="w-6 h-10 rounded-full border border-bone-white/25 flex justify-center pt-2">
+                <span class="scroll-dot w-1 h-1 rounded-full bg-bone-white"></span>
+            </span>
+        </a>
+    </section>
+
+    <!-- ============ STATS ============ -->
+    <section id="stats" class="relative z-10 border-y border-bone-white/10 grain">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8 py-14 grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="reveal text-center lg:text-left">
+                <div class="counter font-display text-4xl sm:text-5xl font-bold text-bone-white" data-target="6" data-suffix="">0</div>
+                <p class="mt-2 text-sm text-bone-white/55">Integrated modules</p>
+            </div>
+            <div class="reveal text-center lg:text-left">
+                <div class="counter font-display text-4xl sm:text-5xl font-bold text-bone-white" data-target="100" data-suffix="%">0</div>
+                <p class="mt-2 text-sm text-bone-white/55">Audit-trail coverage</p>
+            </div>
+            <div class="reveal text-center lg:text-left">
+                <div class="counter font-display text-4xl sm:text-5xl font-bold text-bone-white" data-target="24" data-suffix="/7">0</div>
+                <p class="mt-2 text-sm text-bone-white/55">Follow-up scheduling</p>
+            </div>
+            <div class="reveal text-center lg:text-left">
+                <div class="counter font-display text-4xl sm:text-5xl font-bold text-bone-white" data-target="0" data-suffix="">0</div>
+                <p class="mt-2 text-sm text-bone-white/55">Patient data lost</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section id="features" class="relative z-10 py-24 sm:py-32">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8">
+            <div class="max-w-2xl mb-14">
+                <p class="reveal text-xs font-semibold uppercase tracking-widest text-blood-red mb-3">Everything in one place</p>
+                <h2 class="reveal font-display text-3xl sm:text-5xl font-bold tracking-tight">Built for the full<br> bite-treatment workflow.</h2>
+                <p class="reveal mt-5 text-bone-white/60 text-lg">From the moment a patient walks in to the final follow-up dose — every step is recorded, tracked, and reportable.</p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Patients -->
+                <article class="feature-card reveal rounded-2xl p-7">
+                    <div class="feature-icon mb-5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold text-bone-white mb-2">Patient Management</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Centralized patient records with full history, demographics, and treatment timelines at your fingertips.</p>
+                </article>
+
+                <!-- Bite Cases -->
+                <article class="feature-card reveal rounded-2xl p-7">
+                    <div class="feature-icon mb-5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold text-bone-white mb-2">Bite Case Tracking</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Log exposure details, animal type, and wound category. Track each case from intake through resolution.</p>
+                </article>
+
+                <!-- Vaccination -->
+                <article class="feature-card reveal rounded-2xl p-7">
+                    <div class="feature-icon mb-5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold text-bone-white mb-2">Vaccination Scheduling</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Automated PEP dose scheduling with follow-up reminders so no patient misses a critical booster.</p>
+                </article>
+
+                <!-- Inventory -->
+                <article class="feature-card reveal rounded-2xl p-7">
+                    <div class="feature-icon mb-5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold text-bone-white mb-2">Vaccine Inventory</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Real-time stock levels, batch tracking, and expiry monitoring to prevent shortages before they happen.</p>
+                </article>
+
+                <!-- Reports -->
+                <article class="feature-card reveal rounded-2xl p-7">
+                    <div class="feature-icon mb-5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold text-bone-white mb-2">Reports & Analytics</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Generate case, vaccination, and inventory reports instantly for compliance and decision-making.</p>
+                </article>
+
+                <!-- Audit -->
+                <article class="feature-card reveal rounded-2xl p-7">
+                    <div class="feature-icon mb-5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold text-bone-white mb-2">Audit Trail</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Every action is logged — logins, edits, status changes — for full accountability and regulatory traceability.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ WORKFLOW ============ -->
+    <section id="workflow" class="relative z-10 py-24 sm:py-32 border-t border-bone-white/10">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8">
+            <div class="max-w-2xl mb-16">
+                <p class="reveal text-xs font-semibold uppercase tracking-widest text-blood-red mb-3">How it works</p>
+                <h2 class="reveal font-display text-3xl sm:text-5xl font-bold tracking-tight">From intake to immunity<br>in three clean steps.</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 lg:gap-12">
+                <div class="reveal relative">
+                    <div class="step-num font-display text-7xl font-bold leading-none">01</div>
+                    <h3 class="font-display text-xl font-semibold mt-4 mb-2 text-bone-white">Register the patient</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Capture patient details and the bite exposure — animal, site, and category — in a single guided form.</p>
+                </div>
+                <div class="reveal relative">
+                    <div class="step-num font-display text-7xl font-bold leading-none">02</div>
+                    <h3 class="font-display text-xl font-semibold mt-4 mb-2 text-bone-white">Schedule &amp; vaccinate</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">The system builds the PEP dose calendar, deducts stock automatically, and queues follow-up reminders.</p>
+                </div>
+                <div class="reveal relative">
+                    <div class="step-num font-display text-7xl font-bold leading-none">03</div>
+                    <h3 class="font-display text-xl font-semibold mt-4 mb-2 text-bone-white">Report &amp; review</h3>
+                    <p class="text-sm text-bone-white/60 leading-relaxed">Close the case, export compliance reports, and review the complete audit trail — all in a few clicks.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SECURITY ============ -->
+    <section id="security" class="relative z-10 py-24 sm:py-32 border-t border-bone-white/10">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-14 items-center">
+            <div>
+                <p class="reveal text-xs font-semibold uppercase tracking-widest text-blood-red mb-3">Secure by design</p>
+                <h2 class="reveal font-display text-3xl sm:text-5xl font-bold tracking-tight mb-6">Patient data, treated with the care it deserves.</h2>
+                <p class="reveal text-bone-white/60 text-lg mb-8">Role-based access, encrypted sessions, and an immutable audit log mean every record is protected — and every change is accountable.</p>
+                <ul class="space-y-4">
+                    <li class="reveal flex items-start gap-3">
+                        <span class="mt-1 w-5 h-5 rounded-full bg-venom-green/20 text-venom-green flex items-center justify-center shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>
+                        <span class="text-bone-white/80 text-sm">Role-based permissions for admins, nurses, and staff</span>
+                    </li>
+                    <li class="reveal flex items-start gap-3">
+                        <span class="mt-1 w-5 h-5 rounded-full bg-venom-green/20 text-venom-green flex items-center justify-center shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>
+                        <span class="text-bone-white/80 text-sm">Tamper-evident audit trail on every record</span>
+                    </li>
+                    <li class="reveal flex items-start gap-3">
+                        <span class="mt-1 w-5 h-5 rounded-full bg-venom-green/20 text-venom-green flex items-center justify-center shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>
+                        <span class="text-bone-white/80 text-sm">CSRF-protected forms &amp; session hardening built in</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="reveal relative">
+                <div class="aspect-square max-w-md mx-auto relative">
+                    <div class="absolute inset-0 rounded-full border border-blood-red/30 animate-pulse"></div>
+                    <div class="absolute inset-8 rounded-full border border-bone-white/10"></div>
+                    <div class="absolute inset-16 rounded-full border border-bone-white/10"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-32 h-32 rounded-3xl bg-gradient-to-br from-blood-red to-bruise-purple flex items-center justify-center shadow-2xl shadow-blood-red/40">
+                            <svg class="w-16 h-16 text-bone-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="relative z-10 py-24 sm:py-32">
+        <div class="max-w-5xl mx-auto px-5 sm:px-8">
+            <div class="reveal relative overflow-hidden rounded-3xl border border-blood-red/30 p-10 sm:p-16 text-center" style="background: linear-gradient(135deg, rgba(75,44,79,0.55), rgba(138,3,3,0.35));">
+                <div class="absolute inset-0 grain opacity-40 pointer-events-none"></div>
+                <h2 class="relative font-display text-3xl sm:text-5xl font-bold tracking-tight mb-5">Ready to modernize your bite center?</h2>
+                <p class="relative text-bone-white/70 text-lg max-w-xl mx-auto mb-8">Sign in to access the dashboard and start managing cases, vaccinations, and inventory today.</p>
+                <a href="{% url 'accounts:login' %}" class="btn-glow relative inline-flex items-center gap-2 bg-blood-red text-white font-semibold px-7 py-3.5 rounded-xl text-sm">
+                    Sign in to dashboard
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="relative z-10 border-t border-bone-white/10 py-12">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <span class="w-9 h-9 rounded-xl bg-blood-red flex items-center justify-center text-white font-bold text-sm">AB</span>
+                <div>
+                    <p class="font-display font-semibold text-bone-white text-sm leading-tight">ABTC Management System</p>
+                    <p class="text-xs text-bone-white/45">Animal Bite &amp; Rabies Vaccination Management</p>
+                </div>
+            </div>
+            <p class="text-xs text-bone-white/45">© <span id="year"></span> Municipal Health Office · Animal Bite Treatment Center</p>
+        </div>
+    </footer>
+
+    <!-- ============ GSAP + ScrollTrigger ============ -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+    <!-- ============ THREE.JS 3D SCENE ============ -->
+    <script type="module">
+        import * as THREE from 'three';
+
+        const canvas = document.getElementById('bg-canvas');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x1A1A1A, 0.06);
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 9);
+
+        // --- Central wireframe icosahedron (virus-cell motif) ---
+        const coreGeo = new THREE.IcosahedronGeometry(2.4, 1);
+        const coreMat = new THREE.MeshBasicMaterial({
+            color: 0x8A0303, wireframe: true, transparent: true, opacity: 0.55
+        });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        scene.add(core);
+
+        // Inner solid glow sphere
+        const innerGeo = new THREE.IcosahedronGeometry(1.55, 2);
+        const innerMat = new THREE.MeshBasicMaterial({
+            color: 0x4B2C4F, transparent: true, opacity: 0.35
+        });
+        const inner = new THREE.Mesh(innerGeo, innerMat);
+        scene.add(inner);
+
+        // --- Orbiting rings ---
+        const ringGroup = new THREE.Group();
+        const ringColors = [0x8A0303, 0xD9A679, 0x4B2C4F];
+        for (let i = 0; i < 3; i++) {
+            const r = 3.2 + i * 0.7;
+            const tube = 0.012;
+            const ringGeo = new THREE.TorusGeometry(r, tube, 16, 120);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: ringColors[i], transparent: true, opacity: 0.5 - i * 0.1
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2 + (i * 0.5);
+            ring.rotation.y = i * 0.4;
+            ringGroup.add(ring);
+        }
+        scene.add(ringGroup);
+
+        // --- Particle field ---
+        const particleCount = 1200;
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const palette = [
+            new THREE.Color(0xE8E4D9),
+            new THREE.Color(0x8A0303),
+            new THREE.Color(0xD9A679),
+            new THREE.Color(0x4B2C4F),
+        ];
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+            const radius = 5 + Math.random() * 18;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            positions[i3]     = radius * Math.sin(phi) * Math.cos(theta);
+            positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            positions[i3 + 2] = radius * Math.cos(phi);
+            const c = palette[Math.floor(Math.random() * palette.length)];
+            colors[i3] = c.r; colors[i3 + 1] = c.g; colors[i3 + 2] = c.b;
+        }
+        const pGeo = new THREE.BufferGeometry();
+        pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        pGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        const pMat = new THREE.PointsMaterial({
+            size: 0.05, vertexColors: true, transparent: true, opacity: 0.8,
+            blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        const particles = new THREE.Points(pGeo, pMat);
+        scene.add(particles);
+
+        // --- Mouse parallax ---
+        const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+        window.addEventListener('pointermove', (e) => {
+            mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        // --- Scroll-driven camera Z ---
+        let scrollY = 0;
+        window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
+
+        const clock = new THREE.Clock();
+        function animate() {
+            const t = clock.getElapsedTime();
+            mouse.x += (mouse.tx - mouse.x) * 0.04;
+            mouse.y += (mouse.ty - mouse.y) * 0.04;
+
+            if (!reduceMotion) {
+                core.rotation.y = t * 0.18;
+                core.rotation.x = t * 0.10;
+                inner.rotation.y = -t * 0.12;
+                inner.rotation.z = t * 0.06;
+                ringGroup.rotation.y = t * 0.25;
+                ringGroup.rotation.x = t * 0.10;
+                particles.rotation.y = t * 0.02;
+            }
+
+            // Parallax + gentle drift
+            camera.position.x += (mouse.x * 1.6 - camera.position.x) * 0.05;
+            camera.position.y += (-mouse.y * 1.2 - camera.position.y) * 0.05;
+            camera.position.z = 9 + Math.min(scrollY / window.innerHeight, 1) * 2.5;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+
+    <!-- ============ GSAP ANIMATIONS + INTERACTIONS ============ -->
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Navbar glass on scroll
+        const navbar = document.getElementById('navbar');
+        ScrollTrigger.create({
+            start: 'top -60',
+            end: 99999,
+            toggleClass: { className: 'nav-glass', targets: navbar }
+        });
+
+        if (!reduceMotion) {
+            // Hero headline: split into chars and stagger
+            const heroTitle = document.getElementById('hero-title');
+            const lines = heroTitle.querySelectorAll('span.block');
+            lines.forEach(line => {
+                const text = line.textContent;
+                line.innerHTML = '';
+                [...text].forEach(ch => {
+                    const s = document.createElement('span');
+                    s.className = 'char';
+                    s.textContent = ch === ' ' ? '\u00A0' : ch;
+                    line.appendChild(s);
+                });
+            });
+
+            const tl = gsap.timeline({ delay: 0.2 });
+            tl.to('.char', {
+                opacity: 1, y: 0, rotate: 0,
+                stagger: 0.022, duration: 0.7, ease: 'back.out(1.4)'
+            })
+            .to('#hero-badge', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.4')
+            .to('#hero-sub',   { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3')
+            .to('#hero-cta',   { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3');
+
+            // Generic reveals
+            gsap.utils.toArray('.reveal').forEach(el => {
+                if (el.closest('#top')) return; // hero handled above
+                gsap.to(el, {
+                    opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+                    scrollTrigger: { trigger: el, start: 'top 85%' }
+                });
+            });
+
+            // Counter animations
+            gsap.utils.toArray('.counter').forEach(counter => {
+                const target = parseFloat(counter.dataset.target);
+                const suffix = counter.dataset.suffix || '';
+                const obj = { val: 0 };
+                ScrollTrigger.create({
+                    trigger: counter,
+                    start: 'top 90%',
+                    once: true,
+                    onEnter: () => gsap.to(obj, {
+                        val: target, duration: 1.6, ease: 'power2.out',
+                        onUpdate: () => { counter.textContent = Math.round(obj.val) + suffix; }
+                    })
+                });
+            });
+        } else {
+            // Reduced motion: show everything
+            gsap.set('.reveal, .char', { opacity: 1, y: 0, rotate: 0 });
+            document.querySelectorAll('.counter').forEach(c => {
+                c.textContent = c.dataset.target + (c.dataset.suffix || '');
+            });
+        }
+
+        // Feature card spotlight (mouse-tracked radial glow)
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('pointermove', (e) => {
+                const r = card.getBoundingClientRect();
+                card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+                card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -10,6 +10,12 @@ User = get_user_model()
 def is_admin(user):
     return user.is_authenticated and user.role == 'admin'
 
+def landing_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard:index')
+    return render(request, 'accounts/landing.html')
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard:index')

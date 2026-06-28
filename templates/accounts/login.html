@@ -4,52 +4,496 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - ABTC Management System</title>
+    <title>Login — ABTC Management System</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{% static 'css/output.css' %}">
-    <script src="{% static 'vendor/htmx.min.js' %}"></script>
+
     <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.169.0/build/three.module.js"
+        }
+    }
+    </script>
+
     <style>
-        .login-bg { background: linear-gradient(135deg, #4B2C4F 0%, #1A1A1A 50%, #8A0303 100%); }
-        .pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        :root {
+            --blood-red: #8A0303;
+            --flesh-beige: #D9A679;
+            --bruise-purple: #4B2C4F;
+            --bone-white: #E8E4D9;
+            --predator-black: #1A1A1A;
+        }
+
+        html, body { height: 100%; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Figtree', system-ui, sans-serif;
+            background: #0e0e0e;
+            color: var(--bone-white);
+            overflow: hidden;
+        }
+        h1, h2, h3, h4, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* ── Canvas ── */
+        #login-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* ── Background layers ── */
+        .bg-overlay {
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 50%, rgba(75,44,79,0.35) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 50% at 80% 30%, rgba(138,3,3,0.25) 0%, transparent 60%),
+                linear-gradient(180deg, rgba(26,26,26,0.3) 0%, rgba(14,14,14,0.7) 100%);
+        }
+
+        /* ── Animated glow orb ── */
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            pointer-events: none;
+            z-index: 0;
+            animation: orbFloat 8s ease-in-out infinite alternate;
+        }
+        .glow-orb--red {
+            width: 500px; height: 500px;
+            background: rgba(138, 3, 3, 0.30);
+            top: -10%; left: 10%;
+        }
+        .glow-orb--purple {
+            width: 400px; height: 400px;
+            background: rgba(75, 44, 79, 0.25);
+            bottom: -5%; right: 5%;
+            animation-delay: -4s;
+        }
+        @keyframes orbFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, -30px) scale(1.15); }
+        }
+
+        /* ── Grain ── */
+        .grain {
+            background-image: radial-gradient(rgba(232,228,217,0.04) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* ── Card glass ── */
+        .login-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(232,228,217,0.09);
+            backdrop-filter: blur(24px) saturate(150%);
+            -webkit-backdrop-filter: blur(24px) saturate(150%);
+        }
+
+        /* ── Input focus ring ── */
+        .login-input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(232,228,217,0.12);
+            transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
+        }
+        .login-input:focus {
+            background: rgba(255,255,255,0.09);
+            border-color: rgba(138,3,3,0.7);
+            box-shadow: 0 0 0 3px rgba(138,3,3,0.15), 0 4px 20px -4px rgba(138,3,3,0.25);
+        }
+
+        /* ── Glow button ── */
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px -4px rgba(138,3,3,0.5);
+            transition: box-shadow .3s ease, transform .2s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 8px 40px -4px rgba(138,3,3,0.7);
+            transform: translateY(-1px);
+        }
+        .btn-glow:active { transform: translateY(0); }
+        .btn-glow::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* ── Side panel branding ── */
+        .side-brand-line {
+            position: relative;
+        }
+        .side-brand-line::after {
+            content: '';
+            position: absolute;
+            right: -48px;
+            top: 50%;
+            width: 32px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(138,3,3,0.6), transparent);
+        }
+
+        /* ── Floating shapes for side panel ── */
+        .float-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(232,228,217,0.08);
+            animation: floatSpin 20s linear infinite;
+        }
+        .float-ring--1 { width: 120px; height: 120px; top: 15%; left: 20%; }
+        .float-ring--2 { width: 80px; height: 80px; bottom: 20%; right: 15%; animation-duration: 14s; animation-direction: reverse; border-color: rgba(138,3,3,0.2); }
+        .float-ring--3 { width: 200px; height: 200px; top: 50%; left: 60%; animation-duration: 28s; border-color: rgba(75,44,79,0.15); }
+        @keyframes floatSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* ── Password toggle ── */
+        .pw-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(232,228,217,0.4);
+            transition: color .2s ease;
+            cursor: pointer;
+            z-index: 5;
+        }
+        .pw-toggle:hover { color: rgba(232,228,217,0.8); }
+
+        /* ── Message anim ── */
+        .msg-enter {
+            animation: msgSlideIn .35s cubic-bezier(.16,1,.3,1);
+        }
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ── Reduced motion ── */
+        @media (prefers-reduced-motion: reduce) {
+            .glow-orb, .float-ring { animation: none; }
+            .login-card, .login-input, .btn-glow { transition: none; }
+        }
     </style>
 </head>
-<body class="login-bg min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-md fade-in">
-        <div class="text-center mb-8">
-            <div class="w-20 h-20 mx-auto rounded-2xl bg-blood-red flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-blood-red/30 mb-4">AB</div>
-            <h1 class="text-2xl font-bold text-bone-white">ABTC Management System</h1>
-            <p class="text-flesh-beige/70 text-sm mt-1">Animal Bite & Rabies Vaccination Management</p>
-        </div>
-        <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-bone-white/10">
-            <h2 class="text-xl font-semibold text-bone-white mb-6">Sign In</h2>
-            <form method="POST" action="{% url 'accounts:login' %}" class="space-y-4">
-                {% csrf_token %}
-                <div>
-                    <label class="block text-sm font-medium text-flesh-beige mb-1">Username</label>
-                    <input type="text" name="username" placeholder="Enter username" required
-                           class="w-full px-4 py-2.5 bg-white/10 border border-bone-white/20 rounded-xl text-bone-white placeholder-bone-white/40 focus:outline-none focus:ring-2 focus:ring-blood-red focus:border-transparent transition-all">
+
+<body x-data="{ loading: true }" x-init="setTimeout(() => loading = false, 100)">
+
+    <!-- 3D Canvas -->
+    <canvas id="login-canvas"></canvas>
+
+    <!-- Glowing orbs -->
+    <div class="glow-orb glow-orb--red"></div>
+    <div class="glow-orb glow-orb--purple"></div>
+
+    <!-- Vignette -->
+    <div class="fixed inset-0 z-0 pointer-events-none" style="background:radial-gradient(ellipse 60% 50% at 50% 50%,transparent 0%,rgba(14,14,14,0.65) 100%);"></div>
+
+    <!-- Grain overlay -->
+    <div class="fixed inset-0 z-0 pointer-events-none grain opacity-50"></div>
+
+    <!-- ============ MAIN LAYOUT ============ -->
+    <div class="relative z-10 flex h-full">
+
+        <!-- ── LEFT SIDE: Branding (hidden on small screens) ── -->
+        <div class="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-center px-12 xl:px-20 overflow-hidden">
+            <!-- Floating rings -->
+            <div class="float-ring float-ring--1"></div>
+            <div class="float-ring float-ring--2"></div>
+            <div class="float-ring float-ring--3"></div>
+
+            <div class="relative z-10 max-w-lg">
+                <!-- Logo -->
+                <div id="brand-logo" class="flex items-center gap-4 mb-10 opacity-0" style="transform:translateY(20px)">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blood-red to-blood-red/70 flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-blood-red/40">
+                        AB
+                    </div>
+                    <div class="side-brand-line">
+                        <p class="font-display text-xl font-bold text-bone-white tracking-tight">ABTC System</p>
+                        <p class="text-xs text-bone-white/45 font-medium">Management Platform</p>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-flesh-beige mb-1">Password</label>
-                    <input type="password" name="password" placeholder="Enter password" required
-                           class="w-full px-4 py-2.5 bg-white/10 border border-bone-white/20 rounded-xl text-bone-white placeholder-bone-white/40 focus:outline-none focus:ring-2 focus:ring-blood-red focus:border-transparent transition-all">
+
+                <!-- Tagline -->
+                <h1 id="brand-title" class="opacity-0 font-display text-4xl xl:text-5xl font-bold tracking-tight leading-[1.1] mb-5" style="transform:translateY(30px)">
+                    Every bite case<br>
+                    <span class="bg-gradient-to-r from-blood-red via-flesh-beige to-blood-red bg-clip-text" style="-webkit-text-fill-color:transparent;">tracked with care.</span>
+                </h1>
+                <p id="brand-sub" class="opacity-0 text-bone-white/55 text-base xl:text-lg leading-relaxed max-w-md" style="transform:translateY(30px)">
+                    Securely access your Animal Bite Treatment Center dashboard — patients, vaccinations, inventory, and full audit trails in one place.
+                </p>
+
+                <!-- Trust badges -->
+                <div id="brand-badges" class="opacity-0 flex flex-wrap items-center gap-4 mt-10" style="transform:translateY(20px)">
+                    <span class="inline-flex items-center gap-2 text-xs text-bone-white/45 bg-bone-white/5 px-3 py-1.5 rounded-full border border-bone-white/8">
+                        <svg class="w-3.5 h-3.5 text-venom-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        Encrypted sessions
+                    </span>
+                    <span class="inline-flex items-center gap-2 text-xs text-bone-white/45 bg-bone-white/5 px-3 py-1.5 rounded-full border border-bone-white/8">
+                        <svg class="w-3.5 h-3.5 text-flesh-beige" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        Audit-trail ready
+                    </span>
+                    <span class="inline-flex items-center gap-2 text-xs text-bone-white/45 bg-bone-white/5 px-3 py-1.5 rounded-full border border-bone-white/8">
+                        <svg class="w-3.5 h-3.5 text-blood-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Role-based access
+                    </span>
                 </div>
-                <button type="submit" class="w-full py-2.5 bg-blood-red hover:bg-red-900 text-white font-medium rounded-xl transition-all duration-200 shadow-lg shadow-blood-red/20 hover:shadow-blood-red/30">
-                    Sign In
-                </button>
-            </form>
-            {% if messages %}
-            <div class="mt-4 space-y-2">
-                {% for message in messages %}
-                <div class="px-3 py-2 rounded-lg text-sm {% if message.tags == 'error' %}bg-red-500/20 text-red-300{% elif message.tags == 'success' %}bg-green-500/20 text-green-300{% else %}bg-blue-500/20 text-blue-300{% endif %}">
-                    {{ message }}
-                </div>
-                {% endfor %}
             </div>
-            {% endif %}
         </div>
-        <p class="text-center text-bone-white/40 text-xs mt-6">Municipal Health Office - Animal Bite Treatment Center</p>
+
+        <!-- ── RIGHT SIDE: Login Form ── -->
+        <div class="flex-1 flex items-center justify-center px-5 sm:px-8">
+            <div class="w-full max-w-md">
+
+                <!-- Mobile-only logo -->
+                <div id="mobile-logo" class="lg:hidden text-center mb-8 opacity-0" style="transform:translateY(20px)">
+                    <a href="{% url 'accounts:landing' %}" class="inline-flex items-center gap-2 text-bone-white/40 hover:text-bone-white/70 text-xs mb-5 transition-colors group">
+                        <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        Back to home
+                    </a>
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blood-red to-blood-red/70 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-blood-red/40 mb-3">AB</div>
+                    <h1 class="text-lg font-display font-bold text-bone-white">ABTC System</h1>
+                    <p class="text-bone-white/45 text-xs">Animal Bite Treatment Center</p>
+                </div>
+
+                <!-- Card -->
+                <div id="login-card" class="login-card rounded-3xl p-8 sm:p-10 opacity-0" style="transform:translateY(30px)">
+
+                    <!-- Desktop back link -->
+                    <a href="{% url 'accounts:landing' %}" class="hidden lg:inline-flex items-center gap-2 text-bone-white/35 hover:text-bone-white/65 text-xs mb-7 transition-colors group">
+                        <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        Back to home
+                    </a>
+
+                    <!-- Header -->
+                    <div class="mb-7">
+                        <h2 class="font-display text-2xl font-bold text-bone-white tracking-tight">Sign in</h2>
+                        <p class="text-sm text-bone-white/45 mt-1.5">Enter your credentials to access the dashboard</p>
+                    </div>
+
+                    <!-- Messages -->
+                    {% if messages %}
+                    <div class="mb-5 space-y-2">
+                        {% for message in messages %}
+                        <div class="msg-enter flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium
+                                    {% if message.tags == 'error' %}bg-blood-red/15 text-red-300 border border-blood-red/25
+                                    {% elif message.tags == 'success' %}bg-venom-green/15 text-green-300 border border-venom-green/25
+                                    {% else %}bg-flesh-beige/15 text-flesh-beige border border-flesh-beige/25{% endif %}">
+                            {% if message.tags == 'error' %}
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {% elif message.tags == 'success' %}
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Form -->
+                    <form method="POST" action="{% url 'accounts:login' %}" class="space-y-4">
+                        {% csrf_token %}
+
+                        <!-- Username -->
+                        <div>
+                            <label class="block text-xs font-semibold text-bone-white/60 uppercase tracking-wider mb-1.5">Username</label>
+                            <div class="relative">
+                                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-bone-white/30">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    name="username"
+                                    placeholder="jdoe"
+                                    autocomplete="username"
+                                    required
+                                    class="login-input w-full pl-10 pr-4 py-3 rounded-xl text-sm text-bone-white placeholder-bone-white/30 outline-none"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Password -->
+                        <div x-data="{ show: false }">
+                            <label class="block text-xs font-semibold text-bone-white/60 uppercase tracking-wider mb-1.5">Password</label>
+                            <div class="relative">
+                                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-bone-white/30">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                </div>
+                                <input
+                                    :type="show ? 'text' : 'password'"
+                                    name="password"
+                                    placeholder="••••••••"
+                                    autocomplete="current-password"
+                                    required
+                                    class="login-input w-full pl-10 pr-10 py-3 rounded-xl text-sm text-bone-white placeholder-bone-white/30 outline-none"
+                                >
+                                <button type="button" @click="show = !show" class="pw-toggle">
+                                    <!-- Eye open -->
+                                    <svg x-show="!show" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    <!-- Eye closed -->
+                                    <svg x-show="show" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit" class="btn-glow w-full mt-2 py-3 bg-gradient-to-r from-blood-red via-blood-red to-blood-red/80 text-white font-semibold rounded-xl text-sm tracking-wide cursor-pointer">
+                            <span class="relative z-10 flex items-center justify-center gap-2">
+                                Sign In
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                            </span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <p id="login-footer" class="text-center text-bone-white/30 text-[11px] mt-7 opacity-0" style="transform:translateY(15px)">
+                    Municipal Health Office — Animal Bite Treatment Center
+                </p>
+            </div>
+        </div>
     </div>
+
+    <!-- ============ GSAP ============ -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+    <!-- ============ THREE.JS 3D SCENE ============ -->
+    <script type="module">
+        import * as THREE from 'three';
+        const canvas = document.getElementById('login-canvas');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0e0e0e, 0.045);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 10);
+
+        // ── Central icosahedron wireframe ──
+        const coreGeo = new THREE.IcosahedronGeometry(2.6, 1);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x8A0303, wireframe: true, transparent: true, opacity: 0.40 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        scene.add(core);
+
+        // Inner glow
+        const innerGeo = new THREE.IcosahedronGeometry(1.7, 2);
+        const innerMat = new THREE.MeshBasicMaterial({ color: 0x4B2C4F, transparent: true, opacity: 0.25 });
+        const inner = new THREE.Mesh(innerGeo, innerMat);
+        scene.add(inner);
+
+        // ── Rings ──
+        const ringGroup = new THREE.Group();
+        const ringData = [
+            { r: 3.4, color: 0x8A0303, rot: [Math.PI/2, 0.3, 0], opacity: 0.40 },
+            { r: 4.1, color: 0xD9A679, rot: [Math.PI/2 + 0.4, 0.8, 0.2], opacity: 0.28 },
+            { r: 4.8, color: 0x4B2C4F, rot: [Math.PI/2 - 0.3, 1.1, -0.1], opacity: 0.20 },
+        ];
+        ringData.forEach(d => {
+            const geo = new THREE.TorusGeometry(d.r, 0.010, 16, 140);
+            const mat = new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: d.opacity });
+            const m = new THREE.Mesh(geo, mat);
+            m.rotation.set(...d.rot);
+            ringGroup.add(m);
+        });
+        scene.add(ringGroup);
+
+        // ── Particles ──
+        const pCount = 900;
+        const pos = new Float32Array(pCount * 3);
+        const cols = new Float32Array(pCount * 3);
+        const palette = [new THREE.Color(0xE8E4D9), new THREE.Color(0x8A0303), new THREE.Color(0xD9A679), new THREE.Color(0x4B2C4F)];
+        for (let i = 0; i < pCount; i++) {
+            const i3 = i * 3;
+            const radius = 4 + Math.random() * 20;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            pos[i3]     = radius * Math.sin(phi) * Math.cos(theta);
+            pos[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            pos[i3 + 2] = radius * Math.cos(phi);
+            const c = palette[Math.floor(Math.random() * palette.length)];
+            cols[i3] = c.r; cols[i3+1] = c.g; cols[i3+2] = c.b;
+        }
+        const pGeo = new THREE.BufferGeometry();
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        pGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+        const pMat = new THREE.PointsMaterial({
+            size: 0.06, vertexColors: true, transparent: true, opacity: 0.7,
+            blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        scene.add(new THREE.Points(pGeo, pMat));
+
+        // ── Mouse parallax ──
+        const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+        window.addEventListener('pointermove', e => {
+            mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        // ── Animate ──
+        const clock = new THREE.Clock();
+        (function loop() {
+            const t = clock.getElapsedTime();
+            mouse.x += (mouse.tx - mouse.x) * 0.04;
+            mouse.y += (mouse.ty - mouse.y) * 0.04;
+
+            if (!reduceMotion) {
+                core.rotation.y = t * 0.14;
+                core.rotation.x = t * 0.08;
+                inner.rotation.y = -t * 0.10;
+                ringGroup.rotation.y = t * 0.18;
+                ringGroup.rotation.x = t * 0.07;
+            }
+
+            camera.position.x += (mouse.x * 2.0 - camera.position.x) * 0.04;
+            camera.position.y += (-mouse.y * 1.4 - camera.position.y) * 0.04;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(loop);
+        })();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+
+    <!-- ============ GSAP ENTRANCE ============ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const gs = (sel, opts) => { const el = document.querySelector(sel); if (el && !reduceMotion) gsap.to(sel, opts); else if (el) gsap.set(sel, { opacity:1, y:0 }); };
+
+            if (reduceMotion) {
+                gsap.set(['#brand-logo','#brand-title','#brand-sub','#brand-badges','#mobile-logo','#login-card','#login-footer'], { opacity:1, y:0 });
+                return;
+            }
+
+            const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+            tl.to('#brand-logo',  { opacity: 1, y: 0, duration: 0.7, delay: 0.15 })
+              .to('#brand-title', { opacity: 1, y: 0, duration: 0.8 }, '-=0.4')
+              .to('#brand-sub',   { opacity: 1, y: 0, duration: 0.7 }, '-=0.4')
+              .to('#brand-badges',{ opacity: 1, y: 0, duration: 0.6 }, '-=0.3')
+              .to('#mobile-logo', { opacity: 1, y: 0, duration: 0.6 }, '-=0.6')
+              .to('#login-card',  { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, '-=0.4')
+              .to('#login-footer',{ opacity: 1, y: 0, duration: 0.5 }, '-=0.3');
+        });
+    </script>
 </body>
 </html>
