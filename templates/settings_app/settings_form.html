@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Edit Setting - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'settings_app:settings_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
+        <h1 class="text-xl font-bold text-predator-black">Edit Setting</h1>
+    </div>
+    <div class="card">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div><label class="form-label">Key</label>{{ form.key }}</div>
+            <div><label class="form-label">Value</label>{{ form.value }}</div>
+            <div><label class="form-label">Description</label>{{ form.description }}</div>
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="btn-primary">Save</button>
+                <a href="{% url 'settings_app:settings_list' %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

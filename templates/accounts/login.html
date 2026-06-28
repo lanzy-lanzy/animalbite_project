@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ABTC Management System</title>
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+    <script src="{% static 'vendor/htmx.min.js' %}"></script>
+    <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+    <style>
+        .login-bg { background: linear-gradient(135deg, #4B2C4F 0%, #1A1A1A 50%, #8A0303 100%); }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="login-bg min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md fade-in">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 mx-auto rounded-2xl bg-blood-red flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-blood-red/30 mb-4">AB</div>
+            <h1 class="text-2xl font-bold text-bone-white">ABTC Management System</h1>
+            <p class="text-flesh-beige/70 text-sm mt-1">Animal Bite & Rabies Vaccination Management</p>
+        </div>
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-bone-white/10">
+            <h2 class="text-xl font-semibold text-bone-white mb-6">Sign In</h2>
+            <form method="POST" action="{% url 'accounts:login' %}" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium text-flesh-beige mb-1">Username</label>
+                    <input type="text" name="username" placeholder="Enter username" required
+                           class="w-full px-4 py-2.5 bg-white/10 border border-bone-white/20 rounded-xl text-bone-white placeholder-bone-white/40 focus:outline-none focus:ring-2 focus:ring-blood-red focus:border-transparent transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-flesh-beige mb-1">Password</label>
+                    <input type="password" name="password" placeholder="Enter password" required
+                           class="w-full px-4 py-2.5 bg-white/10 border border-bone-white/20 rounded-xl text-bone-white placeholder-bone-white/40 focus:outline-none focus:ring-2 focus:ring-blood-red focus:border-transparent transition-all">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-blood-red hover:bg-red-900 text-white font-medium rounded-xl transition-all duration-200 shadow-lg shadow-blood-red/20 hover:shadow-blood-red/30">
+                    Sign In
+                </button>
+            </form>
+            {% if messages %}
+            <div class="mt-4 space-y-2">
+                {% for message in messages %}
+                <div class="px-3 py-2 rounded-lg text-sm {% if message.tags == 'error' %}bg-red-500/20 text-red-300{% elif message.tags == 'success' %}bg-green-500/20 text-green-300{% else %}bg-blue-500/20 text-blue-300{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <p class="text-center text-bone-white/40 text-xs mt-6">Municipal Health Office - Animal Bite Treatment Center</p>
+    </div>
+</body>
+</html>

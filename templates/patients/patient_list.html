@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Patients - ABTC System{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-bold text-predator-black">Patient Records</h1>
+    <a href="{% url 'patients:patient_create' %}" class="btn-primary btn-sm">+ Register Patient</a>
+</div>
+<div class="card mb-6">
+    <form method="GET" class="flex flex-wrap gap-3">
+        <div class="flex-1 min-w-[200px]">
+            <input type="text" name="q" value="{{ query }}" placeholder="Search by name, ID, or contact..." class="form-input">
+        </div>
+        <select name="barangay" class="form-input w-auto">
+            <option value="">All Barangays</option>
+            {% for b in barangays %}<option value="{{ b.id }}" {% if selected_barangay|stringformat:'s' == b.id|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+        </select>
+        <select name="sex" class="form-input w-auto">
+            <option value="">All Sex</option>
+            <option value="male" {% if selected_sex == 'male' %}selected{% endif %}>Male</option>
+            <option value="female" {% if selected_sex == 'female' %}selected{% endif %}>Female</option>
+        </select>
+        <button type="submit" class="btn-primary btn-sm">Filter</button>
+        <a href="{% url 'patients:patient_list' %}" class="btn-secondary btn-sm">Reset</a>
+    </form>
+</div>
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100">
+                    <th class="table-header">Patient #</th>
+                    <th class="table-header">Name</th>
+                    <th class="table-header">Age/Sex</th>
+                    <th class="table-header">Barangay</th>
+                    <th class="table-header">Contact</th>
+                    <th class="table-header">Registered</th>
+                    <th class="table-header text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for p in patients %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="table-cell font-medium">{{ p.patient_number }}</td>
+                    <td class="table-cell">{{ p.full_name }}</td>
+                    <td class="table-cell">{{ p.age }} / {{ p.get_sex_display }}</td>
+                    <td class="table-cell">{{ p.barangay|default:'-' }}</td>
+                    <td class="table-cell">{{ p.contact_number }}</td>
+                    <td class="table-cell text-gray-500">{{ p.created_at|date:'M d, Y' }}</td>
+                    <td class="table-cell text-right">
+                        <a href="{% url 'patients:patient_detail' p.pk %}" class="btn-secondary btn-xs">View</a>
+                        <a href="{% url 'patients:patient_edit' p.pk %}" class="btn-secondary btn-xs">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center py-8 text-gray-500">No patients found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if patients.has_other_pages %}
+    <div class="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
+        <p class="text-sm text-gray-500">Page {{ patients.number }} of {{ patients.paginator.num_pages }}</p>
+        <div class="flex gap-1">
+            {% if patients.has_previous %}<a href="?page={{ patients.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn-secondary btn-xs">Previous</a>{% endif %}
+            {% if patients.has_next %}<a href="?page={{ patients.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn-secondary btn-xs">Next</a>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

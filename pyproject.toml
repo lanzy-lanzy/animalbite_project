@@ -1,0 +1,17 @@
+[project]
+name = "animalbite-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.0.6",
+    "django-htmx>=1.27.0",
+    "openpyxl>=3.1.5",
+    "reportlab>=5.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "python-decouple>=3.8",
+]

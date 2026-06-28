@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Missed Appointments - ABTC System{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-bold text-predator-black">Missed Appointments</h1>
+    <a href="{% url 'reports:reports_index' %}" class="btn-secondary btn-sm">Back to Reports</a>
+</div>
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead><tr class="border-b border-gray-100"><th class="table-header">Patient</th><th class="table-header">Case #</th><th class="table-header">Follow-Up Date</th><th class="table-header">Status</th><th class="table-header">Actions</th></tr></thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for r in records %}
+                <tr class="hover:bg-gray-50"><td class="table-cell">{{ r.bite_case.patient.full_name }}</td><td class="table-cell">{{ r.bite_case.case_number }}</td><td class="table-cell">{{ r.follow_up_date|date:'M d, Y' }}</td><td class="table-cell"><span class="status-badge bg-red-100 text-red-800">Missed</span></td><td class="table-cell"><a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}" class="btn-secondary btn-xs">View</a></td></tr>
+                {% empty %}<tr><td colspan="5" class="text-center py-8 text-gray-500">No missed appointments.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

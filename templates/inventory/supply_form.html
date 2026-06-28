@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'inventory:supply_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
+        <h1 class="text-xl font-bold text-predator-black">{{ title }}</h1>
+    </div>
+    <div class="card">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Supply Name *</label>{{ form.supply_name }}</div>
+                <div><label class="form-label">Type *</label>{{ form.supply_type }}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="form-label">Quantity *</label>{{ form.quantity }}</div>
+                <div><label class="form-label">Unit *</label>{{ form.unit }}</div>
+                <div><label class="form-label">Reorder Level</label>{{ form.reorder_level }}</div>
+            </div>
+            <div><label class="form-label">Supplier</label>{{ form.source_supplier }}</div>
+            <div><label class="form-label">Remarks</label>{{ form.remarks }}</div>
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="btn-primary">Save</button>
+                <a href="{% url 'inventory:supply_list' %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

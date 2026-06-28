@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Vaccine Inventory - ABTC System{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-bold text-predator-black">Vaccine Inventory</h1>
+    <a href="{% url 'inventory:vaccine_create' %}" class="btn-primary btn-sm">+ Stock In</a>
+</div>
+<div class="card mb-6">
+    <form method="GET" class="flex gap-3">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search vaccine, brand, batch..." class="form-input max-w-md">
+        <button type="submit" class="btn-primary btn-sm">Search</button>
+        <a href="{% url 'inventory:vaccine_list' %}" class="btn-secondary btn-sm">Reset</a>
+    </form>
+</div>
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100">
+                    <th class="table-header">Vaccine</th>
+                    <th class="table-header">Brand</th>
+                    <th class="table-header">Batch</th>
+                    <th class="table-header">Available</th>
+                    <th class="table-header">Used</th>
+                    <th class="table-header">Expiry</th>
+                    <th class="table-header">Status</th>
+                    <th class="table-header text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for item in items %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="table-cell font-medium">{{ item.vaccine_name }}</td>
+                    <td class="table-cell">{{ item.brand }}</td>
+                    <td class="table-cell text-xs font-mono">{{ item.batch_number }}</td>
+                    <td class="table-cell"><span class="font-semibold {% if item.quantity_available <= 0 %}text-red-600{% elif item.is_low_stock %}text-orange-600{% else %}text-venom-green{% endif %}">{{ item.quantity_available }}</span></td>
+                    <td class="table-cell text-gray-500">{{ item.quantity_used }}</td>
+                    <td class="table-cell text-gray-500">{{ item.expiration_date|date:'M d, Y' }}</td>
+                    <td class="table-cell">
+                        {% if item.is_expired %}<span class="status-badge bg-red-100 text-red-800">Expired</span>
+                        {% elif item.is_low_stock %}<span class="status-badge bg-yellow-100 text-yellow-800">Low Stock</span>
+                        {% else %}<span class="status-badge bg-green-100 text-green-800">Available</span>{% endif %}
+                    </td>
+                    <td class="table-cell text-right"><a href="{% url 'inventory:vaccine_detail' item.pk %}" class="btn-secondary btn-xs">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center py-8 text-gray-500">No vaccine inventory found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Cases Report - ABTC System{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-bold text-predator-black">{{ title }}</h1>
+    </div>
+    <div class="flex gap-2">
+        <a href="{% url 'reports:reports_index' %}" class="btn-secondary btn-sm">Back to Reports</a>
+        <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&export=csv{% endif %}" class="btn-primary btn-sm">Export CSV</a>
+    </div>
+</div>
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100">
+                    <th class="table-header">Case #</th>
+                    <th class="table-header">Patient</th>
+                    <th class="table-header">Date</th>
+                    <th class="table-header">Animal</th>
+                    <th class="table-header">Exposure</th>
+                    <th class="table-header">Barangay</th>
+                    <th class="table-header">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for case in cases %}
+                <tr class="hover:bg-gray-50">
+                    <td class="table-cell font-medium">{{ case.case_number }}</td>
+                    <td class="table-cell">{{ case.patient.full_name }}</td>
+                    <td class="table-cell">{{ case.created_at|date:'M d, Y' }}</td>
+                    <td class="table-cell capitalize">{{ case.get_animal_type_display }}</td>
+                    <td class="table-cell capitalize">{{ case.get_exposure_type_display }}</td>
+                    <td class="table-cell">{{ case.incident_barangay }}</td>
+                    <td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center py-8 text-gray-500">No cases found for this period.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

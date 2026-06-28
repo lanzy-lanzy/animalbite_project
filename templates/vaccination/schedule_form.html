@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Create Vaccination Schedule{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
+        <h1 class="text-xl font-bold text-predator-black">Create Vaccination Schedule - {{ case.case_number }}</h1>
+    </div>
+    <div class="card">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="form-label">RIG Given</label>{{ form.rig_given }}</div>
+                <div><label class="form-label">Tetanus Toxoid</label>{{ form.tetanus_toxoid_given }}</div>
+                <div><label class="form-label">Antibiotics</label>{{ form.antibiotics_given }}</div>
+            </div>
+            <div><label class="form-label">Other Medicine</label>{{ form.other_medicine }}</div>
+            <div><label class="form-label">Doctor Notes</label>{{ form.doctor_notes }}</div>
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="btn-primary">Create Schedule</button>
+                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <p class="text-xs text-gray-400 mt-4">A default vaccination schedule (Days 0, 3, 7, 14, 28) will be automatically generated based on system settings.</p>
+</div>
+{% endblock %}

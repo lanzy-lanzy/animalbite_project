@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Vaccine Report - ABTC System{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-bold text-predator-black">Vaccine Usage Report</h1>
+    </div>
+    <div class="flex gap-2">
+        <a href="{% url 'reports:reports_index' %}" class="btn-secondary btn-sm">Back to Reports</a>
+        <a href="?export=csv" class="btn-primary btn-sm">Export CSV</a>
+    </div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="card text-center"><p class="text-xs text-gray-500 uppercase">Total Received</p><p class="text-2xl font-bold text-predator-black">{{ total_received }}</p></div>
+    <div class="card text-center"><p class="text-xs text-gray-500 uppercase">Total Used</p><p class="text-2xl font-bold text-blood-red">{{ total_used }}</p></div>
+    <div class="card text-center"><p class="text-xs text-gray-500 uppercase">Available</p><p class="text-2xl font-bold text-venom-green">{{ total_available }}</p></div>
+</div>
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead><tr class="border-b border-gray-100"><th class="table-header">Vaccine</th><th class="table-header">Brand</th><th class="table-header">Batch</th><th class="table-header">Received</th><th class="table-header">Used</th><th class="table-header">Available</th><th class="table-header">Expiry</th></tr></thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for item in items %}
+                <tr class="hover:bg-gray-50"><td class="table-cell font-medium">{{ item.vaccine_name }}</td><td class="table-cell">{{ item.brand }}</td><td class="table-cell text-xs font-mono">{{ item.batch_number }}</td><td class="table-cell">{{ item.quantity_received }}</td><td class="table-cell">{{ item.quantity_used }}</td><td class="table-cell font-semibold">{{ item.quantity_available }}</td><td class="table-cell">{{ item.expiration_date|date:'M d, Y' }}</td></tr>
+                {% empty %}<tr><td colspan="7" class="text-center py-8 text-gray-500">No data.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'bite_cases:case_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
+        <h1 class="text-xl font-bold text-predator-black">{{ title }}</h1>
+    </div>
+    <div class="card">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Patient *</label>{{ form.patient }}{% if form.patient.errors %}<p class="text-red-500 text-xs mt-1">{{ form.patient.errors.0 }}</p>{% endif %}</div>
+                <div><label class="form-label">Date & Time of Bite *</label>{{ form.date_time_bite }}{% if form.date_time_bite.errors %}<p class="text-red-500 text-xs mt-1">{{ form.date_time_bite.errors.0 }}</p>{% endif %}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Place of Incident *</label>{{ form.place_of_incident }}</div>
+                <div><label class="form-label">Incident Barangay *</label>{{ form.incident_barangay }}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div><label class="form-label">Animal Type *</label>{{ form.animal_type }}</div>
+                <div><label class="form-label">Specify (if Other)</label>{{ form.animal_other }}</div>
+                <div><label class="form-label">Ownership *</label>{{ form.animal_ownership }}</div>
+                <div><label class="form-label">Vax Status *</label>{{ form.animal_vax_status }}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Animal Condition *</label>{{ form.animal_condition }}</div>
+                <div><label class="form-label">Exposure Type *</label>{{ form.exposure_type }}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="form-label">Body Part Affected *</label>{{ form.body_part_affected }}</div>
+                <div><label class="form-label">Number of Wounds *</label>{{ form.number_of_wounds }}</div>
+                <div class="flex items-center pt-6"><label class="flex items-center gap-2">{{ form.wound_washed_immediately }} Washed immediately?</label></div>
+            </div>
+            <div><label class="form-label">Wound Description</label>{{ form.wound_description }}</div>
+            <div><label class="form-label">First Aid Given</label>{{ form.first_aid_given }}</div>
+            <div><label class="form-label">Initial Consultation Notes</label>{{ form.initial_consultation_notes }}</div>
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="btn-primary">Save Case</button>
+                <a href="{% url 'bite_cases:case_list' %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

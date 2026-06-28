@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'patients:patient_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
+        <h1 class="text-xl font-bold text-predator-black">{{ title }}</h1>
+    </div>
+    <div class="card">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="form-label">First Name *</label>{{ form.first_name }}{% if form.first_name.errors %}<p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}</div>
+                <div><label class="form-label">Middle Name</label>{{ form.middle_name }}</div>
+                <div><label class="form-label">Last Name *</label>{{ form.last_name }}{% if form.last_name.errors %}<p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="form-label">Suffix</label>{{ form.suffix }}</div>
+                <div><label class="form-label">Birthdate *</label>{{ form.birthdate }}{% if form.birthdate.errors %}<p class="text-red-500 text-xs mt-1">{{ form.birthdate.errors.0 }}</p>{% endif %}</div>
+                <div><label class="form-label">Sex *</label>{{ form.sex }}{% if form.sex.errors %}<p class="text-red-500 text-xs mt-1">{{ form.sex.errors.0 }}</p>{% endif %}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Civil Status</label>{{ form.civil_status }}</div>
+                <div><label class="form-label">Contact Number *</label>{{ form.contact_number }}{% if form.contact_number.errors %}<p class="text-red-500 text-xs mt-1">{{ form.contact_number.errors.0 }}</p>{% endif %}</div>
+            </div>
+            <div><label class="form-label">Address</label>{{ form.address }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Barangay</label>{{ form.barangay }}</div>
+                <div><label class="form-label">Parent/Guardian</label>{{ form.parent_guardian }}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Emergency Contact Name</label>{{ form.emergency_contact_name }}</div>
+                <div><label class="form-label">Emergency Contact #</label>{{ form.emergency_contact_number }}</div>
+            </div>
+            <div><label class="form-label">Medical History</label>{{ form.medical_history }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="form-label">Allergy Info</label>{{ form.allergy_info }}</div>
+                <div><label class="form-label">Previous Rabies Vax</label>{{ form.previous_rabies_vax }}</div>
+            </div>
+            <div><label class="form-label">Remarks</label>{{ form.remarks }}</div>
+            <div class="flex gap-2 pt-4">
+                <button type="submit" class="btn-primary">Save Patient</button>
+                <a href="{% url 'patients:patient_list' %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
