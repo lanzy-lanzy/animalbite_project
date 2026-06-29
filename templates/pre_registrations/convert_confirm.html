@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Confirm Conversion - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="card">
+        <h1 class="text-xl font-bold text-predator-black">Possible Duplicate Warning</h1>
+        <p class="mt-2 text-sm text-gray-600">Review these possible duplicate pre-registrations before converting {{ record.pre_registration_number }} into an official patient and case record.</p>
+        <ul class="mt-4 space-y-2">
+            {% for duplicate in duplicates %}
+            <li class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm">
+                <a class="font-semibold underline" href="{% url 'pre_registrations:staff_detail' duplicate.pk %}">{{ duplicate.pre_registration_number }}</a>
+                - {{ duplicate.full_name }} - {{ duplicate.bite_datetime|date:"M d, Y" }}
+            </li>
+            {% endfor %}
+        </ul>
+        <form method="POST" class="mt-5 flex flex-wrap gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="confirm_duplicates" value="1">
+            <button type="submit" class="btn-success">Continue Conversion</button>
+            <a href="{% url 'pre_registrations:staff_detail' record.pk %}" class="btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

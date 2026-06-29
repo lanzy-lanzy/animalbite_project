@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Check Pre-Registration Status - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <a href="{% url 'accounts:landing' %}" class="text-sm text-gray-600 hover:text-blood-red">&larr; Back to landing page</a>
+        <h1 class="mt-3 text-2xl font-bold text-predator-black">Check Pre-Registration Status</h1>
+        <p class="mt-2 text-sm text-gray-600">Enter your unique pre-registration number. Public users can only retrieve a result when they know the exact number.</p>
+    </div>
+    <div class="card">
+        <form method="POST" class="flex flex-col sm:flex-row gap-3">
+            {% csrf_token %}
+            <div class="flex-1">{{ form.pre_registration_number }}{% if form.pre_registration_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.pre_registration_number.errors.0 }}</p>{% endif %}</div>
+            <button type="submit" class="btn-primary">Check Status</button>
+        </form>
+    </div>
+    {% if record %}
+    <div class="card mt-5">
+        <p class="text-sm text-gray-500">Pre-registration number</p>
+        <h2 class="text-2xl font-bold text-predator-black">{{ record.pre_registration_number }}</h2>
+        <p class="mt-3 text-gray-700">Status: <span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span></p>
+        <p class="mt-2 text-gray-700">Patient: {{ record.full_name }}</p>
+        <p class="mt-4 text-sm text-gray-600">Please proceed to the Animal Bite Treatment Center. This status is not an official treatment record.</p>
+        <a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-secondary mt-4">View Slip</a>
+    </div>
+    {% elif missing %}
+    <div class="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">No pre-registration was found for that number.</div>
+    {% endif %}
+</div>
+{% endblock %}

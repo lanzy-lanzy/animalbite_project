@@ -61,6 +61,10 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     Patients
                 </a>
+                <a href="{% url 'pre_registrations:staff_list' %}" class="sidebar-link {% if url_name == 'staff_list' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h7l3 3v13H7z"/></svg>
+                    Pre-Registrations
+                </a>
 
                 <div class="pt-3 pb-1">
                     <p class="px-4 text-xs font-semibold text-bone-white/40 uppercase tracking-wider">Case Management</p>

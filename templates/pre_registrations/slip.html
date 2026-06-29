@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Pre-Registration Slip - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="no-print mb-5 flex flex-wrap gap-3">
+        {% if public %}
+        <a href="{% url 'pre_registrations:public_success' record.pre_registration_number %}" class="btn-secondary">&larr; Back</a>
+        {% else %}
+        <a href="{% url 'pre_registrations:staff_detail' record.pk %}" class="btn-secondary">&larr; Back</a>
+        {% endif %}
+        <button type="button" onclick="window.print()" class="btn-primary">Print Slip</button>
+    </div>
+    <div class="card bg-white">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 border-b border-gray-200 pb-5">
+            <div>
+                <p class="text-sm font-semibold text-gray-500">Municipal Health Office / Animal Bite Treatment Center</p>
+                <h1 class="text-2xl font-bold text-predator-black">Pre-Registration Slip</h1>
+                <p class="mt-2 text-xl font-bold text-blood-red">{{ record.pre_registration_number }}</p>
+            </div>
+            <img class="h-36 w-36" src="{% url 'pre_registrations:qr_code' record.pre_registration_number %}" alt="QR code">
+        </div>
+
+        <dl class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div><dt class="font-semibold text-gray-500">Patient full name</dt><dd>{{ record.full_name }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Age / Sex</dt><dd>{{ record.age }} / {{ record.get_sex_display }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Contact number</dt><dd>{{ record.contact_number }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Barangay</dt><dd>{{ record.barangay }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Date and time of bite</dt><dd>{{ record.bite_datetime|date:"M d, Y g:i A" }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Type of animal</dt><dd>{{ record.get_animal_type_display }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Body part affected</dt><dd>{{ record.body_part_affected }}</dd></div>
+            <div><dt class="font-semibold text-gray-500">Submitted at</dt><dd>{{ record.submitted_at|date:"M d, Y g:i A" }}</dd></div>
+        </dl>
+
+        <div class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            Please proceed immediately to the Animal Bite Treatment Center. This pre-registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.
+        </div>
+        <p class="mt-4 text-xs text-gray-500">Pre-registration is only for faster encoding and initial information gathering. It is not yet an official treatment record until verified by authorized staff.</p>
+    </div>
+</div>
+{% endblock %}

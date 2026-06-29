@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Pre-Registrations - ABTC System{% endblock %}
+{% block page_title %}<h1 class="text-lg font-bold text-predator-black">Pre-Registrations</h1>{% endblock %}
+{% block content %}
+<div class="space-y-5">
+    <div class="card">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <input type="text" name="q" value="{{ query }}" class="form-input" placeholder="Number, name, contact">
+            <input type="text" name="barangay" value="{{ selected_barangay }}" class="form-input" placeholder="Barangay">
+            <input type="date" name="date" value="{{ selected_date }}" class="form-input">
+            <select name="status" class="form-input">
+                <option value="">All statuses</option>
+                {% for value,label in statuses %}
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-primary">Search</button>
+        </form>
+    </div>
+    <div class="card overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="table-header">Number</th>
+                    <th class="table-header">Patient</th>
+                    <th class="table-header">Contact</th>
+                    <th class="table-header">Barangay</th>
+                    <th class="table-header">Status</th>
+                    <th class="table-header">Submitted</th>
+                    <th class="table-header"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td class="table-cell font-semibold">{{ record.pre_registration_number }}</td>
+                    <td class="table-cell">{{ record.full_name }}</td>
+                    <td class="table-cell">{{ record.contact_number }}</td>
+                    <td class="table-cell">{{ record.barangay }}</td>
+                    <td class="table-cell"><span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
+                    <td class="table-cell">{{ record.submitted_at|date:"M d, Y" }}</td>
+                    <td class="table-cell text-right"><a href="{% url 'pre_registrations:staff_detail' record.pk %}" class="btn-secondary btn-sm">Open</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="table-cell text-center text-gray-500">No pre-registrations found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

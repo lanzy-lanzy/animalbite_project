@@ -177,6 +177,8 @@
 
             <div class="hidden md:flex items-center gap-8 text-sm font-medium">
                 <a href="#features" class="nav-link">Features</a>
+                <a href="{% url 'pre_registrations:public_create' %}" class="nav-link">Pre-register</a>
+                <a href="{% url 'pre_registrations:public_status' %}" class="nav-link">Check status</a>
                 <a href="#workflow" class="nav-link">Workflow</a>
                 <a href="#security" class="nav-link">Security</a>
                 <a href="{% url 'accounts:login' %}" class="nav-link">Sign in</a>
@@ -207,14 +209,17 @@
                     A unified platform for Animal Bite Treatment Centers — manage patients, bite cases,
                     vaccination schedules, and vaccine inventory in one secure, audit-ready system.
                 </p>
+                <p class="reveal mt-4 text-sm text-bone-white/70 max-w-xl">
+                    Animal bite patients can pre-register online before visiting the Municipal Health Office. Pre-registration speeds up encoding only and does not replace medical consultation or vaccination assessment.
+                </p>
 
                 <div id="hero-cta" class="reveal mt-9 flex flex-wrap items-center gap-4">
-                    <a href="{% url 'accounts:login' %}" class="btn-glow inline-flex items-center gap-2 bg-blood-red text-white font-semibold px-6 py-3.5 rounded-xl text-sm">
-                        Sign in to dashboard
+                    <a href="{% url 'pre_registrations:public_create' %}" class="btn-glow inline-flex items-center gap-2 bg-blood-red text-white font-semibold px-6 py-3.5 rounded-xl text-sm">
+                        Pre-Register Animal Bite Case
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
-                    <a href="#features" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-semibold text-bone-white border border-bone-white/20 hover:bg-bone-white/5 transition-colors">
-                        Explore features
+                    <a href="{% url 'pre_registrations:public_status' %}" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-semibold text-bone-white border border-bone-white/20 hover:bg-bone-white/5 transition-colors">
+                        Check Pre-Registration Status
                     </a>
                 </div>
             </div>
@@ -227,6 +232,34 @@
                 <span class="scroll-dot w-1 h-1 rounded-full bg-bone-white"></span>
             </span>
         </a>
+    </section>
+
+    <!-- ============ PUBLIC PRE-REGISTRATION ============ -->
+    <section class="relative z-10 border-y border-bone-white/10 grain">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8 py-14 grid lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2">
+                <p class="reveal text-xs font-semibold uppercase tracking-widest text-blood-red mb-3">Public patient pre-registration</p>
+                <h2 class="reveal font-display text-3xl sm:text-4xl font-bold tracking-tight">Save time at the Animal Bite Treatment Center.</h2>
+                <p class="reveal mt-4 text-bone-white/65">Fill out basic patient and bite incident details before arrival. Staff will verify the information, check for duplicates, and convert it into an official patient and animal bite case record only after assessment.</p>
+                <div class="reveal mt-6 rounded-2xl border border-red-300/25 bg-red-900/20 p-5 text-sm text-bone-white/80">
+                    Emergency reminder: immediately wash the wound with soap and running water for at least 15 minutes, then proceed to the nearest health facility.
+                </div>
+            </div>
+            <div class="reveal space-y-4 text-sm text-bone-white/70">
+                <div>
+                    <p class="font-semibold text-bone-white">Animal Bite Treatment Center</p>
+                    <p>Municipal Health Office</p>
+                    <p>Office hours: Monday to Friday, 8:00 AM to 5:00 PM</p>
+                    <p>Location: Municipal Health Office / ABTC</p>
+                    <p>Contact: Please call or visit the Municipal Health Office for urgent guidance.</p>
+                </div>
+                <ul class="space-y-2">
+                    <li>Keep the biting animal under observation when safe and possible.</li>
+                    <li>Do not apply garlic, chemicals, or other irritants to the wound.</li>
+                    <li>Return for all scheduled vaccination doses after assessment.</li>
+                </ul>
+            </div>
+        </div>
     </section>
 
     <!-- ============ STATS ============ -->
