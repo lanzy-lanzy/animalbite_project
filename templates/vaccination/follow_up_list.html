@@ -1,50 +1,269 @@
 {% extends 'base.html' %}
-{% block title %}Follow-Up Monitoring - ABTC System{% endblock %}
+{% block title %}Follow-Ups — ABTC{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-xl font-bold text-predator-black">Follow-Up Monitoring</h1>
-</div>
-<div class="card mb-6">
-    <form method="GET" class="flex gap-3">
-        <select name="status" class="form-input w-auto" onchange="this.form.submit()">
-            <option value="">All Status</option>
-            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
-            <option value="missed" {% if status_filter == 'missed' %}selected{% endif %}>Missed</option>
-            <option value="rescheduled" {% if status_filter == 'rescheduled' %}selected{% endif %}>Rescheduled</option>
-            <option value="contacted" {% if status_filter == 'contacted' %}selected{% endif %}>Contacted</option>
-        </select>
-        <a href="{% url 'vaccination:follow_up_list' %}" class="btn-secondary btn-sm">Reset</a>
-    </form>
-</div>
-<div class="card">
-    <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-gray-100">
-                    <th class="table-header">Patient</th>
-                    <th class="table-header">Case #</th>
-                    <th class="table-header">Follow-Up Date</th>
-                    <th class="table-header">Status</th>
-                    <th class="table-header">Notes</th>
-                    <th class="table-header text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for r in records %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="table-cell font-medium">{{ r.bite_case.patient.full_name }}</td>
-                    <td class="table-cell">{{ r.bite_case.case_number }}</td>
-                    <td class="table-cell">{{ r.follow_up_date|date:'M d, Y' }}</td>
-                    <td class="table-cell"><span class="status-badge status-{{ r.status }}">{{ r.get_status_display }}</span></td>
-                    <td class="table-cell text-gray-500 max-w-xs truncate">{{ r.notes|default:'-' }}</td>
-                    <td class="table-cell text-right"><a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}" class="btn-secondary btn-xs">View Case</a></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="text-center py-8 text-gray-500">No follow-up records found.</td></tr>
+<div class="space-y-6">
+    <!-- Hero — workflow at a glance -->
+    <div class="relative overflow-hidden rounded-[1.5rem] border text-white shadow-xl shadow-emerald-950/10" style="background:#0a1f1a; border-color:#0a1f1a;">
+        <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="absolute -top-16 -right-16 w-72 h-72 rounded-full blur-3xl opacity-15" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+        <div class="relative p-6 sm:p-7">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                <div>
+                    <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Follow-up Hub · Simple 3-step workflow
+                    </p>
+                    <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight mt-3">Follow-Up Monitoring</h1>
+                    <p class="text-sm font-medium text-sage-200 mt-1.5 max-w-2xl">Schedule → Contact → Complete. One tap to update status. Overdue is auto-flagged. All actions are audited.</p>
+                    <div class="flex flex-wrap gap-2 mt-4 text-xs font-bold">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-ink">1 <span class="font-medium text-muted">Schedule</span></span>
+                        <span class="text-white/40">→</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 text-white border border-white/15">2 <span class="text-sage-300">Contact</span></span>
+                        <span class="text-white/40">→</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white">3 <span class="text-white/90">Complete</span></span>
+                        <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/20 ml-2">Auto: Missed if overdue</span>
+                    </div>
+                </div>
+                <div class="flex gap-3 shrink-0">
+                    <div class="bg-white rounded-2xl p-4 min-w-[118px] shadow-xl">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total</p>
+                        <p class="font-display text-2xl font-bold text-ink">{{ total }}</p>
+                        <p class="text-xs font-medium text-muted">{{ pending }} pending</p>
+                    </div>
+                    <div class="bg-red-500 text-white rounded-2xl p-4 min-w-[118px] shadow-xl">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Overdue</p>
+                        <p class="font-display text-2xl font-bold">{{ overdue_count }}</p>
+                        <p class="text-xs font-medium text-white/80">Needs contact</p>
+                    </div>
+                    <div class="hidden sm:block bg-white/10 backdrop-blur border border-white/15 rounded-2xl p-4 min-w-[118px]">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Missed</p>
+                        <p class="font-display text-2xl font-bold text-white">{{ missed }}</p>
+                        <p class="text-xs font-medium text-sage-200">{{ completed }} completed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats pills -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if date_from %}from={{ date_from }}&{% endif %}{% if date_to %}to={{ date_to }}&{% endif %}" class="card p-4 text-center hover:shadow-md transition-shadow {% if not status_filter and not overdue %}ring-2 ring-emerald-950/15{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">All</p>
+            <p class="font-display text-xl font-bold text-ink">{{ total }}</p>
+        </a>
+        <a href="?status=pending{% if q %}&q={{ q }}{% endif %}{% if date_from %}&from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}" class="card p-4 text-center hover:shadow-md transition-shadow {% if status_filter == 'pending' %}ring-2 ring-amber-500/30 bg-amber-50/50{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-amber-700">Pending</p>
+            <p class="font-display text-xl font-bold text-ink">{{ pending }}</p>
+        </a>
+        <a href="?status=completed{% if q %}&q={{ q }}{% endif %}" class="card p-4 text-center hover:shadow-md transition-shadow {% if status_filter == 'completed' %}ring-2 ring-emerald-700/30{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-emerald-700">Completed</p>
+            <p class="font-display text-xl font-bold text-ink">{{ completed }}</p>
+        </a>
+        <a href="?overdue=1" class="card p-4 text-center hover:shadow-md transition-shadow {% if overdue %}ring-2 ring-red-500/30 bg-red-50/60{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-red-600">Overdue</p>
+            <p class="font-display text-xl font-bold text-ink">{{ overdue_count }}</p>
+        </a>
+    </div>
+
+    <!-- Filters — search + status + date range + overdue -->
+    <div class="card">
+        <form method="GET" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <div class="lg:col-span-5">
+                    <label class="form-label">Search patient or case #</label>
+                    <div class="relative">
+                        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" name="q" value="{{ q }}" placeholder="e.g., AB-2024-001 or Juan Dela Cruz" class="form-input pl-9">
+                    </div>
+                </div>
+                <div class="lg:col-span-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-input">
+                        <option value="">All status</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="missed" {% if status_filter == 'missed' %}selected{% endif %}>Missed</option>
+                        <option value="rescheduled" {% if status_filter == 'rescheduled' %}selected{% endif %}>Rescheduled</option>
+                        <option value="contacted" {% if status_filter == 'contacted' %}selected{% endif %}>Contacted</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-4 flex gap-2 items-end">
+                    <label class="flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold cursor-pointer {% if overdue %}bg-red-500 text-white border-red-500{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">
+                        <input type="checkbox" name="overdue" value="1" {% if overdue %}checked{% endif %} class="hidden" onchange="this.form.submit()">
+                        <span class="w-2 h-2 rounded-full {% if overdue %}bg-white animate-pulse{% else %}bg-red-500{% endif %}"></span>
+                        Overdue only
+                    </label>
+                    <a href="{% url 'vaccination:follow_up_list' %}" class="ml-auto btn-secondary btn-sm">Reset</a>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="form-label">From date</label>
+                    <input type="date" name="from" value="{{ date_from }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label">To date</label>
+                    <input type="date" name="to" value="{{ date_to }}" class="form-input">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button type="submit" class="btn-primary flex-1">Apply Filters</button>
+                    <a href="{% url 'vaccination:follow_up_list' %}" class="btn-secondary">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table — premium, inline status editor -->
+    <div class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Follow-ups · {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}</h3>
+                <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }} · Tap status to change quickly</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-bold">
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-muted">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live & audited
+                </span>
+                <span class="inline-flex items-center gap-1 text-muted">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Pending
+                    <span class="w-2 h-2 rounded-full bg-emerald-600 ml-2"></span> Completed
+                    <span class="w-2 h-2 rounded-full bg-red-500 ml-2"></span> Missed
+                </span>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Patient</th>
+                        <th class="table-header">Case #</th>
+                        <th class="table-header">Follow-Up Date</th>
+                        <th class="table-header">Status</th>
+                        <th class="table-header">Notes</th>
+                        <th class="table-header text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for r in records %}
+                    <tr class="hover:bg-sage-50 transition-colors group">
+                        <td class="table-cell">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-emerald-950 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                    {{ r.bite_case.patient.full_name|first|upper }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-ink truncate">{{ r.bite_case.patient.full_name }}</p>
+                                    <p class="text-xs font-medium text-muted truncate">{{ r.bite_case.patient.contact_number }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="table-cell">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-xs font-bold text-ink">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                {{ r.bite_case.case_number }}
+                            </span>
+                        </td>
+                        <td class="table-cell">
+                            <span class="inline-flex flex-col">
+                                <span class="text-sm font-semibold text-ink">{{ r.follow_up_date|date:'M d, Y' }}</span>
+                                <span class="text-xs font-medium {% if r.follow_up_date < today and r.status == 'pending' %}text-red-600{% else %}text-muted{% endif %}">
+                                    {% if r.follow_up_date < today and r.status == 'pending' %}Overdue{% else %}{{ r.follow_up_date|date:'l' }}{% endif %}
+                                </span>
+                            </span>
+                        </td>
+                        <td class="table-cell">
+                            <!-- Quick inline status switcher — one-tap workflow -->
+                            <form method="POST" class="inline-flex items-center gap-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="record_id" value="{{ r.pk }}">
+                                <select name="new_status" onchange="this.form.submit()" class="text-xs font-bold rounded-full border px-2.5 py-1.5 pr-6 cursor-pointer
+                                    {% if r.status == 'pending' %}bg-amber-50 border-amber-200 text-amber-800
+                                    {% elif r.status == 'completed' %}bg-emerald-50 border-emerald-200 text-emerald-800
+                                    {% elif r.status == 'missed' %}bg-red-50 border-red-200 text-red-700
+                                    {% elif r.status == 'rescheduled' %}bg-blue-50 border-blue-200 text-blue-700
+                                    {% elif r.status == 'contacted' %}bg-sage-100 border-line text-ink
+                                    {% else %}bg-white border-line text-ink{% endif %}">
+                                    {% for val,lab in status_choices %}
+                                    <option value="{{ val }}" {% if r.status == val %}selected{% endif %}>{{ lab }}</option>
+                                    {% endfor %}
+                                </select>
+                                <noscript><button type="submit" class="btn-secondary btn-xs">Save</button></noscript>
+                            </form>
+                        </td>
+                        <td class="table-cell">
+                            <span class="text-sm text-ink/80 max-w-[220px] truncate block" title="{{ r.notes }}">{{ r.notes|default:'—' }}</span>
+                        </td>
+                        <td class="table-cell text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">View</a>
+                                <a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}#followups" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Manage</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-14">
+                            <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            </div>
+                            <p class="text-sm font-bold text-ink mt-3">No follow-ups match your filters</p>
+                            <p class="text-xs font-medium text-muted mt-1">Try clearing filters or create a follow-up from a case.</p>
+                            <a href="{% url 'bite_cases:case_list' %}" class="inline-flex mt-4 btn-primary btn-sm">Go to Cases</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-t border-line bg-sage-50">
+            <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count }} total</p>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </a>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <span class="w-8 h-8 rounded-full bg-emerald-950 text-white flex items-center justify-center text-sm font-bold">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ num }}" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-sm font-medium text-ink hover:bg-sage-50">{{ num }}</a>
+                    {% endif %}
                 {% endfor %}
-            </tbody>
-        </table>
+                {% if page_obj.has_next %}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Workflow tip -->
+    <div class="card bg-sage-50 border-dashed flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div class="flex gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-950 text-white flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-ink">Workflow tip — keep it simple</p>
+                <p class="text-xs font-medium text-muted mt-1">Create follow-up from the <span class="font-bold text-ink">Case Detail → Follow-ups</span> tab. Status auto-sets to <span class="text-amber-700 font-bold">Pending</span>, then tap the badge here to → <span class="text-emerald-700 font-bold">Contacted</span> → <span class="text-emerald-700 font-bold">Completed</span> . Overdue is flagged automatically — no extra steps.</p>
+            </div>
+        </div>
+        <a href="{% url 'bite_cases:case_list' %}" class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50 whitespace-nowrap">
+            Open Cases
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
     </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 12, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

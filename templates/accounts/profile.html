@@ -3,29 +3,29 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-bold text-predator-black">My Profile</h1>
+        <h1 class="text-xl font-bold text-ink">My Profile</h1>
         <div class="flex gap-2">
             <a href="{% url 'accounts:profile_edit' %}" class="btn-primary btn-sm">Edit Profile</a>
             <a href="{% url 'accounts:change_password' %}" class="btn-secondary btn-sm">Change Password</a>
         </div>
     </div>
     <div class="card">
-        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-            <div class="w-16 h-16 rounded-full bg-blood-red text-white flex items-center justify-center text-2xl font-bold">{{ user.get_full_name|first|default:user.username|first|upper }}</div>
+        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-line">
+            <div class="w-16 h-16 rounded-full bg-emerald-800 text-white flex items-center justify-center text-2xl font-bold">{{ user.get_full_name|first|default:user.username|first|upper }}</div>
             <div>
-                <h2 class="text-lg font-semibold text-predator-black">{{ user.get_full_name|default:user.username }}</h2>
-                <p class="text-sm text-gray-500">{{ user.get_role_display }}</p>
+                <h2 class="text-lg font-semibold text-ink">{{ user.get_full_name|default:user.username }}</h2>
+                <p class="text-sm text-muted">{{ user.get_role_display }}</p>
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Username</label><p class="text-sm font-medium">{{ user.username }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Email</label><p class="text-sm font-medium">{{ user.email|default:'Not set' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">First Name</label><p class="text-sm font-medium">{{ user.first_name|default:'Not set' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Last Name</label><p class="text-sm font-medium">{{ user.last_name|default:'Not set' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Mobile</label><p class="text-sm font-medium">{{ user.mobile|default:'Not set' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Role</label><p class="text-sm font-medium">{{ user.get_role_display }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Status</label><p class="text-sm"><span class="status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">{{ user.is_active|yesno:'Active,Inactive' }}</span></p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Joined</label><p class="text-sm font-medium">{{ user.date_joined|date:'M d, Y' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Username</label><p class="text-sm font-medium">{{ user.username }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Email</label><p class="text-sm font-medium">{{ user.email|default:'Not set' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">First Name</label><p class="text-sm font-medium">{{ user.first_name|default:'Not set' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Last Name</label><p class="text-sm font-medium">{{ user.last_name|default:'Not set' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Mobile</label><p class="text-sm font-medium">{{ user.mobile|default:'Not set' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Role</label><p class="text-sm font-medium">{{ user.get_role_display }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Status</label><p class="text-sm"><span class="status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">{{ user.is_active|yesno:'Active,Inactive' }}</span></p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Joined</label><p class="text-sm font-medium">{{ user.date_joined|date:'M d, Y' }}</p></div>
         </div>
     </div>
 </div>

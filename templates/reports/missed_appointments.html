@@ -1,20 +1,204 @@
 {% extends 'base.html' %}
-{% block title %}Missed Appointments - ABTC System{% endblock %}
+{% block title %}Missed Appointments — ABTC{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-xl font-bold text-predator-black">Missed Appointments</h1>
-    <a href="{% url 'reports:reports_index' %}" class="btn-secondary btn-sm">Back to Reports</a>
-</div>
-<div class="card">
-    <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead><tr class="border-b border-gray-100"><th class="table-header">Patient</th><th class="table-header">Case #</th><th class="table-header">Follow-Up Date</th><th class="table-header">Status</th><th class="table-header">Actions</th></tr></thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for r in records %}
-                <tr class="hover:bg-gray-50"><td class="table-cell">{{ r.bite_case.patient.full_name }}</td><td class="table-cell">{{ r.bite_case.case_number }}</td><td class="table-cell">{{ r.follow_up_date|date:'M d, Y' }}</td><td class="table-cell"><span class="status-badge bg-red-100 text-red-800">Missed</span></td><td class="table-cell"><a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}" class="btn-secondary btn-xs">View</a></td></tr>
-                {% empty %}<tr><td colspan="5" class="text-center py-8 text-gray-500">No missed appointments.</td></tr>{% endfor %}
-            </tbody>
-        </table>
+<div x-data="{
+    previewOpen:false,
+    previewSrc:'',
+    previewBlob:'',
+    isLoading:false,
+    previewError:'',
+    async openPreview(url){
+        this.previewSrc=url;
+        this.previewBlob='';
+        this.previewError='';
+        this.isLoading=true;
+        this.previewOpen=true;
+        try{
+            const res=await fetch(url, {credentials:'same-origin'});
+            if(!res.ok) throw new Error('Server '+res.status);
+            const blob=await res.blob();
+            if(!blob.type.includes('pdf') && blob.size<500) throw new Error('Invalid PDF');
+            this.previewBlob=URL.createObjectURL(blob);
+            this.$nextTick(()=>{
+                const f=this.$refs.pdfFrame;
+                if(f) f.src=this.previewBlob;
+                this.isLoading=false;
+            });
+        }catch(e){
+            console.error(e);
+            this.previewError=e.message;
+            this.isLoading=false;
+            this.$nextTick(()=>{
+                const f=this.$refs.pdfFrame;
+                if(f) f.src=url;
+            });
+        }
+    },
+    printPreview(){
+    const el=document.getElementById('report-print-area');
+    const w=window.open('', '_blank');
+    w.document.write('<html><head><title>Missed Follow-Ups</title><link rel=\'stylesheet\' href=\'/static/css/output.css\'><style>@media print{ .no-print{display:none!important} }</style></head><body>'+el.innerHTML+'</body></html>');
+    w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+} }" class="space-y-5">
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <a href="{% url 'reports:reports_index' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Reports
+            </a>
+            <h1 class="font-display text-2xl font-bold text-ink mt-1">Missed Follow-Ups</h1>
+            <p class="text-sm font-medium text-muted">{{ label }} · <span class="text-ink font-bold">{{ page_obj.paginator.count }} missed</span> · Action required</p>
+        </div>
+        <div class="flex flex-wrap gap-2 no-print">
+            <button @click="openPreview('{{ request.path }}?{% for k,v in request.GET.items %}{% if k != 'export' and k != 'preview' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=pdf&preview=1')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow">
+                Preview PDF
+            </button>
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=pdf" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-ink text-sm font-bold hover:bg-sage-50">Download PDF</a>
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=csv" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-ink text-sm font-bold hover:bg-sage-50">Export CSV</a>
+            <button @click="printPreview()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-ink text-sm font-bold hover:bg-sage-50">Print</button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+        <div class="flex flex-wrap gap-2 mb-4">
+            <a href="?type=daily" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Daily</a>
+            <a href="?type=weekly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Weekly</a>
+            <a href="?type=monthly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Monthly</a>
+            <a href="?type=last7" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Last 7</a>
+            <a href="?type=last30" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Last 30</a>
+            <a href="?type=custom" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'custom' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">Custom</a>
+        </div>
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+                <label class="form-label">Start date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">End date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-input">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="form-label">Search patient / case #</label>
+                <div class="flex gap-2">
+                    <input type="text" name="q" value="{{ q }}" placeholder="e.g., AB-2024-001 or Juan" class="form-input flex-1">
+                    <input type="hidden" name="type" value="{{ report_type }}">
+                    <button type="submit" class="btn-primary">Apply</button>
+                    <a href="{% url 'reports:missed_appointments' %}" class="btn-secondary">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="card text-center p-4 bg-red-50 border-red-200">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-red-700">Missed Total</p>
+            <p class="font-display text-2xl font-bold text-red-700">{{ page_obj.paginator.count }}</p>
+            <p class="text-xs font-medium text-red-600 mt-1">{{ label }}</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Need Contact</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ page_obj.paginator.count }}</p>
+            <p class="text-xs font-medium text-muted mt-1">Follow-up required</p>
+        </div>
+        <div class="card text-center p-4 bg-emerald-950 border-emerald-950 text-white">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Action</p>
+            <p class="font-display text-lg font-bold">Contact & reschedule</p>
+            <p class="text-xs font-medium text-sage-200 mt-1">Within 24h</p>
+        </div>
+    </div>
+
+    <!-- Preview Table -->
+    <div id="report-print-area" class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Preview — Missed Follow-Ups · {{ label }}</h3>
+                <p class="text-xs font-medium text-muted">{{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}</p>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-red-700 bg-white border border-red-200 px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> Requires action
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead><tr class="border-b border-line bg-sage-50"><th class="table-header">Patient</th><th class="table-header">Case #</th><th class="table-header">Follow-Up Date</th><th class="table-header">Status</th><th class="table-header">Contact</th><th class="table-header text-right">Action</th></tr></thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for r in records %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell font-bold text-ink">{{ r.bite_case.patient.full_name }}</td>
+                        <td class="table-cell font-mono text-xs">{{ r.bite_case.case_number }}</td>
+                        <td class="table-cell text-muted">{{ r.follow_up_date|date:'M d, Y' }}</td>
+                        <td class="table-cell"><span class="status-badge bg-red-100 text-red-800">Missed</span></td>
+                        <td class="table-cell">{{ r.bite_case.patient.contact_number }}</td>
+                        <td class="table-cell text-right"><a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}" class="btn-secondary btn-xs">View</a></td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-center py-12"><p class="text-sm font-semibold text-ink">No missed appointments for this filter.</p><p class="text-xs text-muted">Great adherence — try a different date range.</p></td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-between px-5 py-3 border-t border-line bg-sage-50">
+            <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+            <div class="flex gap-2">
+                {% if page_obj.has_previous %}<a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="btn-secondary btn-xs">Previous</a>{% endif %}
+                {% if page_obj.has_next %}<a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="btn-secondary btn-xs">Next</a>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="px-5 py-3 border-t border-line bg-white flex flex-wrap gap-2 text-xs font-medium text-muted">
+            <span>Generated {% now "M d, Y h:i A" %}</span>
+            <span class="opacity-40">·</span>
+            <span>ABTC System · Confidential</span>
+        </div>
+    </div>
+
+    <!-- PDF Preview Modal -->
+    <div x-show="previewOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="previewOpen=false" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-5xl h-[85vh] bg-white rounded-2xl shadow-2xl border border-line overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-line bg-sage-50">
+                <div>
+                    <h3 class="font-display text-sm font-bold text-ink">PDF Preview — Missed Follow-Ups</h3>
+                    <p class="text-xs font-medium text-muted">Review before download/print.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a :href="previewSrc.replace('preview=1','')" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">Download</a>
+                    <button @click="previewOpen=false" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-muted hover:text-ink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 relative bg-white overflow-hidden">
+                <div x-show="isLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                    <svg class="w-8 h-8 animate-spin text-emerald-700" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    <p class="text-sm font-semibold text-ink mt-3">Loading PDF preview…</p>
+                    <p class="text-xs text-muted">Filters applied · please wait</p>
+                </div>
+                <div x-show="previewError" x-cloak class="absolute inset-0 flex flex-col items-center justify-center bg-sage-50 p-6 text-center z-10">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <p class="text-sm font-bold text-ink mt-3">Preview failed — download instead</p>
+                    <p class="text-xs text-muted mt-1" x-text="previewError"></p>
+                    <div class="flex gap-2 mt-4">
+                        <a :href="previewSrc" class="px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">Download PDF</a>
+                        <a :href="previewSrc.replace('preview=1','')" target="_blank" class="px-4 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Open in new tab</a>
+                    </div>
+                    <p class="text-xs text-muted mt-3">Or use <span class="font-bold text-ink">Print</span> for the interactive table preview below.</p>
+                </div>
+                <iframe x-ref="pdfFrame" class="w-full h-full border-0 bg-white" title="PDF preview"></iframe>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

@@ -2,7 +2,7 @@
 {% block title %}Bite Cases - ABTC System{% endblock %}
 {% block content %}
 <div class="flex items-center justify-between mb-6">
-    <h1 class="text-xl font-bold text-predator-black">Animal Bite Cases</h1>
+    <h1 class="text-xl font-bold text-ink">Animal Bite Cases</h1>
     <a href="{% url 'bite_cases:case_create' %}" class="btn-primary btn-sm">+ New Case</a>
 </div>
 <div class="card mb-6">
@@ -32,7 +32,7 @@
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
-                <tr class="border-b border-gray-100">
+                <tr class="border-b border-line">
                     <th class="table-header">Case #</th>
                     <th class="table-header">Patient</th>
                     <th class="table-header">Date</th>
@@ -42,12 +42,12 @@
                     <th class="table-header text-right">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
+            <tbody class="divide-y divide-sage-100">
                 {% for case in cases %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-sage-50 transition-colors">
                     <td class="table-cell font-medium">{{ case.case_number }}</td>
                     <td class="table-cell">{{ case.patient.full_name }}</td>
-                    <td class="table-cell text-gray-500">{{ case.date_time_bite|date:'M d, Y' }}</td>
+                    <td class="table-cell text-muted">{{ case.date_time_bite|date:'M d, Y' }}</td>
                     <td class="table-cell capitalize">{{ case.get_animal_type_display }}</td>
                     <td class="table-cell capitalize">{{ case.get_exposure_type_display }}</td>
                     <td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td>
@@ -57,14 +57,14 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center py-8 text-gray-500">No cases found.</td></tr>
+                <tr><td colspan="7" class="text-center py-8 text-muted">No cases found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% if cases.has_other_pages %}
-    <div class="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
-        <p class="text-sm text-gray-500">Page {{ cases.number }} of {{ cases.paginator.num_pages }}</p>
+    <div class="flex items-center justify-between pt-4 border-t border-line mt-4">
+        <p class="text-sm text-muted">Page {{ cases.number }} of {{ cases.paginator.num_pages }}</p>
         <div class="flex gap-1">
             {% if cases.has_previous %}<a href="?page={{ cases.previous_page_number }}&q={{ query }}&status={{ selected_status }}&animal={{ selected_animal }}" class="btn-secondary btn-xs">Previous</a>{% endif %}
             {% if cases.has_next %}<a href="?page={{ cases.next_page_number }}&q={{ query }}&status={{ selected_status }}&animal={{ selected_animal }}" class="btn-secondary btn-xs">Next</a>{% endif %}

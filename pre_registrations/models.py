@@ -45,6 +45,13 @@ class PreRegistration(models.Model):
     ]
 
     pre_registration_number = models.CharField(max_length=20, unique=True, blank=True)
+    account = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pre_registrations",
+    )
     qr_code = models.TextField(blank=True)
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True)

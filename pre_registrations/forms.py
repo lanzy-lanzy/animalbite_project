@@ -1,9 +1,14 @@
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from .models import PreRegistration
 
 
 INPUT_CLASS = "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8A0303] focus:border-transparent"
+User = get_user_model()
 
 
 class PreRegistrationForm(forms.ModelForm):
@@ -78,6 +83,90 @@ class PreRegistrationForm(forms.ModelForm):
         if not consent:
             raise forms.ValidationError("You must confirm consent before submitting.")
         return consent
+
+
+class PatientSignupPreRegistrationForm(PreRegistrationForm):
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": INPUT_CLASS, "autocomplete": "username"}),
+        help_text="Use this username when you return to track your treatment.",
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": INPUT_CLASS, "autocomplete": "email"})
+    )
+    password1 = forms.CharField(
+        label="Password",
+        widget=forms.PasswordInput(attrs={"class": INPUT_CLASS, "autocomplete": "new-password"}),
+    )
+    password2 = forms.CharField(
+        label="Confirm password",
+        widget=forms.PasswordInput(attrs={"class": INPUT_CLASS, "autocomplete": "new-password"}),
+    )
+
+    def __init__(self, *args, account=None, **kwargs):
+        self.account = account if getattr(account, "is_authenticated", False) else None
+        super().__init__(*args, **kwargs)
+        if self.account:
+            for field_name in ("username", "email", "password1", "password2"):
+                self.fields.pop(field_name)
+
+    def clean_username(self):
+        username = self.cleaned_data["username"].strip()
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("That username is already in use.")
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email already exists. Please log in instead.")
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.account:
+            return cleaned_data
+
+        password1 = cleaned_data.get("password1")
+        password2 = cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            self.add_error("password2", "The two passwords do not match.")
+        if password1:
+            candidate = User(
+                username=cleaned_data.get("username", ""),
+                email=cleaned_data.get("email", ""),
+                first_name=cleaned_data.get("first_name", ""),
+                last_name=cleaned_data.get("last_name", ""),
+                role="patient",
+            )
+            try:
+                validate_password(password1, candidate)
+            except ValidationError as error:
+                self.add_error("password1", error)
+        return cleaned_data
+
+    @transaction.atomic
+    def save(self, commit=True):
+        if not commit:
+            raise ValueError("Patient signup preregistrations must be saved atomically.")
+
+        account = self.account
+        if account is None:
+            account = User.objects.create_user(
+                username=self.cleaned_data["username"],
+                email=self.cleaned_data["email"],
+                password=self.cleaned_data["password1"],
+                first_name=self.cleaned_data["first_name"],
+                last_name=self.cleaned_data["last_name"],
+                mobile=self.cleaned_data["contact_number"],
+                role="patient",
+            )
+        record = super().save(commit=False)
+        record.account = account
+        record.save()
+        self.save_m2m()
+        self.account = account
+        return record
 
 
 class StaffPreRegistrationForm(PreRegistrationForm):

@@ -3,36 +3,36 @@
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'inventory:vaccine_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-        <h1 class="text-xl font-bold text-predator-black">{{ item.vaccine_name }}</h1>
+        <a href="{% url 'inventory:vaccine_list' %}" class="p-2 rounded-lg hover:bg-sage-100">&larr; Back</a>
+        <h1 class="text-xl font-bold text-ink">{{ item.vaccine_name }}</h1>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <div class="card">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Vaccine Information</h3>
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Vaccine Information</h3>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs text-gray-500 uppercase">Brand</label><p class="text-sm font-medium">{{ item.brand }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Batch Number</label><p class="text-sm font-mono">{{ item.batch_number }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Expiration Date</label><p class="text-sm font-medium">{{ item.expiration_date|date:'M d, Y' }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Supplier</label><p class="text-sm font-medium">{{ item.source_supplier|default:'N/A' }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Date Received</label><p class="text-sm font-medium">{{ item.date_received|date:'M d, Y' }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Status</label>
+                    <div><label class="text-xs text-muted uppercase">Brand</label><p class="text-sm font-medium">{{ item.brand }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Batch Number</label><p class="text-sm font-mono">{{ item.batch_number }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Expiration Date</label><p class="text-sm font-medium">{{ item.expiration_date|date:'M d, Y' }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Supplier</label><p class="text-sm font-medium">{{ item.source_supplier|default:'N/A' }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Date Received</label><p class="text-sm font-medium">{{ item.date_received|date:'M d, Y' }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Status</label>
                         {% if item.is_expired %}<span class="status-badge bg-red-100 text-red-800">Expired</span>
                         {% elif item.is_low_stock %}<span class="status-badge bg-yellow-100 text-yellow-800">Low Stock</span>
                         {% else %}<span class="status-badge bg-green-100 text-green-800">Available</span>{% endif %}
                     </div>
                 </div>
-                {% if item.remarks %}<div class="mt-4"><label class="text-xs text-gray-500 uppercase">Remarks</label><p class="text-sm">{{ item.remarks }}</p></div>{% endif %}
+                {% if item.remarks %}<div class="mt-4"><label class="text-xs text-muted uppercase">Remarks</label><p class="text-sm">{{ item.remarks }}</p></div>{% endif %}
             </div>
             <div class="card">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Stock Movement History</h3>
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Stock Movement History</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full">
-                        <thead><tr class="border-b border-gray-100"><th class="table-header">Date</th><th class="table-header">Type</th><th class="table-header">Qty</th><th class="table-header">Reference</th><th class="table-header">By</th></tr></thead>
-                        <tbody class="divide-y divide-gray-50">
+                        <thead><tr class="border-b border-line"><th class="table-header">Date</th><th class="table-header">Type</th><th class="table-header">Qty</th><th class="table-header">Reference</th><th class="table-header">By</th></tr></thead>
+                        <tbody class="divide-y divide-sage-100">
                             {% for m in movements %}
-                            <tr class="hover:bg-gray-50"><td class="table-cell">{{ m.created_at|date:'M d, Y h:i A' }}</td><td class="table-cell"><span class="status-badge {% if m.movement_type == 'stock_in' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">{{ m.get_movement_type_display }}</span></td><td class="table-cell font-medium">{{ m.quantity }}</td><td class="table-cell text-gray-500">{{ m.reference|default:'-' }}</td><td class="table-cell">{{ m.moved_by.get_full_name|default:m.moved_by.username }}</td></tr>
-                            {% empty %}<tr><td colspan="5" class="text-center py-4 text-gray-500">No movements.</td></tr>{% endfor %}
+                            <tr class="hover:bg-sage-50"><td class="table-cell">{{ m.created_at|date:'M d, Y h:i A' }}</td><td class="table-cell"><span class="status-badge {% if m.movement_type == 'stock_in' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">{{ m.get_movement_type_display }}</span></td><td class="table-cell font-medium">{{ m.quantity }}</td><td class="table-cell text-muted">{{ m.reference|default:'-' }}</td><td class="table-cell">{{ m.moved_by.get_full_name|default:m.moved_by.username }}</td></tr>
+                            {% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No movements.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -40,16 +40,16 @@
         </div>
         <div class="space-y-6">
             <div class="card text-center">
-                <p class="text-xs text-gray-500 uppercase mb-1">Quantity Received</p>
-                <p class="text-3xl font-bold text-predator-black">{{ item.quantity_received }}</p>
+                <p class="text-xs text-muted uppercase mb-1">Quantity Received</p>
+                <p class="text-3xl font-bold text-ink">{{ item.quantity_received }}</p>
             </div>
             <div class="card text-center">
-                <p class="text-xs text-gray-500 uppercase mb-1">Quantity Available</p>
-                <p class="text-3xl font-bold text-venom-green">{{ item.quantity_available }}</p>
+                <p class="text-xs text-muted uppercase mb-1">Quantity Available</p>
+                <p class="text-3xl font-bold text-emerald-700">{{ item.quantity_available }}</p>
             </div>
             <div class="card text-center">
-                <p class="text-xs text-gray-500 uppercase mb-1">Quantity Used</p>
-                <p class="text-3xl font-bold text-blood-red">{{ item.quantity_used }}</p>
+                <p class="text-xs text-muted uppercase mb-1">Quantity Used</p>
+                <p class="text-3xl font-bold text-emerald-800">{{ item.quantity_used }}</p>
             </div>
         </div>
     </div>

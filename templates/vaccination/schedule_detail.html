@@ -1,63 +1,194 @@
 {% extends 'base.html' %}
-{% block title %}Vaccination Schedule - {{ schedule.bite_case.case_number }}{% endblock %}
+{% block title %}Vaccination Schedule — {{ schedule.bite_case.case_number }}{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3">
-            <a href="{% url 'vaccination:schedule_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-            <h1 class="text-xl font-bold text-predator-black">Vaccination Schedule</h1>
+            <a href="{% url 'vaccination:schedule_list' %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </a>
+            <div>
+                <h1 class="font-display text-xl font-bold text-ink leading-none">Vaccination Schedule</h1>
+                <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">{{ schedule.bite_case.case_number }} · {{ schedule.bite_case.patient.full_name }}</p>
+            </div>
         </div>
-        <span class="text-sm text-gray-500">{{ schedule.bite_case.case_number }}</span>
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                {{ schedule.doses.count }} doses
+            </span>
+            <a href="{% url 'bite_cases:case_detail' schedule.bite_case.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">View Case</a>
+        </div>
     </div>
 
-    <div class="card mb-6">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Patient & Case Info</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><label class="text-xs text-gray-500 uppercase">Patient</label><p class="text-sm font-medium">{{ schedule.bite_case.patient.full_name }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Case #</label><p class="text-sm font-medium">{{ schedule.bite_case.case_number }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Exposure</label><p class="text-sm font-medium capitalize">{{ schedule.bite_case.get_exposure_type_display }}</p></div>
+    <!-- Progress -->
+    <div class="card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex-1">
+            <div class="flex items-center justify-between mb-1.5">
+                <p class="text-xs font-bold tracking-widest uppercase text-muted">Progress</p>
+                <p class="text-xs font-bold text-ink">
+                    {{ completed }} / {{ total }} completed · {{ progress }}%
+                </p>
+            </div>
+            <div class="h-2 bg-sage-100 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-700 rounded-full" style="width: {{ progress }}%"></div>
+            </div>
+            <p class="text-xs font-medium text-muted mt-1.5">Tap <span class="font-bold text-ink">Update</span> on a dose to mark Completed / Missed — stock auto-deducts.</p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
-            <div><label class="text-xs text-gray-500 uppercase">RIG Given</label><p class="text-sm font-medium">{{ schedule.rig_given|yesno:'Yes,No' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Tetanus Toxoid</label><p class="text-sm font-medium">{{ schedule.tetanus_toxoid_given|yesno:'Yes,No' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Antibiotics</label><p class="text-sm font-medium">{{ schedule.antibiotics_given|yesno:'Yes,No' }}</p></div>
+        <div class="hidden sm:block w-px h-12 bg-line"></div>
+        <div class="flex gap-2 text-xs font-bold">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Scheduled</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Completed</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Missed</span>
         </div>
-        {% if schedule.other_medicine %}<div class="mt-4"><label class="text-xs text-gray-500 uppercase">Other Medicine</label><p class="text-sm">{{ schedule.other_medicine }}</p></div>{% endif %}
-        {% if schedule.doctor_notes %}<div class="mt-4"><label class="text-xs text-gray-500 uppercase">Doctor Notes</label><p class="text-sm">{{ schedule.doctor_notes }}</p></div>{% endif %}
     </div>
 
+    <!-- Patient & Case Info — bento -->
     <div class="card">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Vaccination Doses</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b border-gray-100">
-                        <th class="table-header">Dose</th>
-                        <th class="table-header">Scheduled</th>
-                        <th class="table-header">Actual Date</th>
-                        <th class="table-header">Vaccine</th>
-                        <th class="table-header">Batch</th>
-                        <th class="table-header">Status</th>
-                        <th class="table-header text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    {% for dose in schedule.doses.all %}
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="table-cell font-medium">{{ dose.dose_label }}</td>
-                        <td class="table-cell">{{ dose.scheduled_date|date:'M d, Y' }}</td>
-                        <td class="table-cell">{{ dose.actual_date|date:'M d, Y'|default:'-' }}</td>
-                        <td class="table-cell">{{ dose.vaccine_brand|default:'-' }}</td>
-                        <td class="table-cell">{{ dose.batch_number|default:'-' }}</td>
-                        <td class="table-cell"><span class="status-badge status-{{ dose.dose_status }}">{{ dose.get_dose_status_display }}</span></td>
-                        <td class="table-cell text-right"><a href="{% url 'vaccination:dose_update' dose.pk %}" class="btn-secondary btn-xs">Update</a></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" class="text-center py-8 text-gray-500">No doses scheduled.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display text-sm font-bold text-ink flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-emerald-950 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span>
+                Patient & Case
+            </h3>
+            <span class="text-xs font-bold tracking-widest uppercase px-2.5 py-1 rounded-full {% if schedule.bite_case.case_status == 'completed' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif schedule.bite_case.case_status == 'missed' %}bg-red-50 border border-red-200 text-red-700{% else %}bg-sage-50 border border-line text-ink{% endif %}">
+                {{ schedule.bite_case.get_case_status_display }}
+            </span>
         </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="rounded-xl bg-sage-50 border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Patient</p>
+                <p class="text-sm font-bold text-ink mt-1">{{ schedule.bite_case.patient.full_name }}</p>
+                <p class="text-xs font-medium text-muted">{{ schedule.bite_case.patient.contact_number }}</p>
+            </div>
+            <div class="rounded-xl bg-white border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Case # · Exposure</p>
+                <p class="text-sm font-bold text-ink mt-1">{{ schedule.bite_case.case_number }}</p>
+                <p class="text-xs font-medium text-emerald-700 capitalize">{{ schedule.bite_case.get_exposure_type_display }} · {{ schedule.bite_case.get_animal_type_display }}</p>
+            </div>
+            <div class="rounded-xl bg-white border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Consultation</p>
+                <p class="text-sm font-bold text-ink mt-1">{{ schedule.bite_case.date_time_consultation|date:'M d, Y' }}</p>
+                <p class="text-xs font-medium text-muted">{{ schedule.bite_case.incident_barangay }}</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-line">
+            <div class="text-center rounded-xl p-3 {% if schedule.rig_given %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-line{% endif %}">
+                <p class="text-[11px] font-bold tracking-widest uppercase {% if schedule.rig_given %}text-emerald-700{% else %}text-muted{% endif %}">RIG</p>
+                <p class="text-sm font-bold {% if schedule.rig_given %}text-emerald-800{% else %}text-ink{% endif %} mt-1">{{ schedule.rig_given|yesno:'Yes,No' }}</p>
+            </div>
+            <div class="text-center rounded-xl p-3 {% if schedule.tetanus_toxoid_given %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-line{% endif %}">
+                <p class="text-[11px] font-bold tracking-widest uppercase {% if schedule.tetanus_toxoid_given %}text-emerald-700{% else %}text-muted{% endif %}">Tetanus</p>
+                <p class="text-sm font-bold {% if schedule.tetanus_toxoid_given %}text-emerald-800{% else %}text-ink{% endif %} mt-1">{{ schedule.tetanus_toxoid_given|yesno:'Yes,No' }}</p>
+            </div>
+            <div class="text-center rounded-xl p-3 {% if schedule.antibiotics_given %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-line{% endif %}">
+                <p class="text-[11px] font-bold tracking-widest uppercase {% if schedule.antibiotics_given %}text-emerald-700{% else %}text-muted{% endif %}">Antibiotics</p>
+                <p class="text-sm font-bold {% if schedule.antibiotics_given %}text-emerald-800{% else %}text-ink{% endif %} mt-1">{{ schedule.antibiotics_given|yesno:'Yes,No' }}</p>
+            </div>
+        </div>
+        {% if schedule.other_medicine %}
+        <div class="mt-4 rounded-xl bg-sage-50 border border-line p-3.5">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Other Medicine</p>
+            <p class="text-sm font-medium text-ink mt-1">{{ schedule.other_medicine }}</p>
+        </div>
+        {% endif %}
+        {% if schedule.doctor_notes %}
+        <div class="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3.5">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-amber-800">Doctor Notes</p>
+            <p class="text-sm font-medium text-ink mt-1">{{ schedule.doctor_notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Doses Timeline -->
+    <div class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <h3 class="font-display text-sm font-bold text-ink flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></span>
+                Vaccination Doses — Timeline
+            </h3>
+            <span class="text-xs font-bold tracking-widest uppercase bg-white border border-line px-2.5 py-1 rounded-full text-muted">{{ schedule.doses.count }} doses · tap to update</span>
+        </div>
+
+        <div class="relative">
+            <!-- vertical line -->
+            <div class="absolute left-[22px] sm:left-[28px] top-6 bottom-6 w-0.5 bg-line hidden sm:block"></div>
+
+            <div class="divide-y divide-sage-100">
+                {% for dose in schedule.doses.all %}
+                <div class="relative flex gap-4 p-5 hover:bg-sage-50/60 transition-colors group">
+                    <!-- dot -->
+                    <div class="hidden sm:flex w-7 h-7 rounded-full border-2 items-center justify-center shrink-0 z-10 mt-1
+                        {% if dose.dose_status == 'completed' %}bg-emerald-600 border-emerald-600 text-white
+                        {% elif dose.dose_status == 'missed' %}bg-red-500 border-red-500 text-white
+                        {% elif dose.dose_status == 'scheduled' %}bg-white border-emerald-300 text-emerald-700
+                        {% else %}bg-white border-line text-muted{% endif %}">
+                        {% if dose.dose_status == 'completed' %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        {% elif dose.dose_status == 'missed' %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        {% else %}<span class="w-2 h-2 rounded-full bg-current"></span>{% endif %}
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h4 class="font-display text-sm font-bold text-ink">{{ dose.dose_label }}</h4>
+                            <span class="status-badge status-{{ dose.dose_status }}">{{ dose.get_dose_status_display }}</span>
+                            {% if dose.scheduled_date == today %}<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white">Today</span>{% endif %}
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                            <div class="rounded-xl bg-white border border-line p-3">
+                                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Scheduled</p>
+                                <p class="text-sm font-bold text-ink mt-1">{{ dose.scheduled_date|date:'M d, Y' }}</p>
+                            </div>
+                            <div class="rounded-xl {% if dose.actual_date %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-dashed border-line{% endif %} p-3">
+                                <p class="text-[11px] font-bold tracking-widest uppercase {% if dose.actual_date %}text-emerald-700{% else %}text-muted{% endif %}">Actual</p>
+                                <p class="text-sm font-bold {% if dose.actual_date %}text-ink{% else %}text-muted{% endif %} mt-1">{{ dose.actual_date|date:'M d, Y'|default:'—' }}</p>
+                            </div>
+                            <div class="rounded-xl bg-white border border-line p-3">
+                                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Vaccine · Batch</p>
+                                <p class="text-sm font-semibold text-ink mt-1 truncate">{{ dose.vaccine_brand|default:'—' }}</p>
+                                <p class="text-xs font-mono text-muted truncate">{{ dose.batch_number|default:'—' }}</p>
+                            </div>
+                            <div class="rounded-xl bg-sage-50 border border-line p-3">
+                                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Remarks</p>
+                                <p class="text-xs font-medium text-ink mt-1 line-clamp-2">{{ dose.remarks|default:'—' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 shrink-0">
+                        <a href="{% url 'vaccination:dose_update' dose.pk %}" class="inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow">
+                            Update
+                        </a>
+                        <span class="text-[11px] font-medium text-muted text-center hidden sm:block">{{ dose.scheduled_date|date:'D' }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-14">
+                    <p class="text-sm font-bold text-ink">No doses scheduled</p>
+                    <p class="text-xs text-muted">This schedule has no doses — contact admin.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="px-5 py-3 bg-sage-50 border-t border-line flex flex-wrap gap-2 text-xs font-bold">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-ink"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Completed deducts stock</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-muted">Missed → follow-up</span>
+        </div>
+    </div>
+
+    <!-- Workflow footer -->
+    <div class="card bg-sage-50 border-dashed flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <p class="text-sm font-medium text-ink"><span class="font-bold">Workflow:</span> Schedule auto-created → Update each dose as <span class="text-emerald-700 font-bold">Completed</span> on the day → If not, mark <span class="text-red-600 font-bold">Missed</span> → Create Follow-up.</p>
+        <a href="{% url 'vaccination:follow_up_list' %}" class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Follow-ups →</a>
     </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 12, opacity: 0, duration: 0.45, stagger: 0.06, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

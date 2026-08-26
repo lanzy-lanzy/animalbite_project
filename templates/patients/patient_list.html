@@ -2,7 +2,7 @@
 {% block title %}Patients - ABTC System{% endblock %}
 {% block content %}
 <div class="flex items-center justify-between mb-6">
-    <h1 class="text-xl font-bold text-predator-black">Patient Records</h1>
+    <h1 class="text-xl font-bold text-ink">Patient Records</h1>
     <a href="{% url 'patients:patient_create' %}" class="btn-primary btn-sm">+ Register Patient</a>
 </div>
 <div class="card mb-6">
@@ -27,7 +27,7 @@
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
-                <tr class="border-b border-gray-100">
+                <tr class="border-b border-line">
                     <th class="table-header">Patient #</th>
                     <th class="table-header">Name</th>
                     <th class="table-header">Age/Sex</th>
@@ -37,29 +37,29 @@
                     <th class="table-header text-right">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
+            <tbody class="divide-y divide-sage-100">
                 {% for p in patients %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-sage-50 transition-colors">
                     <td class="table-cell font-medium">{{ p.patient_number }}</td>
                     <td class="table-cell">{{ p.full_name }}</td>
                     <td class="table-cell">{{ p.age }} / {{ p.get_sex_display }}</td>
                     <td class="table-cell">{{ p.barangay|default:'-' }}</td>
                     <td class="table-cell">{{ p.contact_number }}</td>
-                    <td class="table-cell text-gray-500">{{ p.created_at|date:'M d, Y' }}</td>
+                    <td class="table-cell text-muted">{{ p.created_at|date:'M d, Y' }}</td>
                     <td class="table-cell text-right">
                         <a href="{% url 'patients:patient_detail' p.pk %}" class="btn-secondary btn-xs">View</a>
                         <a href="{% url 'patients:patient_edit' p.pk %}" class="btn-secondary btn-xs">Edit</a>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center py-8 text-gray-500">No patients found.</td></tr>
+                <tr><td colspan="7" class="text-center py-8 text-muted">No patients found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% if patients.has_other_pages %}
-    <div class="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
-        <p class="text-sm text-gray-500">Page {{ patients.number }} of {{ patients.paginator.num_pages }}</p>
+    <div class="flex items-center justify-between pt-4 border-t border-line mt-4">
+        <p class="text-sm text-muted">Page {{ patients.number }} of {{ patients.paginator.num_pages }}</p>
         <div class="flex gap-1">
             {% if patients.has_previous %}<a href="?page={{ patients.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn-secondary btn-xs">Previous</a>{% endif %}
             {% if patients.has_next %}<a href="?page={{ patients.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn-secondary btn-xs">Next</a>{% endif %}

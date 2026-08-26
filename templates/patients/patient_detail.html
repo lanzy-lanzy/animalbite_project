@@ -4,8 +4,8 @@
 <div class="max-w-4xl mx-auto">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-            <a href="{% url 'patients:patient_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-            <h1 class="text-xl font-bold text-predator-black">{{ patient.full_name }}</h1>
+            <a href="{% url 'patients:patient_list' %}" class="p-2 rounded-lg hover:bg-sage-100">&larr; Back</a>
+            <h1 class="text-xl font-bold text-ink">{{ patient.full_name }}</h1>
         </div>
         <div class="flex gap-2">
             <a href="{% url 'patients:patient_edit' patient.pk %}" class="btn-secondary btn-sm">Edit</a>
@@ -14,35 +14,35 @@
     </div>
 
     <div class="card mb-6">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Patient Information</h3>
+        <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Patient Information</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Patient #</label><p class="text-sm font-medium">{{ patient.patient_number }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Full Name</label><p class="text-sm font-medium">{{ patient.full_name }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Birthdate</label><p class="text-sm font-medium">{{ patient.birthdate|date:'M d, Y' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Age / Sex</label><p class="text-sm font-medium">{{ patient.age }} / {{ patient.get_sex_display }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Civil Status</label><p class="text-sm font-medium">{{ patient.get_civil_status_display }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Contact #</label><p class="text-sm font-medium">{{ patient.contact_number }}</p></div>
-            <div class="md:col-span-3"><label class="text-xs text-gray-500 uppercase tracking-wider">Address</label><p class="text-sm font-medium">{{ patient.address }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Barangay</label><p class="text-sm font-medium">{{ patient.barangay|default:'-' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Parent/Guardian</label><p class="text-sm font-medium">{{ patient.parent_guardian|default:'N/A' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase tracking-wider">Emergency Contact</label><p class="text-sm font-medium">{{ patient.emergency_contact_name|default:'N/A' }} - {{ patient.emergency_contact_number|default:'N/A' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Patient #</label><p class="text-sm font-medium">{{ patient.patient_number }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Full Name</label><p class="text-sm font-medium">{{ patient.full_name }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Birthdate</label><p class="text-sm font-medium">{{ patient.birthdate|date:'M d, Y' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Age / Sex</label><p class="text-sm font-medium">{{ patient.age }} / {{ patient.get_sex_display }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Civil Status</label><p class="text-sm font-medium">{{ patient.get_civil_status_display }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Contact #</label><p class="text-sm font-medium">{{ patient.contact_number }}</p></div>
+            <div class="md:col-span-3"><label class="text-xs text-muted uppercase tracking-wider">Address</label><p class="text-sm font-medium">{{ patient.address }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Barangay</label><p class="text-sm font-medium">{{ patient.barangay|default:'-' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Parent/Guardian</label><p class="text-sm font-medium">{{ patient.parent_guardian|default:'N/A' }}</p></div>
+            <div><label class="text-xs text-muted uppercase tracking-wider">Emergency Contact</label><p class="text-sm font-medium">{{ patient.emergency_contact_name|default:'N/A' }} - {{ patient.emergency_contact_number|default:'N/A' }}</p></div>
         </div>
         {% if patient.medical_history or patient.allergy_info or patient.previous_rabies_vax %}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
-            {% if patient.medical_history %}<div><label class="text-xs text-gray-500 uppercase tracking-wider">Medical History</label><p class="text-sm">{{ patient.medical_history }}</p></div>{% endif %}
-            {% if patient.allergy_info %}<div><label class="text-xs text-gray-500 uppercase tracking-wider">Allergies</label><p class="text-sm">{{ patient.allergy_info }}</p></div>{% endif %}
-            {% if patient.previous_rabies_vax %}<div><label class="text-xs text-gray-500 uppercase tracking-wider">Previous Rabies Vax</label><p class="text-sm">{{ patient.previous_rabies_vax }}</p></div>{% endif %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-line">
+            {% if patient.medical_history %}<div><label class="text-xs text-muted uppercase tracking-wider">Medical History</label><p class="text-sm">{{ patient.medical_history }}</p></div>{% endif %}
+            {% if patient.allergy_info %}<div><label class="text-xs text-muted uppercase tracking-wider">Allergies</label><p class="text-sm">{{ patient.allergy_info }}</p></div>{% endif %}
+            {% if patient.previous_rabies_vax %}<div><label class="text-xs text-muted uppercase tracking-wider">Previous Rabies Vax</label><p class="text-sm">{{ patient.previous_rabies_vax }}</p></div>{% endif %}
         </div>
         {% endif %}
-        {% if patient.remarks %}<div class="mt-4 pt-4 border-t border-gray-100"><label class="text-xs text-gray-500 uppercase tracking-wider">Remarks</label><p class="text-sm">{{ patient.remarks }}</p></div>{% endif %}
+        {% if patient.remarks %}<div class="mt-4 pt-4 border-t border-line"><label class="text-xs text-muted uppercase tracking-wider">Remarks</label><p class="text-sm">{{ patient.remarks }}</p></div>{% endif %}
     </div>
 
     <div class="card">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Bite Cases History</h3>
+        <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Bite Cases History</h3>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
-                    <tr class="border-b border-gray-100">
+                    <tr class="border-b border-line">
                         <th class="table-header">Case #</th>
                         <th class="table-header">Date</th>
                         <th class="table-header">Animal</th>
@@ -51,9 +51,9 @@
                         <th class="table-header text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50">
+                <tbody class="divide-y divide-sage-100">
                     {% for case in bite_cases %}
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-sage-50">
                         <td class="table-cell font-medium">{{ case.case_number }}</td>
                         <td class="table-cell">{{ case.date_time_bite|date:'M d, Y' }}</td>
                         <td class="table-cell capitalize">{{ case.get_animal_type_display }}</td>
@@ -62,7 +62,7 @@
                         <td class="table-cell text-right"><a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary btn-xs">View</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center py-8 text-gray-500">No bite cases recorded.</td></tr>
+                    <tr><td colspan="6" class="text-center py-8 text-muted">No bite cases recorded.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

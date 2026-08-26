@@ -26,23 +26,28 @@ def convert_to_official_case(pre_registration, user):
         return pre_registration.converted_patient, pre_registration.converted_case
 
     barangay, _ = Barangay.objects.get_or_create(name=pre_registration.barangay, defaults={"is_active": True})
-    patient = Patient.objects.create(
-        patient_number=generate_patient_number(),
-        first_name=pre_registration.first_name,
-        middle_name=pre_registration.middle_name,
-        last_name=pre_registration.last_name,
-        suffix=pre_registration.suffix,
-        birthdate=pre_registration.birthdate,
-        sex=pre_registration.sex,
-        contact_number=pre_registration.contact_number,
-        address=pre_registration.address,
-        barangay=barangay,
-        parent_guardian=pre_registration.guardian_name,
-        emergency_contact_name=pre_registration.emergency_contact_name,
-        emergency_contact_number=pre_registration.emergency_contact_number,
-        remarks=pre_registration.remarks,
-        created_by=user,
-    )
+    patient = None
+    if pre_registration.account_id:
+        patient = Patient.objects.filter(account=pre_registration.account).first()
+    if patient is None:
+        patient = Patient.objects.create(
+            patient_number=generate_patient_number(),
+            account=pre_registration.account,
+            first_name=pre_registration.first_name,
+            middle_name=pre_registration.middle_name,
+            last_name=pre_registration.last_name,
+            suffix=pre_registration.suffix,
+            birthdate=pre_registration.birthdate,
+            sex=pre_registration.sex,
+            contact_number=pre_registration.contact_number,
+            address=pre_registration.address,
+            barangay=barangay,
+            parent_guardian=pre_registration.guardian_name,
+            emergency_contact_name=pre_registration.emergency_contact_name,
+            emergency_contact_number=pre_registration.emergency_contact_number,
+            remarks=pre_registration.remarks,
+            created_by=user,
+        )
     case = AnimalBiteCase.objects.create(
         case_number=generate_case_number(),
         patient=patient,

@@ -3,8 +3,8 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <div class="card">
-        <h1 class="text-xl font-bold text-predator-black">Possible Duplicate Warning</h1>
-        <p class="mt-2 text-sm text-gray-600">Review these possible duplicate pre-registrations before converting {{ record.pre_registration_number }} into an official patient and case record.</p>
+        <h1 class="text-xl font-bold text-ink">Possible Duplicate Warning</h1>
+        <p class="mt-2 text-sm text-ink/70">Review these possible duplicate pre-registrations before converting {{ record.pre_registration_number }} into an official patient and case record.</p>
         <ul class="mt-4 space-y-2">
             {% for duplicate in duplicates %}
             <li class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm">

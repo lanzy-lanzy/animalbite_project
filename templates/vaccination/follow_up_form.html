@@ -1,22 +1,89 @@
 {% extends 'base.html' %}
-{% block title %}Add Follow-Up{% endblock %}
+{% block title %}Add Follow-Up — {{ case.case_number }}{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-        <h1 class="text-xl font-bold text-predator-black">Add Follow-Up - {{ case.case_number }}</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center gap-3">
+        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink leading-none">Add Follow-Up</h1>
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">{{ case.case_number }} · {{ case.patient.full_name }} · {{ case.get_animal_type_display }}</p>
+        </div>
+        <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending by default
+        </span>
     </div>
+
+    <div class="card bg-sage-50 border-dashed p-4 flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-950 text-white flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <p class="text-sm font-medium text-ink"><span class="font-bold">Keep it simple:</span> Pick a <span class="font-bold">date</span> → leave <span class="font-bold">Pending</span> → change to <span class="text-emerald-700 font-bold">Completed / Contacted</span> when done, or <span class="text-red-600 font-bold">Missed</span> if the patient didn’t show. One field, one tap.</p>
+    </div>
+
     <div class="card">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+                <h2 class="font-display text-sm font-bold text-ink">Follow-up details</h2>
+                <p class="text-xs font-medium text-muted">Date when the patient should return or be contacted</p>
+            </div>
+        </div>
+
         <form method="POST" class="space-y-4">
             {% csrf_token %}
-            <div><label class="form-label">Follow-Up Date</label>{{ form.follow_up_date }}</div>
-            <div><label class="form-label">Status</label>{{ form.status }}</div>
-            <div><label class="form-label">Notes</label>{{ form.notes }}</div>
-            <div class="flex gap-2 pt-4">
-                <button type="submit" class="btn-primary">Save</button>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Follow-up date *</label>
+                    {{ form.follow_up_date }}
+                    {% if form.follow_up_date.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.follow_up_date.errors.0 }}</p>{% endif %}
+                    <p class="text-xs font-medium text-muted mt-1">Overdue is auto-flagged in the list</p>
+                </div>
+                <div>
+                    <label class="form-label">Status *</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.status.errors.0 }}</p>{% endif %}
+                    <div class="flex flex-wrap gap-1.5 mt-2 text-xs font-bold">
+                        <span class="px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800">Pending</span>
+                        <span class="px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800">Completed</span>
+                        <span class="px-2 py-1 rounded-full bg-red-50 border border-red-200 text-red-700">Missed</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label class="form-label">Notes (optional)</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.notes.errors.0 }}</p>{% endif %}
+                <p class="text-xs font-medium text-muted mt-1">e.g., “Patient contacted by phone, will return tomorrow”</p>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button type="submit" class="btn-primary">Save Follow-Up</button>
                 <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary">Cancel</a>
+                <a href="{% url 'vaccination:follow_up_list' %}" class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                    View all follow-ups →
+                </a>
             </div>
         </form>
     </div>
+
+    <div class="card bg-emerald-950 border-emerald-950 text-white p-4 flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <p class="text-sm font-medium text-sage-200"><span class="text-white font-bold">Tip:</span> You can also update status directly from the <span class="text-white font-bold">Follow-Up List</span> — just tap the badge and pick a new status. No need to open this form again.</p>
+    </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.4, stagger: 0.07, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

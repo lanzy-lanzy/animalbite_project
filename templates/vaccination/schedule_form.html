@@ -1,27 +1,111 @@
 {% extends 'base.html' %}
-{% block title %}Create Vaccination Schedule{% endblock %}
+{% block title %}Create Schedule — {{ case.case_number }}{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-        <h1 class="text-xl font-bold text-predator-black">Create Vaccination Schedule - {{ case.case_number }}</h1>
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center gap-3">
+        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink leading-none">Create Vaccination Schedule</h1>
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">{{ case.case_number }} · {{ case.patient.full_name }} · {{ case.get_exposure_type_display }}</p>
+        </div>
     </div>
+
+    <div class="card bg-sage-50 border-dashed p-4 flex gap-3">
+        <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+            <p class="text-sm font-bold text-ink">Auto-generates PEP doses — no manual scheduling</p>
+            <p class="text-xs font-medium text-muted mt-1">Creates <span class="font-bold text-ink">Day 0 · 3 · 7 · 14 · 28</span> from consultation date (configurable in Settings → vaccination_days). You only choose RIG / tetanus / antibiotics here. Doses are then managed one-tap in the schedule.</p>
+        </div>
+    </div>
+
     <div class="card">
-        <form method="POST" class="space-y-4">
-            {% csrf_token %}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label class="form-label">RIG Given</label>{{ form.rig_given }}</div>
-                <div><label class="form-label">Tetanus Toxoid</label>{{ form.tetanus_toxoid_given }}</div>
-                <div><label class="form-label">Antibiotics</label>{{ form.antibiotics_given }}</div>
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
             </div>
-            <div><label class="form-label">Other Medicine</label>{{ form.other_medicine }}</div>
-            <div><label class="form-label">Doctor Notes</label>{{ form.doctor_notes }}</div>
-            <div class="flex gap-2 pt-4">
-                <button type="submit" class="btn-primary">Create Schedule</button>
+            <div>
+                <h2 class="font-display text-sm font-bold text-ink">PEP Options</h2>
+                <p class="text-xs font-medium text-muted">Check what was actually given</p>
+            </div>
+        </div>
+
+        <form method="POST" class="space-y-5">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <label class="group relative flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-colors {% if form.rig_given.value %}bg-emerald-50 border-emerald-300{% else %}bg-white border-line hover:border-emerald-200{% endif %}">
+                    {{ form.rig_given }}
+                    <div>
+                        <p class="text-sm font-bold text-ink">RIG Given</p>
+                        <p class="text-xs font-medium text-muted">Rabies immunoglobulin</p>
+                    </div>
+                </label>
+                <label class="group relative flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-colors {% if form.tetanus_toxoid_given.value %}bg-emerald-50 border-emerald-300{% else %}bg-white border-line hover:border-emerald-200{% endif %}">
+                    {{ form.tetanus_toxoid_given }}
+                    <div>
+                        <p class="text-sm font-bold text-ink">Tetanus Toxoid</p>
+                        <p class="text-xs font-medium text-muted">If indicated</p>
+                    </div>
+                </label>
+                <label class="group relative flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-colors {% if form.antibiotics_given.value %}bg-emerald-50 border-emerald-300{% else %}bg-white border-line hover:border-emerald-200{% endif %}">
+                    {{ form.antibiotics_given }}
+                    <div>
+                        <p class="text-sm font-bold text-ink">Antibiotics</p>
+                        <p class="text-xs font-medium text-muted">If prescribed</p>
+                    </div>
+                </label>
+            </div>
+
+            {% if form.rig_given.errors or form.tetanus_toxoid_given.errors or form.antibiotics_given.errors %}
+            <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-medium text-red-700">
+                Please check the PEP options.
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="form-label">Other medicine (optional)</label>
+                {{ form.other_medicine }}
+                <p class="text-xs font-medium text-muted mt-1">e.g., analgesic, antihistamine — free text</p>
+            </div>
+            <div>
+                <label class="form-label">Doctor notes (optional)</label>
+                {{ form.doctor_notes }}
+                <p class="text-xs font-medium text-muted mt-1">Assessment, category, plan — will appear on the schedule</p>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button type="submit" class="btn-primary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Create Schedule & Generate Doses
+                </button>
                 <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary">Cancel</a>
+                <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 5 doses auto-created
+                </span>
             </div>
         </form>
     </div>
-    <p class="text-xs text-gray-400 mt-4">A default vaccination schedule (Days 0, 3, 7, 14, 28) will be automatically generated based on system settings.</p>
+
+    <div class="card bg-emerald-950 border-emerald-950 text-white p-5 flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+            <p class="text-sm font-bold">What happens next?</p>
+            <p class="text-sm font-medium text-sage-200 mt-1">You’ll land on the <span class="text-white font-bold">Schedule Timeline</span> — tap <span class="text-white font-bold">Update</span> on Day 0 to mark Completed (stock deducted). Follow-ups are created from the case page when needed. One flow, no duplication.</p>
+        </div>
+    </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.45, stagger: 0.07, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

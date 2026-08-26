@@ -1,34 +1,125 @@
 {% extends 'base.html' %}
-{% block title %}Update Dose - {{ dose.dose_label }}{% endblock %}
+{% block title %}Update {{ dose.dose_label }} — ABTC{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'vaccination:schedule_detail' dose.schedule.pk %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-        <h1 class="text-xl font-bold text-predator-black">Update Dose - {{ dose.dose_label }}</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center gap-3">
+        <a href="{% url 'vaccination:schedule_detail' dose.schedule.pk %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink leading-none">Update {{ dose.dose_label }}</h1>
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">{{ dose.schedule.bite_case.case_number }} · {{ dose.schedule.bite_case.patient.full_name }}</p>
+        </div>
+        <span class="ml-auto status-badge status-{{ dose.dose_status }}">{{ dose.get_dose_status_display }}</span>
     </div>
+
+    <div class="card bg-sage-50 border-dashed p-4 flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-950 text-white flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <p class="text-sm font-medium text-ink"><span class="font-bold">Workflow:</span> Set <span class="text-emerald-700 font-bold">Status</span> first. If <span class="font-bold">Completed</span>, fill <span class="font-bold">Actual Date</span> + <span class="font-bold">Vaccine / Batch</span> → stock auto-deducts. If <span class="font-bold">Missed</span>, create a Follow-up.</p>
+    </div>
+
     <div class="card">
-        <p class="text-sm text-gray-500 mb-4">Case: {{ dose.schedule.bite_case.case_number }} | Patient: {{ dose.schedule.bite_case.patient.full_name }}</p>
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <h2 class="font-display text-sm font-bold text-ink">{{ dose.dose_label }} · {{ dose.scheduled_date|date:'M d, Y' }}</h2>
+                <p class="text-xs font-medium text-muted">Scheduled {{ dose.scheduled_date|date:'l' }} · Update to reflect reality</p>
+            </div>
+        </div>
+
         <form method="POST" class="space-y-4">
             {% csrf_token %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="form-label">Dose Label</label>{{ form.dose_label }}</div>
-                <div><label class="form-label">Scheduled Date</label>{{ form.scheduled_date }}</div>
+                <div>
+                    <label class="form-label">Dose label</label>
+                    {{ form.dose_label }}
+                    {% if form.dose_label.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.dose_label.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Scheduled date</label>
+                    {{ form.scheduled_date }}
+                    {% if form.scheduled_date.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.scheduled_date.errors.0 }}</p>{% endif %}
+                </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="form-label">Actual Date Given</label>{{ form.actual_date }}</div>
-                <div><label class="form-label">Status</label>{{ form.dose_status }}</div>
+                <div>
+                    <label class="form-label">Actual date given <span class="text-muted font-normal">(required if Completed)</span></label>
+                    {{ form.actual_date }}
+                    {% if form.actual_date.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.actual_date.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Status *</label>
+                    {{ form.dose_status }}
+                    {% if form.dose_status.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.dose_status.errors.0 }}</p>{% endif %}
+                    <p class="text-xs font-medium text-muted mt-1">Completed → stock −1, Missed → follow-up needed</p>
+                </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="form-label">Vaccine Brand</label>{{ form.vaccine_brand }}</div>
-                <div><label class="form-label">Batch Number</label>{{ form.batch_number }}</div>
+
+            <div class="rounded-xl bg-sage-50 border border-line p-4 space-y-4">
+                <p class="text-xs font-bold tracking-widest uppercase text-muted flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-white border border-line flex items-center justify-center text-emerald-700"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></span>
+                    Vaccine details — only if Completed
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Vaccine brand</label>
+                        {{ form.vaccine_brand }}
+                        {% if form.vaccine_brand.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.vaccine_brand.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="form-label">Batch number</label>
+                        {{ form.batch_number }}
+                        {% if form.batch_number.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.batch_number.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">Expiration date</label>
+                    {{ form.expiration_date }}
+                </div>
+                <p class="text-xs font-medium text-muted">Brand/batch must match an <span class="font-bold text-ink">available</span> lot to deduct stock.</p>
             </div>
-            <div><label class="form-label">Expiration Date</label>{{ form.expiration_date }}</div>
-            <div><label class="form-label">Remarks</label>{{ form.remarks }}</div>
-            <div class="flex gap-2 pt-4">
-                <button type="submit" class="btn-primary">Update Dose</button>
+
+            <div>
+                <label class="form-label">Remarks</label>
+                {{ form.remarks }}
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button type="submit" class="btn-primary">Save & Update Dose</button>
                 <a href="{% url 'vaccination:schedule_detail' dose.schedule.pk %}" class="btn-secondary">Cancel</a>
+                <a href="{% url 'bite_cases:case_detail' dose.schedule.bite_case.pk %}" class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                    Back to case →
+                </a>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.4, stagger: 0.07, ease: 'power2.out' });
+    }
+    // Simple UX: highlight vaccine fields when status is Completed
+    const statusEl = document.querySelector('select[name="dose_status"]');
+    const vaccineBox = document.querySelector('.bg-sage-50.border');
+    function toggleVaccine(){
+        if(!statusEl || !vaccineBox) return;
+        if(statusEl.value === 'completed'){
+            vaccineBox.classList.add('ring-2','ring-emerald-200','bg-emerald-50');
+            vaccineBox.classList.remove('bg-sage-50');
+        } else {
+            vaccineBox.classList.remove('ring-2','ring-emerald-200','bg-emerald-50');
+            vaccineBox.classList.add('bg-sage-50');
+        }
+    }
+    if(statusEl){ statusEl.addEventListener('change', toggleVaccine); toggleVaccine(); }
+</script>
 {% endblock %}

@@ -1,45 +1,323 @@
 {% extends 'base.html' %}
-{% block title %}Cases Report - ABTC System{% endblock %}
+{% block title %}Cases Report — ABTC{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h1 class="text-xl font-bold text-predator-black">{{ title }}</h1>
+<div x-data="{
+    previewOpen:false,
+    previewSrc:'',
+    previewBlob:'',
+    isLoading:false,
+    previewError:'',
+    async openPreview(url){
+        this.previewSrc=url;
+        this.previewBlob='';
+        this.previewError='';
+        this.isLoading=true;
+        this.previewOpen=true;
+        try{
+            const res=await fetch(url, {credentials:'same-origin'});
+            if(!res.ok) throw new Error('Server '+res.status);
+            const blob=await res.blob();
+            if(!blob.type.includes('pdf') && blob.size<500) throw new Error('Invalid PDF');
+            this.previewBlob=URL.createObjectURL(blob);
+            this.$nextTick(()=>{
+                const f=this.$refs.pdfFrame;
+                if(f) f.src=this.previewBlob;
+                this.isLoading=false;
+            });
+        }catch(e){
+            console.error(e);
+            this.previewError=e.message;
+            this.isLoading=false;
+            this.$nextTick(()=>{
+                const f=this.$refs.pdfFrame;
+                if(f) f.src=url;
+            });
+        }
+    },
+    printPreview(){
+    const el=document.getElementById('report-print-area');
+    const w=window.open('', '_blank');
+    w.document.write('<html><head><title>{{ title }}</title><link rel=\'stylesheet\' href=\'/static/css/output.css\'><style>@media print{ .no-print{display:none!important} body{ background:white!important } }</style></head><body>'+el.innerHTML+'</body></html>');
+    w.document.close(); w.focus(); setTimeout(()=>w.print(), 300);
+} }" class="space-y-5">
+
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <a href="{% url 'reports:reports_index' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Reports
+            </a>
+            <h1 class="font-display text-2xl font-bold text-ink mt-1">{{ title }}</h1>
+            <p class="text-sm font-medium text-muted">{{ label }} · <span class="text-ink font-bold">{{ total }}</span> record{{ total|pluralize }} · {{ page_obj.paginator.count }} filtered</p>
+        </div>
+        <div class="flex flex-wrap gap-2 no-print">
+            <button @click="openPreview('{{ request.path }}?{% for k,v in request.GET.items %}{% if k != 'export' and k != 'preview' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=pdf&preview=1')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Preview PDF
+            </button>
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=pdf" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-ink text-sm font-bold hover:bg-sage-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v2m6 4H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Download PDF
+            </a>
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}export=csv" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-ink text-sm font-bold hover:bg-sage-50">
+                Export CSV
+            </a>
+            <button @click="printPreview()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-ink text-sm font-bold hover:bg-sage-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z"/></svg>
+                Print
+            </button>
+        </div>
     </div>
-    <div class="flex gap-2">
-        <a href="{% url 'reports:reports_index' %}" class="btn-secondary btn-sm">Back to Reports</a>
-        <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&export=csv{% endif %}" class="btn-primary btn-sm">Export CSV</a>
+
+    <!-- Filters — comprehensive date range + context -->
+    <div class="card">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l-4 4"/></svg></span>
+                Filters — date range is primary
+            </h2>
+            <span class="text-xs font-bold tracking-widest uppercase px-2.5 py-1 rounded-full {% if has_filters %}bg-amber-50 border border-amber-200 text-amber-800{% else %}bg-sage-50 border border-line text-muted{% endif %}">{% if has_filters %}Filtered{% else %}All time{% endif %}</span>
+        </div>
+
+        <form method="GET" class="space-y-4">
+            <!-- Preset pills -->
+            <div class="flex flex-wrap gap-2">
+                <a href="?type=daily" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Daily</a>
+                <a href="?type=weekly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Weekly</a>
+                <a href="?type=monthly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Monthly</a>
+                <a href="?type=last7" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 7 days</a>
+                <a href="?type=last30" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 30 days</a>
+                <a href="?type=annual" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'annual' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Annual</a>
+                <a href="?type=custom" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'custom' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">Custom range</a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                <div>
+                    <label class="form-label">Start date</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label">End date</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label">Barangay</label>
+                    <input type="text" name="barangay" value="{{ selected_barangay }}" list="brgy-list" placeholder="All" class="form-input">
+                    <datalist id="brgy-list">
+                        {% for b in barangays %}<option value="{{ b }}">{% endfor %}
+                    </datalist>
+                </div>
+                <div>
+                    <label class="form-label">Animal</label>
+                    <select name="animal" class="form-input">
+                        <option value="">All</option>
+                        <option value="dog" {% if selected_animal == 'dog' %}selected{% endif %}>Dog</option>
+                        <option value="cat" {% if selected_animal == 'cat' %}selected{% endif %}>Cat</option>
+                        <option value="monkey" {% if selected_animal == 'monkey' %}selected{% endif %}>Monkey</option>
+                        <option value="bat" {% if selected_animal == 'bat' %}selected{% endif %}>Bat</option>
+                        <option value="other" {% if selected_animal == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-input">
+                        <option value="">All</option>
+                        <option value="new" {% if selected_status == 'new' %}selected{% endif %}>New</option>
+                        <option value="under_treatment" {% if selected_status == 'under_treatment' %}selected{% endif %}>Under Treatment</option>
+                        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="missed" {% if selected_status == 'missed' %}selected{% endif %}>Missed</option>
+                        <option value="referred" {% if selected_status == 'referred' %}selected{% endif %}>Referred</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Exposure</label>
+                    <select name="exposure" class="form-input">
+                        <option value="">All</option>
+                        <option value="bite" {% if selected_exposure == 'bite' %}selected{% endif %}>Bite</option>
+                        <option value="scratch" {% if selected_exposure == 'scratch' %}selected{% endif %}>Scratch</option>
+                        <option value="lick" {% if selected_exposure == 'lick' %}selected{% endif %}>Lick</option>
+                        <option value="saliva" {% if selected_exposure == 'saliva' %}selected{% endif %}>Saliva</option>
+                        <option value="other" {% if selected_exposure == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div class="lg:col-span-2">
+                    <label class="form-label">Search (case # or patient)</label>
+                    <input type="text" name="q" value="{{ q }}" placeholder="e.g., AB-2024-001 or Juan Dela Cruz" class="form-input">
+                </div>
+                <div class="flex items-end gap-2">
+                    <input type="hidden" name="type" value="{{ report_type }}">
+                    <button type="submit" class="btn-primary flex-1">Apply Filters</button>
+                    <a href="{% url 'reports:cases_report' %}" class="btn-secondary">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ total }}</p>
+            <p class="text-xs font-medium text-muted mt-1">{{ label }}</p>
+        </div>
+        {% for s in by_status|slice:":3" %}
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted truncate">{{ s.case_status }}</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ s.c }}</p>
+            <p class="text-xs font-medium text-muted">{% widthratio s.c total 100 %}% of total</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Preview Table — print area -->
+    <div id="report-print-area" class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Preview — {{ title }}</h3>
+                <p class="text-xs font-medium text-muted">{{ label }} · {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}</p>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-700 bg-white border border-line px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live preview
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Case #</th>
+                        <th class="table-header">Patient</th>
+                        <th class="table-header">Date</th>
+                        <th class="table-header">Animal</th>
+                        <th class="table-header">Exposure</th>
+                        <th class="table-header">Barangay</th>
+                        <th class="table-header">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for case in cases %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell font-bold text-ink">{{ case.case_number }}</td>
+                        <td class="table-cell">{{ case.patient.full_name }}</td>
+                        <td class="table-cell text-muted">{{ case.created_at|date:'M d, Y' }}</td>
+                        <td class="table-cell capitalize">{{ case.get_animal_type_display }}</td>
+                        <td class="table-cell capitalize">{{ case.get_exposure_type_display }}</td>
+                        <td class="table-cell">{{ case.incident_barangay }}</td>
+                        <td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-12">
+                        <div class="w-12 h-12 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <p class="text-sm font-semibold text-ink mt-3">No cases found for this period.</p>
+                        <p class="text-xs text-muted mt-1">Adjust date range or filters and apply again.</p>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-between px-5 py-3 border-t border-line bg-sage-50">
+            <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+            <div class="flex gap-2">
+                {% if page_obj.has_previous %}<a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="btn-secondary btn-xs">Previous</a>{% endif %}
+                {% if page_obj.has_next %}<a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="btn-secondary btn-xs">Next</a>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="px-5 py-3 border-t border-line bg-white flex flex-wrap gap-2 text-xs font-medium text-muted">
+            <span>Generated {% now "M d, Y h:i A" %}</span>
+            <span class="opacity-40">·</span>
+            <span>ABTC System · Confidential</span>
+            <span class="ml-auto hidden sm:inline">Check filters before PDF/print — preview is live.</span>
+        </div>
+    </div>
+
+    <!-- Secondary summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="card">
+            <h3 class="font-display text-sm font-bold text-ink mb-3">By Barangay (Top 5)</h3>
+            <div class="space-y-2.5">
+                {% for b in by_barangay %}
+                <div class="flex items-center justify-between p-2 rounded-xl hover:bg-sage-50">
+                    <span class="text-sm font-semibold text-ink truncate flex-1">{{ b.incident_barangay|default:"Unknown" }}</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-20 h-1.5 bg-sage-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-700 rounded-full" style="width:{% widthratio b.c total 100 %}%"></div></div>
+                        <span class="text-sm font-bold text-ink w-6 text-right">{{ b.c }}</span>
+                    </div>
+                </div>
+                {% empty %}<p class="text-sm text-muted text-center py-4">No data</p>{% endfor %}
+            </div>
+        </div>
+        <div class="card">
+            <h3 class="font-display text-sm font-bold text-ink mb-3">By Animal</h3>
+            <div class="space-y-2.5">
+                {% for a in by_animal %}
+                <div class="flex items-center justify-between p-2 rounded-xl hover:bg-sage-50">
+                    <span class="text-sm font-semibold text-ink capitalize">{{ a.animal_type }}</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-20 h-1.5 bg-sage-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-800 rounded-full" style="width:{% widthratio a.c total 100 %}%"></div></div>
+                        <span class="text-sm font-bold text-ink w-6 text-right">{{ a.c }}</span>
+                    </div>
+                </div>
+                {% empty %}<p class="text-sm text-muted text-center py-4">No data</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Preview Modal -->
+    <div x-show="previewOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="previewOpen=false" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-5xl h-[85vh] bg-white rounded-2xl shadow-2xl border border-line overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-line bg-sage-50">
+                <div>
+                    <h3 class="font-display text-sm font-bold text-ink">PDF Preview — {{ title }}</h3>
+                    <p class="text-xs font-medium text-muted">Review before download/print. Use browser print if needed.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a :href="previewSrc.replace('preview=1','')" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">Download</a>
+                    <button @click="previewSrc && window.open(previewSrc.replace('preview=1',''), '_blank')" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Open in new tab</button>
+                    <button @click="previewOpen=false" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-muted hover:text-ink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 relative bg-white overflow-hidden">
+                <div x-show="isLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                    <svg class="w-8 h-8 animate-spin text-emerald-700" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    <p class="text-sm font-semibold text-ink mt-3">Loading PDF preview…</p>
+                    <p class="text-xs text-muted">Filters applied · please wait</p>
+                </div>
+                <div x-show="previewError" x-cloak class="absolute inset-0 flex flex-col items-center justify-center bg-sage-50 p-6 text-center z-10">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <p class="text-sm font-bold text-ink mt-3">Preview failed — download instead</p>
+                    <p class="text-xs text-muted mt-1" x-text="previewError"></p>
+                    <div class="flex gap-2 mt-4">
+                        <a :href="previewSrc" class="px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">Download PDF</a>
+                        <a :href="previewSrc.replace('preview=1','')" target="_blank" class="px-4 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Open in new tab</a>
+                    </div>
+                    <p class="text-xs text-muted mt-3">Or use <span class="font-bold text-ink">Print</span> for the interactive table preview below.</p>
+                </div>
+                <iframe x-ref="pdfFrame" class="w-full h-full border-0 bg-white" title="PDF preview"></iframe>
+            </div>
+            <div class="px-5 py-3 border-t border-line bg-sage-50 flex items-center justify-between text-xs font-medium text-muted">
+                <span>Preview is live — filters applied. Close to return to interactive preview.</span>
+                <button @click="previewOpen=false" class="text-ink font-bold hover:underline">Close</button>
+            </div>
+        </div>
     </div>
 </div>
-<div class="card">
-    <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-gray-100">
-                    <th class="table-header">Case #</th>
-                    <th class="table-header">Patient</th>
-                    <th class="table-header">Date</th>
-                    <th class="table-header">Animal</th>
-                    <th class="table-header">Exposure</th>
-                    <th class="table-header">Barangay</th>
-                    <th class="table-header">Status</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for case in cases %}
-                <tr class="hover:bg-gray-50">
-                    <td class="table-cell font-medium">{{ case.case_number }}</td>
-                    <td class="table-cell">{{ case.patient.full_name }}</td>
-                    <td class="table-cell">{{ case.created_at|date:'M d, Y' }}</td>
-                    <td class="table-cell capitalize">{{ case.get_animal_type_display }}</td>
-                    <td class="table-cell capitalize">{{ case.get_exposure_type_display }}</td>
-                    <td class="table-cell">{{ case.incident_barangay }}</td>
-                    <td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="7" class="text-center py-8 text-gray-500">No cases found for this period.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.4, stagger: 0.04, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

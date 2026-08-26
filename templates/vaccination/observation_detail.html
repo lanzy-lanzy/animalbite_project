@@ -1,29 +1,101 @@
 {% extends 'base.html' %}
-{% block title %}Animal Observation - {{ observation.bite_case.case_number }}{% endblock %}
+{% block title %}Observation — {{ observation.bite_case.case_number }}{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'bite_cases:case_detail' observation.bite_case.pk %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-        <h1 class="text-xl font-bold text-predator-black">Animal Observation</h1>
-    </div>
-    <div class="card">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="text-xs text-gray-500 uppercase">Case #</label><p class="text-sm font-medium">{{ observation.bite_case.case_number }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Animal</label><p class="text-sm font-medium capitalize">{{ observation.bite_case.get_animal_type_display }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Owner</label><p class="text-sm font-medium">{{ observation.animal_owner_name|default:'N/A' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Contact</label><p class="text-sm font-medium">{{ observation.owner_contact|default:'N/A' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Start Date</label><p class="text-sm font-medium">{{ observation.start_date|date:'M d, Y' }}</p></div>
-            <div><label class="text-xs text-gray-500 uppercase">Final Condition</label><p class="text-sm font-medium">{{ observation.get_final_condition_display|default:'Under Observation' }}</p></div>
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center gap-3">
+        <a href="{% url 'bite_cases:case_detail' observation.bite_case.pk %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink leading-none">Animal Observation</h1>
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">{{ observation.bite_case.case_number }} · {{ observation.bite_case.get_animal_type_display }}</p>
         </div>
-        {% if observation.observation_notes %}
-        <div class="mt-4"><label class="text-xs text-gray-500 uppercase">Observation Notes</label><p class="text-sm">{{ observation.observation_notes }}</p></div>
-        {% endif %}
-        {% if observation.daily_status %}
-        <div class="mt-4"><label class="text-xs text-gray-500 uppercase">Daily Status</label><p class="text-sm whitespace-pre-line">{{ observation.daily_status }}</p></div>
-        {% endif %}
-        {% if observation.final_remarks %}
-        <div class="mt-4"><label class="text-xs text-gray-500 uppercase">Final Remarks</label><p class="text-sm">{{ observation.final_remarks }}</p></div>
-        {% endif %}
+        <span class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border
+            {% if observation.final_condition == 'healthy' %}bg-emerald-50 border-emerald-200 text-emerald-800
+            {% elif observation.final_condition == 'died' or observation.final_condition == 'sick' %}bg-red-50 border-red-200 text-red-700
+            {% else %}bg-sage-50 border-line text-ink{% endif %}">
+            <span class="w-1.5 h-1.5 rounded-full {% if observation.final_condition == 'healthy' %}bg-emerald-600{% elif observation.final_condition == 'died' %}bg-red-500{% else %}bg-sage-400{% endif %}"></span>
+            {{ observation.get_final_condition_display|default:'Under Observation' }}
+        </span>
+    </div>
+
+    <div class="card">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="rounded-xl bg-sage-50 border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Case #</p>
+                <p class="text-sm font-bold text-ink mt-1">{{ observation.bite_case.case_number }}</p>
+                <p class="text-xs font-medium text-muted">{{ observation.bite_case.patient.full_name }}</p>
+            </div>
+            <div class="rounded-xl bg-white border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Animal</p>
+                <p class="text-sm font-bold text-ink mt-1 capitalize">{{ observation.bite_case.get_animal_type_display }}</p>
+                <p class="text-xs font-medium text-muted">{{ observation.bite_case.incident_barangay }}</p>
+            </div>
+            <div class="rounded-xl bg-white border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Owner</p>
+                <p class="text-sm font-bold text-ink mt-1">{{ observation.animal_owner_name|default:'—' }}</p>
+                <p class="text-xs font-medium text-muted">{{ observation.owner_contact|default:'No contact' }}</p>
+            </div>
+            <div class="rounded-xl bg-white border border-line p-3.5">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Start date</p>
+                <p class="text-sm font-bold text-ink mt-1">{{ observation.start_date|date:'M d, Y' }}</p>
+                <p class="text-xs font-medium text-muted">{{ observation.start_date|date:'l' }}</p>
+            </div>
+        </div>
+
+        <div class="mt-5 space-y-4">
+            {% if observation.animal_location %}
+            <div class="rounded-xl bg-white border border-line p-4">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Animal location</p>
+                <p class="text-sm font-medium text-ink mt-1">{{ observation.animal_location }}</p>
+            </div>
+            {% endif %}
+            {% if observation.observation_notes %}
+            <div class="rounded-xl bg-sage-50 border border-line p-4">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Observation notes</p>
+                <p class="text-sm font-medium text-ink mt-1 whitespace-pre-line">{{ observation.observation_notes }}</p>
+            </div>
+            {% endif %}
+            {% if observation.daily_status %}
+            <div class="rounded-xl bg-white border border-line p-4">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-emerald-950 text-white flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+                    Daily status
+                </p>
+                <p class="text-sm font-medium text-ink mt-3 whitespace-pre-line bg-sage-50 border border-line rounded-xl p-3">{{ observation.daily_status }}</p>
+            </div>
+            {% endif %}
+            {% if observation.final_condition %}
+            <div class="rounded-xl {% if observation.final_condition == 'healthy' %}bg-emerald-50 border-emerald-200{% elif observation.final_condition == 'died' %}bg-red-50 border-red-200{% else %}bg-sage-50 border-line{% endif %} border p-4">
+                <p class="text-[11px] font-bold tracking-widest uppercase {% if observation.final_condition == 'healthy' %}text-emerald-700{% elif observation.final_condition == 'died' %}text-red-700{% else %}text-muted{% endif %}">Final condition</p>
+                <p class="text-sm font-bold {% if observation.final_condition == 'healthy' %}text-emerald-800{% elif observation.final_condition == 'died' %}text-red-700{% else %}text-ink{% endif %} mt-1">{{ observation.get_final_condition_display }}</p>
+                {% if observation.final_remarks %}
+                <p class="text-sm font-medium text-ink mt-2">{{ observation.final_remarks }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-6">
+            <a href="{% url 'bite_cases:case_detail' observation.bite_case.pk %}" class="btn-secondary">Back to Case</a>
+            <a href="{% url 'vaccination:observation_detail' observation.pk %}" class="ml-auto text-xs font-bold text-muted hover:text-ink">Audited · {{ observation.created_at|date:'M d, Y' }}</a>
+        </div>
+    </div>
+
+    <div class="card bg-sage-50 border-dashed p-4 flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <p class="text-sm font-medium text-ink">Keep daily status updated. If the animal stays <span class="font-bold text-emerald-700">healthy for 14 days</span>, the case can be closed as low-risk.</p>
     </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

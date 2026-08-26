@@ -1,40 +1,185 @@
 {% extends 'base.html' %}
-{% block title %}Reports - ABTC System{% endblock %}
+{% block title %}Reports — ABTC System{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="mb-6">
-    <h1 class="text-xl font-bold text-predator-black">Reports</h1>
-    <p class="text-sm text-gray-500 mt-1">Generate and export reports</p>
+<style>
+    .rep-card{ background:white; border:1.5px solid #c8d8c6; border-radius:1.25rem; padding:1.25rem; box-shadow:0 6px 22px -14px rgba(10,31,26,0.14); transition: transform .18s, box-shadow .18s, border-color .18s; }
+    .rep-card:hover{ transform:translateY(-2px); box-shadow:0 14px 36px -14px rgba(10,31,26,0.18); border-color:#a9bfa8; }
+</style>
+
+<!-- Hero -->
+<div class="relative overflow-hidden rounded-[1.5rem] border text-white shadow-xl shadow-emerald-950/15 mb-6" style="background:#0a1f1a; border-color:#0a1f1a;">
+    <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+    <div class="absolute -top-20 -right-20 w-[380px] h-[380px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+    <div class="relative p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+        <div>
+            <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Reporting & Analytics · Live
+            </p>
+            <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight mt-3">Reports Center</h1>
+            <p class="text-sm font-medium text-sage-200 mt-1.5 max-w-xl">Filter by date range, preview live, then export print-ready PDF or CSV. All data is audited and filtered server-side.</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="bg-white text-ink rounded-2xl px-4 py-3 min-w-[120px] shadow-lg">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total in view</p>
+                <p class="font-display text-2xl font-bold leading-none mt-1">{{ total|default:0 }}</p>
+                <p class="text-xs font-medium text-muted mt-1">{{ label }}</p>
+            </div>
+            <div class="hidden sm:block bg-white/10 backdrop-blur border border-white/15 rounded-2xl px-4 py-3">
+                <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Patients</p>
+                <p class="font-display text-2xl font-bold leading-none mt-1 text-white">{{ total_patients|default:0 }}</p>
+                <p class="text-xs font-medium text-sage-200 mt-1">In range</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Global Date Range Filter -->
+<div class="rep-card mb-6" x-data="{type:'{{ report_type }}'}" >
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span>
+            Filter by date & context
+        </h2>
+        <span class="text-xs font-bold tracking-widest uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">{{ label }}</span>
+    </div>
+    <form method="GET" class="space-y-4">
+        <!-- Preset pills -->
+        <div class="flex flex-wrap gap-2">
+            <a href="?type=daily" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Daily</a>
+            <a href="?type=weekly" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Weekly</a>
+            <a href="?type=monthly" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Monthly</a>
+            <a href="?type=last7" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 7 days</a>
+            <a href="?type=last30" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 30 days</a>
+            <a href="?type=annual" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'annual' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Annual</a>
+            <a href="?type=custom" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'custom' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Custom</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+                <label class="form-label">Start date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">End date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">Barangay</label>
+                <input type="text" name="barangay" value="{{ selected_barangay }}" placeholder="All barangays" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">Animal</label>
+                <select name="animal" class="form-input">
+                    <option value="">All animals</option>
+                    <option value="dog" {% if selected_animal == 'dog' %}selected{% endif %}>Dog</option>
+                    <option value="cat" {% if selected_animal == 'cat' %}selected{% endif %}>Cat</option>
+                    <option value="monkey" {% if selected_animal == 'monkey' %}selected{% endif %}>Monkey</option>
+                    <option value="bat" {% if selected_animal == 'bat' %}selected{% endif %}>Bat</option>
+                    <option value="other" {% if selected_animal == 'other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Status</label>
+                <select name="status" class="form-input">
+                    <option value="">All status</option>
+                    <option value="new" {% if selected_status == 'new' %}selected{% endif %}>New</option>
+                    <option value="under_treatment" {% if selected_status == 'under_treatment' %}selected{% endif %}>Under Treatment</option>
+                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="missed" {% if selected_status == 'missed' %}selected{% endif %}>Missed</option>
+                    <option value="referred" {% if selected_status == 'referred' %}selected{% endif %}>Referred</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <input type="hidden" name="type" value="{{ report_type }}">
+            <button type="submit" class="btn-primary">Apply Filters</button>
+            <a href="{% url 'reports:reports_index' %}" class="btn-secondary">Clear</a>
+            <div class="ml-auto flex gap-2">
+                <a href="{% url 'reports:cases_report' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}&barangay={{ selected_barangay }}&animal={{ selected_animal }}&status={{ selected_status }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Open Cases Report →</a>
+            </div>
+        </div>
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+    </form>
+
+    <!-- Live summary for filtered view -->
+    {% if total is not None %}
+    <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="rounded-xl bg-sage-50 border border-line p-3 text-center">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Cases</p>
+            <p class="font-display text-xl font-bold text-ink">{{ total }}</p>
+        </div>
+        {% for s in by_status|slice:":3" %}
+        <div class="rounded-xl bg-white border border-line p-3 text-center">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted truncate">{{ s.case_status }}</p>
+            <p class="font-display text-xl font-bold text-ink">{{ s.c }}</p>
+        </div>
+        {% endfor %}
+        <div class="rounded-xl bg-emerald-950 text-white p-3 text-center">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Patients</p>
+            <p class="font-display text-xl font-bold">{{ total_patients }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Report Hub Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <a href="{% url 'reports:cases_report' %}?type=daily" class="card hover:shadow-md transition-all">
-        <div class="stat-icon bg-blue-100 text-blue-600 mb-3"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-        <h3 class="text-sm font-semibold text-predator-black">Daily Cases Report</h3>
-        <p class="text-xs text-gray-500 mt-1">View and export daily animal bite cases</p>
+    <a href="{% url 'reports:cases_report' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
+        <div class="w-11 h-11 rounded-xl bg-emerald-950 text-white flex items-center justify-center mb-3 group-hover:scale-[1.03] transition-transform">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <h3 class="text-sm font-bold text-ink">Daily Cases Report</h3>
+        <p class="text-xs font-medium text-muted mt-1">Filtered by {{ label|default:"all time" }} · CSV + PDF preview</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
     </a>
-    <a href="{% url 'reports:cases_report' %}?type=weekly" class="card hover:shadow-md transition-all">
-        <div class="stat-icon bg-green-100 text-green-600 mb-3"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
-        <h3 class="text-sm font-semibold text-predator-black">Weekly Cases Report</h3>
-        <p class="text-xs text-gray-500 mt-1">View and export weekly summaries</p>
+    <a href="{% url 'reports:cases_report' %}?type=weekly&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
+        <div class="w-11 h-11 rounded-xl bg-emerald-700 text-white flex items-center justify-center mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <h3 class="text-sm font-bold text-ink">Weekly Cases Report</h3>
+        <p class="text-xs font-medium text-muted mt-1">Week trends · print-ready PDF</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
     </a>
-    <a href="{% url 'reports:cases_report' %}?type=monthly" class="card hover:shadow-md transition-all">
-        <div class="stat-icon bg-purple-100 text-purple-600 mb-3"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
-        <h3 class="text-sm font-semibold text-predator-black">Monthly Cases Report</h3>
-        <p class="text-xs text-gray-500 mt-1">View and export monthly statistics</p>
+    <a href="{% url 'reports:cases_report' %}?type=monthly&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
+        <div class="w-11 h-11 rounded-xl bg-sage-200 text-ink flex items-center justify-center mb-3 border border-line">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+        <h3 class="text-sm font-bold text-ink">Monthly Cases Report</h3>
+        <p class="text-xs font-medium text-muted mt-1">Monthly stats · export PDF</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
     </a>
-    <a href="{% url 'reports:vaccine_report' %}" class="card hover:shadow-md transition-all">
-        <div class="stat-icon bg-yellow-100 text-yellow-600 mb-3"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></div>
-        <h3 class="text-sm font-semibold text-predator-black">Vaccine Usage Report</h3>
-        <p class="text-xs text-gray-500 mt-1">Track vaccine inventory and usage</p>
+    <a href="{% url 'reports:vaccine_report' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
+        <div class="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </div>
+        <h3 class="text-sm font-bold text-ink">Vaccine Usage Report</h3>
+        <p class="text-xs font-medium text-muted mt-1">Inventory · date-filtered · PDF</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
     </a>
-    <a href="{% url 'reports:missed_appointments' %}" class="card hover:shadow-md transition-all">
-        <div class="stat-icon bg-red-100 text-red-600 mb-3"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-        <h3 class="text-sm font-semibold text-predator-black">Missed Appointments</h3>
-        <p class="text-xs text-gray-500 mt-1">List of missed follow-ups</p>
+    <a href="{% url 'reports:missed_appointments' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
+        <div class="w-11 h-11 rounded-xl bg-red-500 text-white flex items-center justify-center mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="text-sm font-bold text-ink">Missed Appointments</h3>
+        <p class="text-xs font-medium text-muted mt-1">Follow-up misses · exportable</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
     </a>
-    <a href="{% url 'reports:cases_report' %}?type=custom" class="card hover:shadow-md transition-all">
-        <div class="stat-icon bg-gray-100 text-gray-600 mb-3"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-        <h3 class="text-sm font-semibold text-predator-black">Custom Report</h3>
-        <p class="text-xs text-gray-500 mt-1">Generate reports with custom date range</p>
+    <a href="{% url 'reports:cases_report' %}?type=custom&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group ring-2 ring-emerald-950/10">
+        <div class="w-11 h-11 rounded-xl bg-emerald-950 text-white flex items-center justify-center mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </div>
+        <h3 class="text-sm font-bold text-ink">Custom Report</h3>
+        <p class="text-xs font-medium text-muted mt-1">Pick any range · preview then PDF/print</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
     </a>
 </div>
+
+<script>
+    // subtle stagger
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.rep-card', { y: 12, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

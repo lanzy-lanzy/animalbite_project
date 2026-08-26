@@ -7,6 +7,7 @@ class User(AbstractUser):
         ('health_worker', 'Health Worker / ABTC Staff'),
         ('doctor', 'Doctor / Nurse'),
         ('encoder', 'Encoder'),
+        ('patient', 'Patient'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='encoder')
     mobile = models.CharField(max_length=20, blank=True)

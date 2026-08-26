@@ -3,7 +3,7 @@ from django.contrib.auth import login, logout, authenticate, get_user_model, upd
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.forms import PasswordChangeForm
-from .forms import LoginForm, UserCreateForm, UserEditForm
+from .forms import LoginForm, ProfileEditForm, UserCreateForm, UserEditForm
 
 User = get_user_model()
 
@@ -12,6 +12,8 @@ def is_admin(user):
 
 def landing_view(request):
     if request.user.is_authenticated:
+        if request.user.role == 'patient':
+            return redirect('accounts:patient_portal')
         return redirect('dashboard:index')
     return render(request, 'accounts/landing.html')
 
@@ -31,6 +33,8 @@ def login_view(request):
                 from audit.models import AuditLog
                 AuditLog.objects.create(user=user, action='LOGIN', description=f'User {user.username} logged in')
                 messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
+                if user.role == 'patient':
+                    return redirect('accounts:patient_portal')
                 return redirect('dashboard:index')
             else:
                 messages.error(request, 'Account is inactive.')
@@ -53,14 +57,35 @@ def profile_view(request):
 def profile_edit(request):
     user = request.user
     if request.method == 'POST':
-        form = UserEditForm(request.POST, instance=user)
+        form = ProfileEditForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Profile updated successfully.')
             return redirect('accounts:profile')
     else:
-        form = UserEditForm(instance=user)
+        form = ProfileEditForm(instance=user)
     return render(request, 'accounts/profile_edit.html', {'form': form})
+
+
+@login_required
+def patient_portal(request):
+    if request.user.role != 'patient':
+        return redirect('dashboard:index')
+
+    from vaccination.models import VaccineDose
+
+    pre_registrations = request.user.pre_registrations.select_related(
+        'converted_case', 'converted_patient'
+    ).order_by('-submitted_at')
+    cases = request.user.patient_profile.bite_cases.all().order_by('-created_at') if hasattr(request.user, 'patient_profile') else []
+    doses = VaccineDose.objects.filter(
+        schedule__bite_case__patient__account=request.user
+    ).select_related('schedule__bite_case').order_by('scheduled_date')
+    return render(request, 'accounts/patient_portal.html', {
+        'pre_registrations': pre_registrations,
+        'cases': cases,
+        'doses': doses,
+    })
 
 @login_required
 def change_password(request):

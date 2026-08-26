@@ -4,8 +4,8 @@
 <div class="max-w-4xl mx-auto">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-            <a href="{% url 'bite_cases:case_list' %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-            <h1 class="text-xl font-bold text-predator-black">{{ case.case_number }}</h1>
+            <a href="{% url 'bite_cases:case_list' %}" class="p-2 rounded-lg hover:bg-sage-100">&larr; Back</a>
+            <h1 class="text-xl font-bold text-ink">{{ case.case_number }}</h1>
         </div>
         <div class="flex gap-2">
             <span class="status-badge status-{{ case.case_status }} text-sm">{{ case.get_case_status_display }}</span>
@@ -16,55 +16,55 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <div class="card">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Bite Incident Details</h3>
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Bite Incident Details</h3>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs text-gray-500 uppercase">Patient</label><p class="text-sm font-medium">{{ case.patient.full_name }} ({{ case.patient.patient_number }})</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Date/Time of Bite</label><p class="text-sm font-medium">{{ case.date_time_bite|date:'M d, Y h:i A' }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Place of Incident</label><p class="text-sm font-medium">{{ case.place_of_incident }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Barangay</label><p class="text-sm font-medium">{{ case.incident_barangay }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Animal Type</label><p class="text-sm font-medium capitalize">{{ case.get_animal_type_display }}{% if case.animal_other %} ({{ case.animal_other }}){% endif %}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Ownership</label><p class="text-sm font-medium capitalize">{{ case.get_animal_ownership_display }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Animal Vax Status</label><p class="text-sm font-medium capitalize">{{ case.get_animal_vax_status_display }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Animal Condition</label><p class="text-sm font-medium capitalize">{{ case.get_animal_condition_display }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Exposure Type</label><p class="text-sm font-medium capitalize">{{ case.get_exposure_type_display }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Body Part</label><p class="text-sm font-medium">{{ case.body_part_affected }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Wounds</label><p class="text-sm font-medium">{{ case.number_of_wounds }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Washed Immediately</label><p class="text-sm font-medium">{{ case.wound_washed_immediately|yesno:'Yes,No' }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Patient</label><p class="text-sm font-medium">{{ case.patient.full_name }} ({{ case.patient.patient_number }})</p></div>
+                    <div><label class="text-xs text-muted uppercase">Date/Time of Bite</label><p class="text-sm font-medium">{{ case.date_time_bite|date:'M d, Y h:i A' }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Place of Incident</label><p class="text-sm font-medium">{{ case.place_of_incident }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Barangay</label><p class="text-sm font-medium">{{ case.incident_barangay }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Animal Type</label><p class="text-sm font-medium capitalize">{{ case.get_animal_type_display }}{% if case.animal_other %} ({{ case.animal_other }}){% endif %}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Ownership</label><p class="text-sm font-medium capitalize">{{ case.get_animal_ownership_display }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Animal Vax Status</label><p class="text-sm font-medium capitalize">{{ case.get_animal_vax_status_display }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Animal Condition</label><p class="text-sm font-medium capitalize">{{ case.get_animal_condition_display }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Exposure Type</label><p class="text-sm font-medium capitalize">{{ case.get_exposure_type_display }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Body Part</label><p class="text-sm font-medium">{{ case.body_part_affected }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Wounds</label><p class="text-sm font-medium">{{ case.number_of_wounds }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Washed Immediately</label><p class="text-sm font-medium">{{ case.wound_washed_immediately|yesno:'Yes,No' }}</p></div>
                 </div>
-                {% if case.wound_description %}<div class="mt-4"><label class="text-xs text-gray-500 uppercase">Wound Description</label><p class="text-sm">{{ case.wound_description }}</p></div>{% endif %}
-                {% if case.first_aid_given %}<div class="mt-4"><label class="text-xs text-gray-500 uppercase">First Aid Given</label><p class="text-sm">{{ case.first_aid_given }}</p></div>{% endif %}
+                {% if case.wound_description %}<div class="mt-4"><label class="text-xs text-muted uppercase">Wound Description</label><p class="text-sm">{{ case.wound_description }}</p></div>{% endif %}
+                {% if case.first_aid_given %}<div class="mt-4"><label class="text-xs text-muted uppercase">First Aid Given</label><p class="text-sm">{{ case.first_aid_given }}</p></div>{% endif %}
             </div>
 
             <!-- Exposure Classification -->
             <div class="card">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Exposure Classification</h3>
+                    <h3 class="text-sm font-semibold text-muted uppercase tracking-wider">Exposure Classification</h3>
                     {% if not case.exposure or not case.exposure.category %}<a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-primary btn-xs">Classify</a>{% endif %}
                 </div>
                 {% with exposure=case.exposure %}
                 {% if exposure and exposure.category %}
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs text-gray-500 uppercase">Category</label><p class="text-sm font-medium">{{ exposure.get_category_display }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Classified By</label><p class="text-sm font-medium">{{ exposure.classified_by.get_full_name|default:exposure.classified_by.username }}</p></div>
-                    <div><label class="text-xs text-gray-500 uppercase">Date</label><p class="text-sm font-medium">{{ exposure.classification_date|date:'M d, Y h:i A' }}</p></div>
-                    {% if exposure.treatment_plan %}<div><label class="text-xs text-gray-500 uppercase">Treatment Plan</label><p class="text-sm">{{ exposure.treatment_plan }}</p></div>{% endif %}
+                    <div><label class="text-xs text-muted uppercase">Category</label><p class="text-sm font-medium">{{ exposure.get_category_display }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Classified By</label><p class="text-sm font-medium">{{ exposure.classified_by.get_full_name|default:exposure.classified_by.username }}</p></div>
+                    <div><label class="text-xs text-muted uppercase">Date</label><p class="text-sm font-medium">{{ exposure.classification_date|date:'M d, Y h:i A' }}</p></div>
+                    {% if exposure.treatment_plan %}<div><label class="text-xs text-muted uppercase">Treatment Plan</label><p class="text-sm">{{ exposure.treatment_plan }}</p></div>{% endif %}
                 </div>
-                {% if exposure.medical_notes %}<div class="mt-4"><label class="text-xs text-gray-500 uppercase">Medical Notes</label><p class="text-sm">{{ exposure.medical_notes }}</p></div>{% endif %}
-                <p class="text-xs text-gray-400 mt-3 italic">* Exposure category and treatment decisions must be based on official health guidelines and professional medical assessment.</p>
+                {% if exposure.medical_notes %}<div class="mt-4"><label class="text-xs text-muted uppercase">Medical Notes</label><p class="text-sm">{{ exposure.medical_notes }}</p></div>{% endif %}
+                <p class="text-xs text-sage-300 mt-3 italic">* Exposure category and treatment decisions must be based on official health guidelines and professional medical assessment.</p>
                 {% else %}
-                <p class="text-sm text-gray-500">Not yet classified.</p>
+                <p class="text-sm text-muted">Not yet classified.</p>
                 {% endif %}
                 {% endwith %}
             </div>
 
             <!-- Medical Notes -->
             <div class="card">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Medical Notes</h3>
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Medical Notes</h3>
                 <div class="space-y-3 mb-4">
                     {% for note in case.medical_notes.all %}
-                    <div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm">{{ note.note }}</p><p class="text-xs text-gray-500 mt-1">- {{ note.created_by.get_full_name|default:note.created_by.username }}, {{ note.created_at|date:'M d, Y h:i A' }}</p></div>
+                    <div class="p-3 bg-sage-50 rounded-lg"><p class="text-sm">{{ note.note }}</p><p class="text-xs text-muted mt-1">- {{ note.created_by.get_full_name|default:note.created_by.username }}, {{ note.created_at|date:'M d, Y h:i A' }}</p></div>
                     {% empty %}
-                    <p class="text-sm text-gray-500">No notes yet.</p>
+                    <p class="text-sm text-muted">No notes yet.</p>
                     {% endfor %}
                 </div>
                 <form method="POST" action="{% url 'bite_cases:add_medical_note' case.pk %}" class="flex gap-2">
@@ -78,7 +78,7 @@
         <!-- Sidebar -->
         <div class="space-y-6">
             <div class="card">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Quick Actions</h3>
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Quick Actions</h3>
                 <div class="space-y-2">
                     <a href="{% url 'vaccination:schedule_create' case.pk %}" class="btn-primary btn-sm w-full justify-center">Create Vaccination Schedule</a>
                     <a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Classify Exposure</a>
@@ -88,14 +88,14 @@
             </div>
             {% if case.vaccination_schedule %}
             <div class="card">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Vaccination Progress</h3>
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Vaccination Progress</h3>
                 {% for dose in case.vaccination_schedule.doses.all %}
                 <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                     <span class="text-sm">{{ dose.dose_label }}</span>
                     <span class="status-badge status-{{ dose.dose_status }}">{{ dose.get_dose_status_display }}</span>
                 </div>
-                {% empty %}<p class="text-sm text-gray-500">No doses scheduled.</p>{% endfor %}
-                <a href="{% url 'vaccination:schedule_detail' case.vaccination_schedule.pk %}" class="text-sm text-blood-red hover:text-red-700 font-medium mt-2 inline-block">View Full Schedule</a>
+                {% empty %}<p class="text-sm text-muted">No doses scheduled.</p>{% endfor %}
+                <a href="{% url 'vaccination:schedule_detail' case.vaccination_schedule.pk %}" class="text-sm text-emerald-800 hover:text-red-700 font-medium mt-2 inline-block">View Full Schedule</a>
             </div>
             {% endif %}
         </div>

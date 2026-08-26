@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from bite_cases.models import AnimalBiteCase
 from patients.models import Patient
+from vaccination.models import VaccinationSchedule, VaccineDose
 
 from .models import PreRegistration
 
@@ -113,6 +114,10 @@ class PreRegistrationModelTests(TestCase):
 class PublicPreRegistrationTests(TestCase):
     def valid_payload(self):
         return {
+            "username": "lina.garcia",
+            "email": "lina@example.com",
+            "password1": "SafePatient!2026",
+            "password2": "SafePatient!2026",
             "first_name": "Lina",
             "middle_name": "M",
             "last_name": "Garcia",
@@ -161,8 +166,37 @@ class PublicPreRegistrationTests(TestCase):
             reverse("pre_registrations:public_success", args=[record.pre_registration_number]),
         )
         self.assertEqual(record.status, PreRegistration.Status.SUBMITTED)
+        self.assertEqual(record.account.username, "lina.garcia")
+        self.assertEqual(record.account.role, "patient")
+        self.assertTrue(record.account.check_password("SafePatient!2026"))
+        self.assertEqual(int(self.client.session['_auth_user_id']), record.account_id)
         self.assertEqual(record.age, 31)
         self.assertTrue(record.qr_code)
+
+    def test_existing_email_does_not_create_partial_registration(self):
+        User = get_user_model()
+        User.objects.create_user(username="existing", email="lina@example.com", password="SafePatient!2026")
+
+        response = self.client.post(reverse("pre_registrations:public_create"), self.valid_payload())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "An account with this email already exists")
+        self.assertEqual(PreRegistration.objects.count(), 0)
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_signed_in_patient_can_add_another_preregistration_to_same_account(self):
+        self.client.post(reverse("pre_registrations:public_create"), self.valid_payload())
+        account = get_user_model().objects.get(username="lina.garcia")
+        second_payload = self.valid_payload()
+        for field in ("username", "email", "password1", "password2"):
+            second_payload.pop(field)
+        second_payload["bite_datetime"] = "2026-07-30T09:00"
+
+        response = self.client.post(reverse("pre_registrations:public_create"), second_payload)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(PreRegistration.objects.filter(account=account).count(), 2)
+        self.assertEqual(get_user_model().objects.filter(role="patient").count(), 1)
 
     def test_status_lookup_only_returns_matching_pre_registration_number(self):
         record = PreRegistration.objects.create(
@@ -292,3 +326,47 @@ class StaffPreRegistrationTests(TestCase):
         self.assertEqual(AnimalBiteCase.objects.count(), 1)
         self.assertEqual(self.record.converted_patient.full_name(), "Rico Bautista")
         self.assertEqual(self.record.converted_case.body_part_affected, "Left ankle")
+
+    def test_conversion_links_patient_account_and_portal_shows_case_and_dose(self):
+        User = get_user_model()
+        patient_account = User.objects.create_user(
+            username="rico.patient",
+            email="rico@example.com",
+            password="SafePatient!2026",
+            role="patient",
+        )
+        self.record.account = patient_account
+        self.record.save(update_fields=["account"])
+        self.client.login(username="encoder", password="pass12345")
+        self.client.post(reverse("pre_registrations:convert", args=[self.record.pk]))
+        self.record.refresh_from_db()
+        schedule = VaccinationSchedule.objects.create(
+            bite_case=self.record.converted_case,
+            created_by=self.staff,
+        )
+        VaccineDose.objects.create(
+            schedule=schedule,
+            dose_label="Day 3",
+            scheduled_date=date(2026, 8, 17),
+        )
+
+        self.client.logout()
+        self.client.login(username="rico.patient", password="SafePatient!2026")
+        response = self.client.get(reverse("accounts:patient_portal"))
+
+        self.assertEqual(self.record.converted_patient.account, patient_account)
+        self.assertContains(response, self.record.converted_case.case_number)
+        self.assertContains(response, "Day 3")
+        self.assertContains(response, "Aug 17, 2026")
+
+    def test_patient_account_is_redirected_away_from_staff_pages(self):
+        patient_account = get_user_model().objects.create_user(
+            username="private.patient",
+            password="SafePatient!2026",
+            role="patient",
+        )
+        self.client.force_login(patient_account)
+
+        response = self.client.get(reverse("pre_registrations:staff_list"))
+
+        self.assertRedirects(response, reverse("accounts:patient_portal"))

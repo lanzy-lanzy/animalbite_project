@@ -1,31 +1,96 @@
 {% extends 'base.html' %}
-{% block title %}Animal Observation{% endblock %}
+{% block title %}Animal Observation — {{ case.case_number }}{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="p-2 rounded-lg hover:bg-gray-100">&larr; Back</a>
-        <h1 class="text-xl font-bold text-predator-black">Animal Observation - {{ case.case_number }}</h1>
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center gap-3">
+        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink leading-none">Animal Observation</h1>
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">{{ case.case_number }} · {{ case.get_animal_type_display }} · {{ case.incident_barangay }}</p>
+        </div>
     </div>
+
+    <div class="card bg-sage-50 border-dashed p-4 flex gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7a4 4 0 11-5.656 5.656A4 4 0 0112 7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </div>
+        <div>
+            <p class="text-sm font-bold text-ink">14-day observation — simple tracking</p>
+            <p class="text-xs font-medium text-muted mt-1">Record where the animal is, who owns it, and its daily condition. If the animal stays <span class="font-bold text-emerald-700">Healthy</span> after 14 days, you can close the observation.</p>
+        </div>
+    </div>
+
     <div class="card">
-        <form method="POST" class="space-y-4">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+                <h2 class="font-display text-sm font-bold text-ink">Observation details</h2>
+                <p class="text-xs font-medium text-muted">Fill what you know — update daily status as needed</p>
+            </div>
+        </div>
+
+        <form method="POST" class="space-y-5">
             {% csrf_token %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="form-label">Animal Owner Name</label>{{ form.animal_owner_name }}</div>
-                <div><label class="form-label">Owner Contact</label>{{ form.owner_contact }}</div>
+                <div>
+                    <label class="form-label">Animal owner name</label>
+                    {{ form.animal_owner_name }}
+                    {% if form.animal_owner_name.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.animal_owner_name.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Owner contact</label>
+                    {{ form.owner_contact }}
+                    {% if form.owner_contact.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.owner_contact.errors.0 }}</p>{% endif %}
+                </div>
             </div>
-            <div><label class="form-label">Animal Location</label>{{ form.animal_location }}</div>
-            <div><label class="form-label">Start Date</label>{{ form.start_date }}</div>
-            <div><label class="form-label">Observation Notes</label>{{ form.observation_notes }}</div>
-            <div><label class="form-label">Daily Status</label>{{ form.daily_status }}</div>
+            <div>
+                <label class="form-label">Animal location</label>
+                {{ form.animal_location }}
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="form-label">Final Condition</label>{{ form.final_condition }}</div>
-                <div><label class="form-label">Final Remarks</label>{{ form.final_remarks }}</div>
+                <div>
+                    <label class="form-label">Start date *</label>
+                    {{ form.start_date }}
+                    {% if form.start_date.errors %}<p class="text-xs font-medium text-red-600 mt-1">{{ form.start_date.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Final condition</label>
+                    {{ form.final_condition }}
+                </div>
             </div>
-            <div class="flex gap-2 pt-4">
-                <button type="submit" class="btn-primary">Save</button>
+            <div>
+                <label class="form-label">Observation notes</label>
+                {{ form.observation_notes }}
+                <p class="text-xs font-medium text-muted mt-1">Where was the animal last seen? Is it caged or stray?</p>
+            </div>
+            <div>
+                <label class="form-label">Daily status (update daily)</label>
+                {{ form.daily_status }}
+                <p class="text-xs font-medium text-muted mt-1">One line per day, e.g., Day 1: Healthy, Day 7: Still healthy</p>
+            </div>
+            <div>
+                <label class="form-label">Final remarks</label>
+                {{ form.final_remarks }}
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button type="submit" class="btn-primary">Save Observation</button>
                 <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.4, stagger: 0.07, ease: 'power2.out' });
+    }
+</script>
 {% endblock %}

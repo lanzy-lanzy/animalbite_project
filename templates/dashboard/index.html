@@ -1,152 +1,433 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Dashboard - ABTC System{% endblock %}
+{% block title %}Dashboard — ABTC System{% endblock %}
 {% block page_title %}
-<h1 class="text-lg font-semibold text-predator-black ml-3">Dashboard</h1>
+<div class="flex items-center gap-3">
+    <div class="hidden sm:flex w-8 h-8 rounded-full bg-emerald-900 text-white items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    </div>
+    <div>
+        <h1 class="text-[15px] font-bold text-ink leading-none">Dashboard</h1>
+        <p class="text-xs font-medium text-muted hidden sm:block">Municipal Health Office · ABTC</p>
+    </div>
+</div>
 {% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+{% endblock %}
+
 {% block content %}
-<!-- Stats Grid -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-    <div class="stat-card">
-        <div class="stat-icon bg-blue-100 text-blue-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-        <div><p class="text-2xl font-bold text-predator-black">{{ total_cases }}</p><p class="text-xs text-gray-500">Total Cases</p></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon bg-red-100 text-red-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-        <div><p class="text-2xl font-bold text-predator-black">{{ new_today }}</p><p class="text-xs text-gray-500">New Today</p></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon bg-yellow-100 text-yellow-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
-        <div><p class="text-2xl font-bold text-predator-black">{{ active_cases }}</p><p class="text-xs text-gray-500">Active Cases</p></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon bg-green-100 text-green-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-        <div><p class="text-2xl font-bold text-predator-black">{{ completed_cases }}</p><p class="text-xs text-gray-500">Completed</p></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon bg-purple-100 text-purple-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
-        <div><p class="text-2xl font-bold text-predator-black">{{ upcoming_doses }}</p><p class="text-xs text-gray-500">Upcoming Doses</p></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon bg-red-100 text-red-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg></div>
-        <div><p class="text-2xl font-bold text-predator-black">{{ missed_doses }}</p><p class="text-xs text-gray-500">Missed Doses</p></div>
-    </div>
-</div>
+<style>
+    .dash-card {
+        background: white;
+        border: 1.5px solid #c8d8c6;
+        border-radius: 1.35rem;
+        box-shadow: 0 8px 28px -14px rgba(10,31,26,0.16), 0 2px 10px -6px rgba(10,31,26,0.08);
+        position: relative;
+        overflow: hidden;
+    }
+    .dash-card::after{
+        content:'';
+        position:absolute;
+        inset:0;
+        background: radial-gradient(560px 220px at 50% -10%, rgba(10,31,26,0.04), transparent 60%);
+        pointer-events:none;
+    }
+    .bar-track{ background: #e6ece5; }
+    .bar-fill{ transform-origin:left; transform: scaleX(0); }
+    .counter{ font-variant-numeric: tabular-nums; }
+</style>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Patients & Vaccines Summary -->
-    <div class="card">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Summary</h3>
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Total Patients</span>
-                <span class="text-lg font-bold text-predator-black">{{ total_patients }}</span>
+<div class="space-y-6 relative">
+    <!-- ============ HERO BANNER — emerald-950 high-contrast, synced with landing CTA ============ -->
+    <div class="relative overflow-hidden rounded-[1.35rem] border text-white shadow-xl shadow-emerald-950/20" style="background:#0a1f1a; border-color:#0a1f1a;">
+        <div class="absolute inset-0 opacity-[0.07]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="absolute -top-24 -right-24 w-[520px] h-[520px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+        <div class="absolute -bottom-32 -left-16 w-[420px] h-[420px] rounded-full blur-3xl opacity-12" style="background: radial-gradient(circle, #a9bfa8, transparent 70%);"></div>
+        <div class="relative p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+                <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Today is {% now "l, F j, Y" %} · Live & audited
+                </p>
+                <h2 class="font-display text-2xl sm:text-[28px] font-bold tracking-tight leading-tight mt-3">
+                    Good {% now "H" as h %}{% if h|add:0 < 12 %}morning{% elif h|add:0 < 18 %}afternoon{% else %}evening{% endif %}, <span class="font-serif italic font-normal text-sage-300">{{ request.user.get_full_name|default:request.user.username }}</span>
+                </h2>
+                <p class="text-sm font-medium text-sage-200 mt-2 max-w-xl">
+                    {% if new_today %} <span class="text-white font-bold">{{ new_today }} new case{{ new_today|pluralize }}</span> today · {% endif %}
+                    {{ active_cases }} active · {{ upcoming_doses }} upcoming dose{{ upcoming_doses|pluralize }} · {{ missed_doses }} missed — all tracked, audited, and ready for reports.
+                </p>
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <a href="{% url 'bite_cases:case_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-emerald-950 text-sm font-bold shadow-lg shadow-black/20 hover:bg-sage-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        New Bite Case
+                    </a>
+                    <a href="{% url 'patients:patient_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-semibold border border-white/20 hover:bg-white/15 transition-colors">
+                        Register Patient
+                    </a>
+                    <a href="{% url 'inventory:vaccine_list' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-semibold border border-white/20 hover:bg-white/15 transition-colors">
+                        Check Inventory
+                    </a>
+                </div>
             </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Available Vaccines</span>
-                <span class="text-lg font-bold text-venom-green">{{ total_vaccines }}</span>
+            <div class="flex gap-3 lg:gap-4 shrink-0">
+                <div class="bg-white text-emerald-950 rounded-2xl p-4 sm:p-5 min-w-[132px] shadow-xl shadow-black/15">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Cases</p>
+                    <p class="font-display text-3xl font-bold leading-none mt-1 counter" data-target="{{ total_cases }}">0</p>
+                    <p class="text-xs font-semibold text-emerald-700 mt-1 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h5m5 0v-5h-5m0 5l-6 6-4-4-6 6"/></svg>
+                        {{ this_month }} this month
+                    </p>
+                </div>
+                <div class="bg-white/10 backdrop-blur border border-white/15 rounded-2xl p-4 sm:p-5 min-w-[132px]">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Active</p>
+                    <p class="font-display text-3xl font-bold leading-none mt-1 counter" data-target="{{ active_cases }}">0</p>
+                    <p class="text-xs font-medium text-sage-200 mt-1">{{ new_today }} new today</p>
+                </div>
             </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Low Stock Items</span>
-                <span class="text-lg font-bold text-blood-red">{{ low_stock }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Expired Vaccines</span>
-                <span class="text-lg font-bold text-blood-red">{{ expired }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">This Week</span>
-                <span class="text-lg font-bold text-predator-black">{{ this_week }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">This Month</span>
-                <span class="text-lg font-bold text-predator-black">{{ this_month }}</span>
-            </div>
+        </div>
+        <div class="relative flex flex-wrap gap-2 px-6 pb-4 text-xs font-medium text-sage-300">
+            <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {{ total_patients }} patients</span>
+            <span class="opacity-40">·</span>
+            <span>{{ total_vaccines }} vials available</span>
+            <span class="opacity-40">·</span>
+            <span class="{% if low_stock %}text-amber-300{% else %}text-sage-300{% endif %}">{{ low_stock }} low stock</span>
+            <span class="opacity-40">·</span>
+            <span class="{% if expired %}text-red-300{% else %}text-sage-300{% endif %}">{{ expired }} expired</span>
         </div>
     </div>
 
-    <!-- Cases by Animal Type -->
-    <div class="card">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Cases by Animal Type</h3>
-        <div class="space-y-3">
-            {% for item in cases_by_animal %}
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600 capitalize">{{ item.animal_type }}</span>
-                <div class="flex items-center gap-2">
-                    <div class="w-24 bg-gray-100 rounded-full h-2">
-                        <div class="bg-blood-red h-2 rounded-full" style="width: {% widthratio item.count total_cases 100 %}%"></div>
+    <!-- ============ STATS 6 — premium bento, counters + bars ============ -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <!-- Total -->
+        <div class="dash-card p-5 group hover:shadow-lg transition-shadow">
+            <div class="absolute top-0 inset-x-0 h-1 bg-emerald-900"></div>
+            <div class="flex items-start justify-between gap-4">
+                <div class="w-11 h-11 rounded-xl bg-emerald-900 text-white flex items-center justify-center shadow-md shadow-emerald-900/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <span class="text-xs font-bold tracking-widest uppercase px-2.5 py-1 rounded-full bg-sage-50 border border-line text-ink">All time</span>
+            </div>
+            <p class="mt-4 text-[11px] font-bold tracking-widest uppercase text-muted">Total Cases</p>
+            <p class="font-display text-3xl font-bold text-ink leading-none mt-1 counter" data-target="{{ total_cases }}">0</p>
+            <div class="mt-3 flex items-center gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> {{ this_week }} this week
+                </span>
+                <span class="text-muted">{{ this_month }} month</span>
+            </div>
+        </div>
+        <!-- New Today -->
+        <div class="dash-card p-5 group hover:shadow-lg transition-shadow">
+            <div class="absolute top-0 inset-x-0 h-1 bg-amber-500"></div>
+            <div class="flex items-start justify-between gap-4">
+                <div class="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full {% if new_today %}bg-amber-50 border border-amber-200 text-amber-800{% else %}bg-sage-50 border border-line text-muted{% endif %}">{% if new_today %}Needs triage{% else %}Quiet day{% endif %}</span>
+            </div>
+            <p class="mt-4 text-[11px] font-bold tracking-widest uppercase text-muted">New Today</p>
+            <p class="font-display text-3xl font-bold text-ink leading-none mt-1 counter" data-target="{{ new_today }}">0</p>
+            <p class="text-xs font-medium text-muted mt-2">vs {{ this_week }} this week · capacity OK</p>
+        </div>
+        <!-- Active -->
+        <div class="dash-card p-5 group hover:shadow-lg transition-shadow">
+            <div class="absolute top-0 inset-x-0 h-1 bg-emerald-700"></div>
+            <div class="flex items-start justify-between gap-4">
+                <div class="w-11 h-11 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-md shadow-emerald-700/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mt-2"></span>
+            </div>
+            <p class="mt-4 text-[11px] font-bold tracking-widest uppercase text-muted">Active Cases</p>
+            <p class="font-display text-3xl font-bold text-ink leading-none mt-1 counter" data-target="{{ active_cases }}">0</p>
+            <div class="mt-3 h-1.5 bar-track rounded-full overflow-hidden">
+                <div class="bar-fill h-full bg-emerald-700 rounded-full" data-width="{% if total_cases %}{% widthratio active_cases total_cases 100 %}{% else %}0{% endif %}"></div>
+            </div>
+            <p class="text-xs text-muted mt-1.5">{% if total_cases %}{% widthratio active_cases total_cases 100 %}% of total{% else %}—{% endif %}</p>
+        </div>
+        <!-- Completed -->
+        <div class="dash-card p-5 group hover:shadow-lg transition-shadow">
+            <div class="absolute top-0 inset-x-0 h-1 bg-sage-300"></div>
+            <div class="flex items-start justify-between gap-4">
+                <div class="w-11 h-11 rounded-xl bg-sage-100 border border-line text-emerald-800 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <span class="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">Done</span>
+            </div>
+            <p class="mt-4 text-[11px] font-bold tracking-widest uppercase text-muted">Completed</p>
+            <p class="font-display text-3xl font-bold text-ink leading-none mt-1 counter" data-target="{{ completed_cases }}">0</p>
+            <div class="mt-3 h-1.5 bar-track rounded-full overflow-hidden">
+                <div class="bar-fill h-full bg-sage-300 rounded-full" data-width="{% if total_cases %}{% widthratio completed_cases total_cases 100 %}{% else %}0{% endif %}"></div>
+            </div>
+            <p class="text-xs text-muted mt-1.5">Closed & archived</p>
+        </div>
+        <!-- Upcoming -->
+        <div class="dash-card p-5 group hover:shadow-lg transition-shadow">
+            <div class="absolute top-0 inset-x-0 h-1 bg-emerald-600"></div>
+            <div class="flex items-start justify-between gap-4">
+                <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="text-xs font-bold tracking-widest uppercase text-emerald-700 bg-emerald-50 border border-line px-2.5 py-1 rounded-full">Schedule</span>
+            </div>
+            <p class="mt-4 text-[11px] font-bold tracking-widest uppercase text-muted">Upcoming Doses</p>
+            <p class="font-display text-3xl font-bold text-ink leading-none mt-1 counter" data-target="{{ upcoming_doses }}">0</p>
+            <p class="text-xs font-medium text-muted mt-2">Next 7 days · auto-reminder on</p>
+        </div>
+        <!-- Missed -->
+        <div class="dash-card p-5 group hover:shadow-lg transition-shadow">
+            <div class="absolute top-0 inset-x-0 h-1 bg-red-500"></div>
+            <div class="flex items-start justify-between gap-4">
+                <div class="w-11 h-11 rounded-xl bg-red-500 text-white flex items-center justify-center shadow-md shadow-red-500/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                </div>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full {% if missed_doses %}bg-red-50 border border-red-200 text-red-700{% else %}bg-emerald-50 border border-emerald-200 text-emerald-800{% endif %}">{% if missed_doses %}Action needed{% else %}All caught up{% endif %}</span>
+            </div>
+            <p class="mt-4 text-[11px] font-bold tracking-widest uppercase text-muted">Missed Doses</p>
+            <p class="font-display text-3xl font-bold text-ink leading-none mt-1 counter" data-target="{{ missed_doses }}">0</p>
+            <p class="text-xs font-medium {% if missed_doses %}text-red-600{% else %}text-muted{% endif %} mt-2">{% if missed_doses %}Follow-up required{% else %}No misses · great adherence{% endif %}</p>
+        </div>
+    </div>
+
+    <!-- ============ SECOND ROW — bento ============ -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- Summary — premium metric bento -->
+        <div class="dash-card p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display text-sm font-bold tracking-tight text-ink">Inventory & Throughput</h3>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="rounded-2xl bg-sage-50 border border-line p-4">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Patients</p>
+                    <p class="font-display text-2xl font-bold text-ink mt-1 counter" data-target="{{ total_patients }}">0</p>
+                    <p class="text-xs font-medium text-emerald-700 mt-1">Active records</p>
+                </div>
+                <div class="rounded-2xl bg-emerald-950 text-white p-4 relative overflow-hidden">
+                    <div class="absolute -top-8 -right-8 w-20 h-20 rounded-full bg-white/10 blur-xl"></div>
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Available Vials</p>
+                    <p class="font-display text-2xl font-bold mt-1 counter" data-target="{{ total_vaccines }}">0</p>
+                    <p class="text-xs font-medium text-sage-200 mt-1">Ready to dispense</p>
+                </div>
+                <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-amber-800">Low Stock</p>
+                        <span class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01"/></svg></span>
                     </div>
-                    <span class="text-sm font-semibold text-predator-black">{{ item.count }}</span>
+                    <p class="font-display text-2xl font-bold text-amber-800 mt-1 counter" data-target="{{ low_stock }}">0</p>
+                    <p class="text-xs font-medium text-amber-700">≤5 vials</p>
                 </div>
-            </div>
-            {% empty %}
-            <p class="text-sm text-gray-500 text-center py-4">No data available</p>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Cases by Exposure -->
-    <div class="card">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Cases by Exposure</h3>
-        <div class="space-y-3">
-            {% for item in cases_by_exposure %}
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600 capitalize">{{ item.exposure_type }}</span>
-                <div class="flex items-center gap-2">
-                    <div class="w-24 bg-gray-100 rounded-full h-2">
-                        <div class="bg-bruise-purple h-2 rounded-full" style="width: {% widthratio item.count total_cases 100 %}%"></div>
+                <div class="rounded-2xl {% if expired %}bg-red-50 border border-red-200{% else %}bg-sage-50 border border-line{% endif %} p-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold tracking-widest uppercase {% if expired %}text-red-700{% else %}text-muted{% endif %}">Expired</p>
+                        <span class="w-6 h-6 rounded-full {% if expired %}bg-red-500 text-white{% else %}bg-sage-200 text-muted{% endif %} flex items-center justify-center"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></span>
                     </div>
-                    <span class="text-sm font-semibold text-predator-black">{{ item.count }}</span>
+                    <p class="font-display text-2xl font-bold {% if expired %}text-red-700{% else %}text-ink{% endif %} mt-1 counter" data-target="{{ expired }}">0</p>
+                    <p class="text-xs font-medium {% if expired %}text-red-600{% else %}text-muted{% endif %}">{% if expired %}Remove & reorder{% else %}No expired lots{% endif %}</p>
                 </div>
             </div>
-            {% empty %}
-            <p class="text-sm text-gray-500 text-center py-4">No data available</p>
-            {% endfor %}
+            <div class="mt-5 grid grid-cols-2 gap-3">
+                <div class="flex items-center justify-between rounded-xl bg-white border border-line px-3.5 py-2.5">
+                    <span class="text-xs font-semibold text-muted">This Week</span>
+                    <span class="font-display font-bold text-ink counter" data-target="{{ this_week }}">0</span>
+                </div>
+                <div class="flex items-center justify-between rounded-xl bg-white border border-line px-3.5 py-2.5">
+                    <span class="text-xs font-semibold text-muted">This Month</span>
+                    <span class="font-display font-bold text-ink counter" data-target="{{ this_month }}">0</span>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
-<!-- Top Barangays & Recent Cases -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Cases by Barangay -->
-    <div class="card">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Top Barangays</h3>
-        <div class="space-y-2">
-            {% for item in cases_by_barangay %}
-            <div class="flex items-center justify-between py-1">
-                <span class="text-sm text-gray-700">{{ item.incident_barangay|default:'Unknown' }}</span>
-                <div class="flex items-center gap-2">
-                    <div class="w-32 bg-gray-100 rounded-full h-2">
-                        <div class="bg-venom-green h-2 rounded-full" style="width: {% widthratio item.count total_cases 100 %}%"></div>
+        <!-- Cases by Animal -->
+        <div class="dash-card p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display text-sm font-bold tracking-tight text-ink">Cases by Animal</h3>
+                <span class="text-xs font-semibold text-muted bg-sage-50 border border-line px-2.5 py-1 rounded-full">{{ total_cases }} total</span>
+            </div>
+            <div class="space-y-4">
+                {% for item in cases_by_animal %}
+                <div class="group">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-sm font-semibold text-ink capitalize flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full {% if item.animal_type == 'dog' %}bg-emerald-800{% elif item.animal_type == 'cat' %}bg-amber-500{% elif item.animal_type == 'monkey' %}bg-sage-400{% else %}bg-emerald-600{% endif %}"></span>
+                            {{ item.animal_type }}
+                        </span>
+                        <span class="text-sm font-bold text-ink">{{ item.count }}</span>
                     </div>
-                    <span class="text-sm font-semibold text-predator-black">{{ item.count }}</span>
+                    <div class="h-2 bar-track rounded-full overflow-hidden">
+                        <div class="bar-fill h-full rounded-full {% if item.animal_type == 'dog' %}bg-emerald-800{% elif item.animal_type == 'cat' %}bg-amber-500{% elif item.animal_type == 'monkey' %}bg-sage-400{% else %}bg-emerald-600{% endif %}" data-width="{% widthratio item.count total_cases 100 %}"></div>
+                    </div>
+                    <p class="text-xs text-muted mt-1">{% widthratio item.count total_cases 100 %}% of cases</p>
                 </div>
+                {% empty %}
+                <div class="text-center py-10">
+                    <div class="w-12 h-12 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 21h8M12 17v4"/></svg>
+                    </div>
+                    <p class="text-sm font-medium text-muted mt-3">No animal data yet</p>
+                </div>
+                {% endfor %}
             </div>
-            {% empty %}
-            <p class="text-sm text-gray-500 text-center py-4">No data available</p>
-            {% endfor %}
+            <a href="{% url 'reports:reports_index' %}" class="mt-5 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-900">View reports →</a>
+        </div>
+
+        <!-- Cases by Exposure -->
+        <div class="dash-card p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display text-sm font-bold tracking-tight text-ink">Cases by Exposure</h3>
+                <span class="w-7 h-7 rounded-full bg-emerald-950 text-white flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </span>
+            </div>
+            <div class="space-y-4">
+                {% for item in cases_by_exposure %}
+                <div class="group">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-sm font-semibold text-ink capitalize">{{ item.exposure_type|default:item.exposure_type }}</span>
+                        <span class="text-sm font-bold text-ink">{{ item.count }}</span>
+                    </div>
+                    <div class="h-2 bar-track rounded-full overflow-hidden">
+                        <div class="bar-fill h-full bg-emerald-950 rounded-full" data-width="{% widthratio item.count total_cases 100 %}"></div>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-xs text-muted capitalize">{{ item.exposure_type }}</span>
+                        <span class="text-xs font-semibold text-muted">{% widthratio item.count total_cases 100 %}%</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-10">
+                    <div class="w-12 h-12 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    </div>
+                    <p class="text-sm font-medium text-muted mt-3">No exposure data yet</p>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 
-    <!-- Recent Cases -->
-    <div class="card">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Recent Cases</h3>
-            <a href="{% url 'bite_cases:case_list' %}" class="text-sm text-blood-red hover:text-red-700 font-medium">View All</a>
-        </div>
-        <div class="space-y-3">
-            {% for case in recent_cases %}
-            <a href="{% url 'bite_cases:case_detail' case.pk %}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                <div>
-                    <p class="text-sm font-medium text-predator-black">{{ case.case_number }}</p>
-                    <p class="text-xs text-gray-500">{{ case.patient.full_name }} - {{ case.get_animal_type_display }}</p>
+    <!-- ============ THIRD ROW ============ -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        <!-- Top Barangays — 2/5 -->
+        <div class="dash-card p-6 lg:col-span-2">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display text-sm font-bold tracking-tight text-ink">Top Barangays</h3>
+                <span class="text-xs font-bold tracking-widest uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">Top 10</span>
+            </div>
+            <div class="space-y-2.5">
+                {% for item in cases_by_barangay %}
+                <div class="group flex items-center gap-3 p-2 rounded-xl hover:bg-sage-50 transition-colors">
+                    <span class="w-7 h-7 rounded-full {% if forloop.counter == 1 %}bg-amber-500 text-white{% elif forloop.counter == 2 %}bg-sage-300 text-ink{% elif forloop.counter == 3 %}bg-emerald-700 text-white{% else %}bg-white border border-line text-muted{% endif %} flex items-center justify-center text-xs font-bold shrink-0">{{ forloop.counter }}</span>
+                    <span class="text-sm font-semibold text-ink flex-1 truncate">{{ item.incident_barangay|default:'Unknown' }}</span>
+                    <div class="hidden sm:flex items-center gap-2">
+                        <div class="w-20 bar-track rounded-full h-1.5 overflow-hidden">
+                            <div class="bar-fill h-full bg-emerald-700 rounded-full" data-width="{% widthratio item.count total_cases 100 %}"></div>
+                        </div>
+                        <span class="text-sm font-bold text-ink w-6 text-right">{{ item.count }}</span>
+                    </div>
+                    <span class="sm:hidden text-sm font-bold text-ink">{{ item.count }}</span>
                 </div>
-                <span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span>
-            </a>
-            {% empty %}
-            <p class="text-sm text-gray-500 text-center py-4">No recent cases</p>
-            {% endfor %}
+                {% empty %}
+                <p class="text-sm text-muted text-center py-8">No data available</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Cases — 3/5 premium list -->
+        <div class="dash-card p-6 lg:col-span-3">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display text-sm font-bold tracking-tight text-ink">Recent Cases</h3>
+                <a href="{% url 'bite_cases:case_list' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-900 px-3 py-1.5 rounded-full hover:bg-emerald-950 transition-colors">
+                    View all
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+            <div class="space-y-2.5">
+                {% for case in recent_cases %}
+                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="group flex items-center gap-4 p-3.5 rounded-2xl border border-transparent hover:border-line hover:bg-sage-50 transition-all">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center font-bold text-sm shrink-0 group-hover:scale-[1.02] transition-transform">
+                        {{ case.patient.full_name|first|upper }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-bold text-ink truncate">{{ case.case_number }}</p>
+                            <span class="hidden sm:inline-flex w-1 h-1 rounded-full bg-line"></span>
+                            <p class="hidden sm:block text-xs font-medium text-muted truncate">{{ case.patient.full_name }}</p>
+                        </div>
+                        <p class="text-xs font-medium text-muted flex items-center gap-1.5 mt-0.5">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white border border-line text-[11px]">{{ case.get_animal_type_display }}</span>
+                            <span class="hidden sm:inline">{{ case.get_exposure_type_display|default:case.exposure_type }}</span>
+                            <span class="hidden sm:inline opacity-40">·</span>
+                            <span>{{ case.created_at|date:'M d, Y' }}</span>
+                        </p>
+                    </div>
+                    <span class="status-badge status-{{ case.case_status }} shrink-0">{{ case.get_case_status_display }}</span>
+                    <svg class="hidden sm:block w-4 h-4 text-sage-400 group-hover:text-ink group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                {% empty %}
+                <div class="text-center py-12">
+                    <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <p class="text-sm font-semibold text-ink mt-3">No recent cases</p>
+                    <p class="text-xs text-muted mt-1">New bite cases will appear here</p>
+                    <a href="{% url 'bite_cases:case_create' %}" class="inline-flex mt-4 btn-primary btn-sm">Create first case</a>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
+    <p class="text-center text-xs font-medium text-muted pt-2">Last updated {% now "F j, Y g:i A" %} · Data is audited and refreshes on every case update.</p>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    gsap.registerPlugin(ScrollTrigger);
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) {
+        // counters
+        document.querySelectorAll('.counter').forEach(el => {
+            const target = parseInt(el.dataset.target || el.textContent, 10) || 0;
+            const obj = { v: 0 };
+            gsap.to(obj, {
+                v: target,
+                duration: 1.2,
+                ease: 'power2.out',
+                delay: 0.15,
+                onUpdate: () => el.textContent = Math.round(obj.v).toLocaleString(),
+                scrollTrigger: { trigger: el, start: 'top 92%', once: true }
+            });
+        });
+        // bars
+        gsap.utils.toArray('.bar-fill').forEach(bar => {
+            const w = bar.dataset.width || 0;
+            gsap.to(bar, {
+                scaleX: 1,
+                duration: 0.9,
+                ease: 'power3.out',
+                scrollTrigger: { trigger: bar, start: 'top 92%', once: true },
+                onStart: () => bar.style.width = w + '%'
+            });
+        });
+        // cards stagger
+        gsap.from('.dash-card', {
+            y: 18,
+            opacity: 0,
+            duration: 0.6,
+            stagger: 0.06,
+            ease: 'power2.out',
+            delay: 0.1,
+            clearProps: 'all'
+        });
+    } else {
+        document.querySelectorAll('.counter').forEach(el => el.textContent = el.dataset.target);
+        document.querySelectorAll('.bar-fill').forEach(b => { b.style.transform='scaleX(1)'; b.style.width = b.dataset.width + '%'; });
+        gsap.set('.dash-card', { opacity:1, y:0 });
+    }
+</script>
 {% endblock %}

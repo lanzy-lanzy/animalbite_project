@@ -8,7 +8,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'css/output.css' %}">
 
@@ -17,33 +17,32 @@
     <script type="importmap">
     {
         "imports": {
-            "three": "https://unpkg.com/three@0.169.0/build/three.module.js"
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
         }
     }
     </script>
 
     <style>
         :root {
-            --blood-red: #8A0303;
-            --flesh-beige: #D9A679;
-            --bruise-purple: #4B2C4F;
-            --bone-white: #E8E4D9;
-            --predator-black: #1A1A1A;
+            --emerald-950: #0a1f1a;
+            --emerald-900: #0f2e26;
+            --emerald-800: #143d33;
+            --emerald-700: #1b4d3e;
+            --sage-50: #f2f5f1;
+            --sage-100: #e6ece5;
+            --sage-200: #d0ddd0;
+            --sage-300: #a9bfa8;
+            --line: #c8d8c6;
+            --ink: #0a1f1a;
         }
-
         html, body { height: 100%; margin: 0; padding: 0; }
-
         body {
             font-family: 'Figtree', system-ui, sans-serif;
-            background: #0e0e0e;
-            color: var(--bone-white);
+            background: var(--sage-50);
+            color: var(--ink);
             overflow: hidden;
         }
-        h1, h2, h3, h4, .font-display {
-            font-family: 'Space Grotesk', sans-serif;
-        }
-
-        /* ── Canvas ── */
+        h1, h2, h3, h4, .font-display { font-family: 'Space Grotesk', sans-serif; }
         #login-canvas {
             position: fixed;
             inset: 0;
@@ -51,138 +50,51 @@
             height: 100%;
             z-index: 0;
         }
-
-        /* ── Background layers ── */
-        .bg-overlay {
-            background:
-                radial-gradient(ellipse 80% 60% at 50% 50%, rgba(75,44,79,0.35) 0%, transparent 70%),
-                radial-gradient(ellipse 50% 50% at 80% 30%, rgba(138,3,3,0.25) 0%, transparent 60%),
-                linear-gradient(180deg, rgba(26,26,26,0.3) 0%, rgba(14,14,14,0.7) 100%);
-        }
-
-        /* ── Animated glow orb ── */
-        .glow-orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(90px);
-            pointer-events: none;
-            z-index: 0;
-            animation: orbFloat 8s ease-in-out infinite alternate;
-        }
-        .glow-orb--red {
-            width: 500px; height: 500px;
-            background: rgba(138, 3, 3, 0.30);
-            top: -10%; left: 10%;
-        }
-        .glow-orb--purple {
-            width: 400px; height: 400px;
-            background: rgba(75, 44, 79, 0.25);
-            bottom: -5%; right: 5%;
-            animation-delay: -4s;
-        }
-        @keyframes orbFloat {
-            0%   { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(30px, -30px) scale(1.15); }
-        }
-
-        /* ── Grain ── */
         .grain {
-            background-image: radial-gradient(rgba(232,228,217,0.04) 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-image: radial-gradient(rgba(10,31,26,0.06) 1px, transparent 1px);
+            background-size: 22px 22px;
         }
-
-        /* ── Card glass ── */
         .login-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(232,228,217,0.09);
-            backdrop-filter: blur(24px) saturate(150%);
-            -webkit-backdrop-filter: blur(24px) saturate(150%);
+            background: white;
+            border: 1.5px solid var(--line);
+            box-shadow: 0 16px 48px -16px rgba(10,31,26,0.18), 0 6px 18px -8px rgba(10,31,26,0.12);
         }
-
-        /* ── Input focus ring ── */
         .login-input {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(232,228,217,0.12);
-            transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
+            background: white;
+            border: 1.5px solid var(--line);
+            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
         }
         .login-input:focus {
-            background: rgba(255,255,255,0.09);
-            border-color: rgba(138,3,3,0.7);
-            box-shadow: 0 0 0 3px rgba(138,3,3,0.15), 0 4px 20px -4px rgba(138,3,3,0.25);
+            background: white;
+            border-color: var(--emerald-800);
+            box-shadow: 0 0 0 3px rgba(20,61,51,0.14), 0 4px 16px -8px rgba(10,31,26,0.12);
         }
-
-        /* ── Glow button ── */
-        .btn-glow {
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 20px -4px rgba(138,3,3,0.5);
-            transition: box-shadow .3s ease, transform .2s ease;
+        .login-input::placeholder { color: #8aa589; }
+        .btn-emerald {
+            background: var(--emerald-900);
+            color: white;
+            box-shadow: 0 8px 24px -10px rgba(10,31,26,0.45);
+            transition: all .2s cubic-bezier(.16,1,.3,1);
         }
-        .btn-glow:hover {
-            box-shadow: 0 8px 40px -4px rgba(138,3,3,0.7);
-            transform: translateY(-1px);
-        }
-        .btn-glow:active { transform: translateY(0); }
-        .btn-glow::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
-            pointer-events: none;
-        }
-
-        /* ── Side panel branding ── */
-        .side-brand-line {
-            position: relative;
-        }
-        .side-brand-line::after {
-            content: '';
-            position: absolute;
-            right: -48px;
-            top: 50%;
-            width: 32px;
-            height: 2px;
-            background: linear-gradient(90deg, rgba(138,3,3,0.6), transparent);
-        }
-
-        /* ── Floating shapes for side panel ── */
+        .btn-emerald:hover { background: var(--emerald-950); transform: translateY(-1px); box-shadow: 0 14px 36px -12px rgba(10,31,26,0.55); }
+        .btn-emerald:active { transform: translateY(0); }
         .float-ring {
             position: absolute;
             border-radius: 50%;
-            border: 1px solid rgba(232,228,217,0.08);
-            animation: floatSpin 20s linear infinite;
+            border: 1.5px solid rgba(255,255,255,0.10);
+            animation: floatSpin 22s linear infinite;
         }
         .float-ring--1 { width: 120px; height: 120px; top: 15%; left: 20%; }
-        .float-ring--2 { width: 80px; height: 80px; bottom: 20%; right: 15%; animation-duration: 14s; animation-direction: reverse; border-color: rgba(138,3,3,0.2); }
-        .float-ring--3 { width: 200px; height: 200px; top: 50%; left: 60%; animation-duration: 28s; border-color: rgba(75,44,79,0.15); }
+        .float-ring--2 { width: 80px; height: 80px; bottom: 20%; right: 15%; animation-duration: 14s; animation-direction: reverse; border-color: rgba(255,255,255,0.07); }
+        .float-ring--3 { width: 200px; height: 200px; top: 50%; left: 60%; animation-duration: 28s; border-color: rgba(255,255,255,0.06); }
         @keyframes floatSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        /* ── Password toggle ── */
-        .pw-toggle {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(232,228,217,0.4);
-            transition: color .2s ease;
-            cursor: pointer;
-            z-index: 5;
-        }
-        .pw-toggle:hover { color: rgba(232,228,217,0.8); }
-
-        /* ── Message anim ── */
-        .msg-enter {
-            animation: msgSlideIn .35s cubic-bezier(.16,1,.3,1);
-        }
-        @keyframes msgSlideIn {
-            from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        /* ── Reduced motion ── */
+        .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #5a6b63; transition: color .2s ease; cursor: pointer; z-index: 5; }
+        .pw-toggle:hover { color: var(--ink); }
+        .msg-enter { animation: msgSlideIn .35s cubic-bezier(.16,1,.3,1); }
+        @keyframes msgSlideIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @media (prefers-reduced-motion: reduce) {
-            .glow-orb, .float-ring { animation: none; }
-            .login-card, .login-input, .btn-glow { transition: none; }
+            .float-ring { animation: none; }
+            .login-card, .login-input { transition: none; }
         }
     </style>
 </head>
@@ -192,21 +104,17 @@
     <!-- 3D Canvas -->
     <canvas id="login-canvas"></canvas>
 
-    <!-- Glowing orbs -->
-    <div class="glow-orb glow-orb--red"></div>
-    <div class="glow-orb glow-orb--purple"></div>
-
-    <!-- Vignette -->
-    <div class="fixed inset-0 z-0 pointer-events-none" style="background:radial-gradient(ellipse 60% 50% at 50% 50%,transparent 0%,rgba(14,14,14,0.65) 100%);"></div>
-
-    <!-- Grain overlay -->
-    <div class="fixed inset-0 z-0 pointer-events-none grain opacity-50"></div>
+    <!-- Grain + vignette -->
+    <div class="fixed inset-0 z-0 pointer-events-none" style="background:radial-gradient(800px 600px at 20% 15%, rgba(20,61,51,0.08) 0%, transparent 60%), radial-gradient(700px 500px at 90% 85%, rgba(168,191,168,0.22) 0%, transparent 65%), linear-gradient(180deg, rgba(242,245,241,0.25) 0%, rgba(242,245,241,0.85) 100%);"></div>
+    <div class="fixed inset-0 z-0 pointer-events-none grain opacity-40"></div>
 
     <!-- ============ MAIN LAYOUT ============ -->
     <div class="relative z-10 flex h-full">
 
-        <!-- ── LEFT SIDE: Branding (hidden on small screens) ── -->
-        <div class="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-center px-12 xl:px-20 overflow-hidden">
+        <!-- ── LEFT SIDE: Branding — dark emerald high-contrast, synced with landing CTA -->
+        <div class="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-center px-12 xl:px-20 overflow-hidden bg-emerald-950 text-white">
+            <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+            <div class="absolute -top-28 -right-28 w-[520px] h-[520px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
             <!-- Floating rings -->
             <div class="float-ring float-ring--1"></div>
             <div class="float-ring float-ring--2"></div>
@@ -215,80 +123,81 @@
             <div class="relative z-10 max-w-lg">
                 <!-- Logo -->
                 <div id="brand-logo" class="flex items-center gap-4 mb-10 opacity-0" style="transform:translateY(20px)">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blood-red to-blood-red/70 flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-blood-red/40">
+                    <div class="w-14 h-14 rounded-2xl bg-white text-emerald-950 flex items-center justify-center font-bold text-xl shadow-xl shadow-black/20">
                         AB
                     </div>
-                    <div class="side-brand-line">
-                        <p class="font-display text-xl font-bold text-bone-white tracking-tight">ABTC System</p>
-                        <p class="text-xs text-bone-white/45 font-medium">Management Platform</p>
+                    <div>
+                        <p class="font-display text-xl font-bold text-white tracking-tight">ABTC System</p>
+                        <p class="text-xs text-sage-200 font-medium tracking-widest uppercase">Municipal Health Office</p>
                     </div>
                 </div>
 
                 <!-- Tagline -->
-                <h1 id="brand-title" class="opacity-0 font-display text-4xl xl:text-5xl font-bold tracking-tight leading-[1.1] mb-5" style="transform:translateY(30px)">
+                <h1 id="brand-title" class="opacity-0 font-display text-4xl xl:text-5xl font-bold tracking-tight leading-[1.05] mb-5 text-white" style="transform:translateY(30px)">
                     Every bite case<br>
-                    <span class="bg-gradient-to-r from-blood-red via-flesh-beige to-blood-red bg-clip-text" style="-webkit-text-fill-color:transparent;">tracked with care.</span>
+                    <span class="font-serif italic font-normal text-sage-300">tracked with care.</span>
                 </h1>
-                <p id="brand-sub" class="opacity-0 text-bone-white/55 text-base xl:text-lg leading-relaxed max-w-md" style="transform:translateY(30px)">
+                <p id="brand-sub" class="opacity-0 text-sage-100 text-base xl:text-lg leading-relaxed max-w-md" style="transform:translateY(30px)">
                     Securely access your Animal Bite Treatment Center dashboard — patients, vaccinations, inventory, and full audit trails in one place.
                 </p>
 
-                <!-- Trust badges -->
-                <div id="brand-badges" class="opacity-0 flex flex-wrap items-center gap-4 mt-10" style="transform:translateY(20px)">
-                    <span class="inline-flex items-center gap-2 text-xs text-bone-white/45 bg-bone-white/5 px-3 py-1.5 rounded-full border border-bone-white/8">
-                        <svg class="w-3.5 h-3.5 text-venom-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <!-- Trust badges — high contrast on dark -->
+                <div id="brand-badges" class="opacity-0 flex flex-wrap items-center gap-3 mt-10" style="transform:translateY(20px)">
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-full border border-white/15 backdrop-blur">
+                        <span class="w-6 h-6 rounded-full bg-white text-emerald-900 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></span>
                         Encrypted sessions
                     </span>
-                    <span class="inline-flex items-center gap-2 text-xs text-bone-white/45 bg-bone-white/5 px-3 py-1.5 rounded-full border border-bone-white/8">
-                        <svg class="w-3.5 h-3.5 text-flesh-beige" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-full border border-white/15 backdrop-blur">
+                        <span class="w-6 h-6 rounded-full bg-white/15 border border-white/20 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
                         Audit-trail ready
                     </span>
-                    <span class="inline-flex items-center gap-2 text-xs text-bone-white/45 bg-bone-white/5 px-3 py-1.5 rounded-full border border-bone-white/8">
-                        <svg class="w-3.5 h-3.5 text-blood-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-full border border-white/15 backdrop-blur">
+                        <span class="w-6 h-6 rounded-full bg-white text-emerald-900 flex items-center justify-center text-[10px] font-bold">R</span>
                         Role-based access
                     </span>
                 </div>
             </div>
+            <p class="absolute bottom-6 left-12 xl:left-20 text-xs text-sage-300/60">© Municipal Health Office · ABTC</p>
         </div>
 
-        <!-- ── RIGHT SIDE: Login Form ── -->
-        <div class="flex-1 flex items-center justify-center px-5 sm:px-8">
+        <!-- ── RIGHT SIDE: Login Form — light high-contrast -->
+        <div class="flex-1 flex items-center justify-center px-5 sm:px-8 bg-sage-50/70 backdrop-blur-sm">
             <div class="w-full max-w-md">
 
                 <!-- Mobile-only logo -->
                 <div id="mobile-logo" class="lg:hidden text-center mb-8 opacity-0" style="transform:translateY(20px)">
-                    <a href="{% url 'accounts:landing' %}" class="inline-flex items-center gap-2 text-bone-white/40 hover:text-bone-white/70 text-xs mb-5 transition-colors group">
+                    <a href="{% url 'accounts:landing' %}" class="inline-flex items-center gap-2 text-emerald-800 hover:text-emerald-900 text-xs font-semibold mb-5 transition-colors group">
                         <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Back to home
                     </a>
-                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blood-red to-blood-red/70 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-blood-red/40 mb-3">AB</div>
-                    <h1 class="text-lg font-display font-bold text-bone-white">ABTC System</h1>
-                    <p class="text-bone-white/45 text-xs">Animal Bite Treatment Center</p>
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-900 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-emerald-900/20 mb-3">AB</div>
+                    <h1 class="text-lg font-display font-bold text-ink">ABTC System</h1>
+                    <p class="text-muted text-xs font-medium">Animal Bite Treatment Center</p>
                 </div>
 
-                <!-- Card -->
-                <div id="login-card" class="login-card rounded-3xl p-8 sm:p-10 opacity-0" style="transform:translateY(30px)">
+                <!-- Card — white high-contrast, synced with landing bento -->
+                <div id="login-card" class="login-card rounded-[1.75rem] p-8 sm:p-10 opacity-0" style="transform:translateY(30px)">
 
                     <!-- Desktop back link -->
-                    <a href="{% url 'accounts:landing' %}" class="hidden lg:inline-flex items-center gap-2 text-bone-white/35 hover:text-bone-white/65 text-xs mb-7 transition-colors group">
+                    <a href="{% url 'accounts:landing' %}" class="hidden lg:inline-flex items-center gap-2 text-muted hover:text-ink text-xs font-semibold mb-7 transition-colors group">
                         <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Back to home
                     </a>
 
-                    <!-- Header -->
+                    <!-- Header — dark ink for contrast -->
                     <div class="mb-7">
-                        <h2 class="font-display text-2xl font-bold text-bone-white tracking-tight">Sign in</h2>
-                        <p class="text-sm text-bone-white/45 mt-1.5">Enter your credentials to access the dashboard</p>
+                        <h2 class="font-display text-2xl font-bold text-ink tracking-tight">Sign in</h2>
+                        <p class="text-sm text-muted font-medium mt-1.5">Enter your credentials to access your account</p>
                     </div>
 
                     <!-- Messages -->
                     {% if messages %}
                     <div class="mb-5 space-y-2">
                         {% for message in messages %}
-                        <div class="msg-enter flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium
-                                    {% if message.tags == 'error' %}bg-blood-red/15 text-red-300 border border-blood-red/25
-                                    {% elif message.tags == 'success' %}bg-venom-green/15 text-green-300 border border-venom-green/25
-                                    {% else %}bg-flesh-beige/15 text-flesh-beige border border-flesh-beige/25{% endif %}">
+                        <div class="msg-enter flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold border
+                                    {% if message.tags == 'error' %}bg-red-50 text-red-800 border-red-200
+                                    {% elif message.tags == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-200
+                                    {% else %}bg-sage-100 text-ink border-line{% endif %}">
                             {% if message.tags == 'error' %}
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             {% elif message.tags == 'success' %}
@@ -306,9 +215,9 @@
 
                         <!-- Username -->
                         <div>
-                            <label class="block text-xs font-semibold text-bone-white/60 uppercase tracking-wider mb-1.5">Username</label>
+                            <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-1.5">Username</label>
                             <div class="relative">
-                                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-bone-white/30">
+                                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sage-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                 </div>
                                 <input
@@ -317,16 +226,16 @@
                                     placeholder="jdoe"
                                     autocomplete="username"
                                     required
-                                    class="login-input w-full pl-10 pr-4 py-3 rounded-xl text-sm text-bone-white placeholder-bone-white/30 outline-none"
+                                    class="login-input w-full pl-10 pr-4 py-3 rounded-xl text-sm text-ink outline-none"
                                 >
                             </div>
                         </div>
 
                         <!-- Password -->
                         <div x-data="{ show: false }">
-                            <label class="block text-xs font-semibold text-bone-white/60 uppercase tracking-wider mb-1.5">Password</label>
+                            <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-1.5">Password</label>
                             <div class="relative">
-                                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-bone-white/30">
+                                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sage-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 </div>
                                 <input
@@ -335,30 +244,27 @@
                                     placeholder="••••••••"
                                     autocomplete="current-password"
                                     required
-                                    class="login-input w-full pl-10 pr-10 py-3 rounded-xl text-sm text-bone-white placeholder-bone-white/30 outline-none"
+                                    class="login-input w-full pl-10 pr-10 py-3 rounded-xl text-sm text-ink outline-none"
                                 >
                                 <button type="button" @click="show = !show" class="pw-toggle">
-                                    <!-- Eye open -->
                                     <svg x-show="!show" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                    <!-- Eye closed -->
                                     <svg x-show="show" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Submit -->
-                        <button type="submit" class="btn-glow w-full mt-2 py-3 bg-gradient-to-r from-blood-red via-blood-red to-blood-red/80 text-white font-semibold rounded-xl text-sm tracking-wide cursor-pointer">
-                            <span class="relative z-10 flex items-center justify-center gap-2">
-                                Sign In
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                            </span>
+                        <!-- Submit — emerald synced with landing -->
+                        <button type="submit" class="btn-emerald w-full mt-2 py-3.5 rounded-full text-white font-bold text-sm tracking-wide cursor-pointer flex items-center justify-center gap-2">
+                            Sign In
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                         </button>
                     </form>
+                    <p class="mt-5 text-center text-sm font-medium text-muted">New patient? <a href="{% url 'pre_registrations:public_create' %}" class="font-bold text-emerald-800 hover:text-emerald-900 underline decoration-emerald-800/20 underline-offset-2">Sign up and pre-register</a></p>
                 </div>
 
-                <!-- Footer -->
-                <p id="login-footer" class="text-center text-bone-white/30 text-[11px] mt-7 opacity-0" style="transform:translateY(15px)">
-                    Municipal Health Office — Animal Bite Treatment Center
+                <!-- Footer — dark ink on sage for contrast -->
+                <p id="login-footer" class="text-center text-muted font-medium text-[11px] tracking-wide mt-7 opacity-0" style="transform:translateY(15px)">
+                    Municipal Health Office — Animal Bite Treatment Center · Secure & audited
                 </p>
             </div>
         </div>
@@ -367,7 +273,7 @@
     <!-- ============ GSAP ============ -->
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-    <!-- ============ THREE.JS 3D SCENE ============ -->
+    <!-- ============ THREE.JS 3D SCENE — emerald synced, low wash -->
     <script type="module">
         import * as THREE from 'three';
         const canvas = document.getElementById('login-canvas');
@@ -378,52 +284,53 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
 
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x0e0e0e, 0.045);
+        scene.fog = new THREE.Fog(0xf2f5f1, 10, 26);
 
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 0, 10);
 
-        // ── Central icosahedron wireframe ──
+        // Central muted emerald wireframe — low opacity, not washing
         const coreGeo = new THREE.IcosahedronGeometry(2.6, 1);
-        const coreMat = new THREE.MeshBasicMaterial({ color: 0x8A0303, wireframe: true, transparent: true, opacity: 0.40 });
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x143d33, wireframe: true, transparent: true, opacity: 0.14 });
         const core = new THREE.Mesh(coreGeo, coreMat);
         scene.add(core);
 
-        // Inner glow
+        // Inner sage glow — subtle
         const innerGeo = new THREE.IcosahedronGeometry(1.7, 2);
-        const innerMat = new THREE.MeshBasicMaterial({ color: 0x4B2C4F, transparent: true, opacity: 0.25 });
+        const innerMat = new THREE.MeshBasicMaterial({ color: 0xd0ddd0, transparent: true, opacity: 0.18 });
         const inner = new THREE.Mesh(innerGeo, innerMat);
         scene.add(inner);
 
-        // ── Rings ──
+        // Rings — emerald muted, pushed to right/left to avoid form wash
         const ringGroup = new THREE.Group();
         const ringData = [
-            { r: 3.4, color: 0x8A0303, rot: [Math.PI/2, 0.3, 0], opacity: 0.40 },
-            { r: 4.1, color: 0xD9A679, rot: [Math.PI/2 + 0.4, 0.8, 0.2], opacity: 0.28 },
-            { r: 4.8, color: 0x4B2C4F, rot: [Math.PI/2 - 0.3, 1.1, -0.1], opacity: 0.20 },
+            { r: 3.4, color: 0x143d33, rot: [Math.PI/2, 0.3, 0], opacity: 0.10 },
+            { r: 4.1, color: 0xa9bfa8, rot: [Math.PI/2 + 0.4, 0.8, 0.2], opacity: 0.07 },
+            { r: 4.8, color: 0xd0ddd0, rot: [Math.PI/2 - 0.3, 1.1, -0.1], opacity: 0.05 },
         ];
         ringData.forEach(d => {
             const geo = new THREE.TorusGeometry(d.r, 0.010, 16, 140);
             const mat = new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: d.opacity });
             const m = new THREE.Mesh(geo, mat);
             m.rotation.set(...d.rot);
+            m.position.set(1.2, -0.4, -1.5);
             ringGroup.add(m);
         });
         scene.add(ringGroup);
 
-        // ── Particles ──
-        const pCount = 900;
+        // Particles — sage / emerald / white, low opacity
+        const pCount = 700;
         const pos = new Float32Array(pCount * 3);
         const cols = new Float32Array(pCount * 3);
-        const palette = [new THREE.Color(0xE8E4D9), new THREE.Color(0x8A0303), new THREE.Color(0xD9A679), new THREE.Color(0x4B2C4F)];
+        const palette = [new THREE.Color(0xe6ece5), new THREE.Color(0x143d33), new THREE.Color(0xa9bfa8), new THREE.Color(0xffffff)];
         for (let i = 0; i < pCount; i++) {
             const i3 = i * 3;
             const radius = 4 + Math.random() * 20;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
-            pos[i3]     = radius * Math.sin(phi) * Math.cos(theta);
+            pos[i3]     = radius * Math.sin(phi) * Math.cos(theta) + 1.5;
             pos[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-            pos[i3 + 2] = radius * Math.cos(phi);
+            pos[i3 + 2] = radius * Math.cos(phi) - 2;
             const c = palette[Math.floor(Math.random() * palette.length)];
             cols[i3] = c.r; cols[i3+1] = c.g; cols[i3+2] = c.b;
         }
@@ -431,19 +338,18 @@
         pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
         pGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
         const pMat = new THREE.PointsMaterial({
-            size: 0.06, vertexColors: true, transparent: true, opacity: 0.7,
+            size: 0.05, vertexColors: true, transparent: true, opacity: 0.35,
             blending: THREE.AdditiveBlending, depthWrite: false
         });
         scene.add(new THREE.Points(pGeo, pMat));
 
-        // ── Mouse parallax ──
+        // Mouse parallax — gentle
         const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
         window.addEventListener('pointermove', e => {
             mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
             mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
         });
 
-        // ── Animate ──
         const clock = new THREE.Clock();
         (function loop() {
             const t = clock.getElapsedTime();
@@ -451,15 +357,15 @@
             mouse.y += (mouse.ty - mouse.y) * 0.04;
 
             if (!reduceMotion) {
-                core.rotation.y = t * 0.14;
-                core.rotation.x = t * 0.08;
-                inner.rotation.y = -t * 0.10;
-                ringGroup.rotation.y = t * 0.18;
-                ringGroup.rotation.x = t * 0.07;
+                core.rotation.y = t * 0.10;
+                core.rotation.x = t * 0.06;
+                inner.rotation.y = -t * 0.08;
+                ringGroup.rotation.y = t * 0.10;
+                ringGroup.rotation.x = t * 0.04;
             }
 
-            camera.position.x += (mouse.x * 2.0 - camera.position.x) * 0.04;
-            camera.position.y += (-mouse.y * 1.4 - camera.position.y) * 0.04;
+            camera.position.x += (mouse.x * 1.2 - camera.position.x) * 0.04;
+            camera.position.y += (-mouse.y * 0.7 - camera.position.y) * 0.04;
             camera.lookAt(0, 0, 0);
 
             renderer.render(scene, camera);
@@ -477,7 +383,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const gs = (sel, opts) => { const el = document.querySelector(sel); if (el && !reduceMotion) gsap.to(sel, opts); else if (el) gsap.set(sel, { opacity:1, y:0 }); };
 
             if (reduceMotion) {
                 gsap.set(['#brand-logo','#brand-title','#brand-sub','#brand-badges','#mobile-logo','#login-card','#login-footer'], { opacity:1, y:0 });

@@ -1,6 +1,7 @@
 from io import BytesIO
 
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -11,7 +12,7 @@ from django.utils import timezone
 
 from audit.models import AuditLog
 
-from .forms import PreRegistrationForm, StaffPreRegistrationForm, StatusLookupForm
+from .forms import PatientSignupPreRegistrationForm, StaffPreRegistrationForm, StatusLookupForm
 from .models import PreRegistration
 from .services import convert_to_official_case
 
@@ -21,15 +22,18 @@ def is_authorized_staff(user):
 
 
 def public_create(request):
+    account = request.user if request.user.is_authenticated and request.user.role == "patient" else None
     if request.method == "POST":
-        form = PreRegistrationForm(request.POST)
+        form = PatientSignupPreRegistrationForm(request.POST, account=account)
         if form.is_valid():
             record = form.save()
-            messages.success(request, "Pre-registration submitted. Please save or print your slip.")
+            if not request.user.is_authenticated:
+                login(request, form.account, backend="django.contrib.auth.backends.ModelBackend")
+            messages.success(request, "Your account and pre-registration are ready. You can now track treatment online.")
             return redirect("pre_registrations:public_success", number=record.pre_registration_number)
     else:
-        form = PreRegistrationForm()
-    return render(request, "pre_registrations/public_form.html", {"form": form})
+        form = PatientSignupPreRegistrationForm(account=account)
+    return render(request, "pre_registrations/public_form.html", {"form": form, "existing_account": account})
 
 
 def public_success(request, number):
