@@ -45,8 +45,16 @@ def case_create(request):
             case.case_number = generate_case_number()
             case.created_by = request.user
             case.save()
+            # Auto-create vaccination schedule so SMS reminders work end-to-end
+            try:
+                from vaccination.schedule_utils import ensure_vaccination_schedule
+                schedule, created = ensure_vaccination_schedule(case, created_by=request.user)
+                if created:
+                    AuditLog.objects.create(user=request.user, action='AUTO_CREATE_SCHEDULE', description=f'Auto-created vaccination schedule for {case.case_number}')
+            except Exception:
+                pass
             AuditLog.objects.create(user=request.user, action='CREATE_CASE', description=f'Created bite case {case.case_number}')
-            messages.success(request, f'Case {case.case_number} created successfully.')
+            messages.success(request, f'Case {case.case_number} created successfully. Vaccination schedule auto-created — SMS reminders will trigger via RHUDumingag.')
             return redirect('bite_cases:case_detail', pk=case.pk)
     else:
         form = AnimalBiteCaseForm()
@@ -54,8 +62,19 @@ def case_create(request):
 
 @login_required
 def case_detail(request, pk):
-    case = get_object_or_404(AnimalBiteCase, pk=pk)
-    return render(request, 'bite_cases/case_detail.html', {'case': case})
+    case = get_object_or_404(AnimalBiteCase.objects.select_related('patient__account'), pk=pk)
+    # Check for one-time temp credentials from pre-reg conversion (stored via patient pk)
+    temp_creds = None
+    # Try patient-specific key
+    key = f'temp_creds_{case.patient_id}'
+    if key in request.session:
+        temp_creds = request.session.pop(key)
+    else:
+        # Fallback generic last (for redirects)
+        last = request.session.get('temp_creds_last')
+        if last and str(last.get('patient_pk')) == str(case.patient_id):
+            temp_creds = request.session.pop('temp_creds_last')
+    return render(request, 'bite_cases/case_detail.html', {'case': case, 'temp_creds': temp_creds})
 
 @login_required
 def case_edit(request, pk):

@@ -5,6 +5,7 @@ from . import views
 app_name = "pre_registrations"
 
 urlpatterns = [
+    path("patient/report-bite/", views.patient_report_bite, name="patient_report"),
     path("pre-register/", views.public_create, name="public_create"),
     path("pre-register/success/<str:number>/", views.public_success, name="public_success"),
     path("pre-register/slip/<str:number>/", views.public_slip, name="public_slip"),

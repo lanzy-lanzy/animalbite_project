@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import VaccinationSchedule, VaccineDose, FollowUpRecord, AnimalObservation
+from .models import VaccinationSchedule, VaccineDose, FollowUpRecord, AnimalObservation, SMSLog
 
 @admin.register(VaccinationSchedule)
 class VaccinationScheduleAdmin(admin.ModelAdmin):
@@ -19,3 +19,11 @@ class FollowUpRecordAdmin(admin.ModelAdmin):
 @admin.register(AnimalObservation)
 class AnimalObservationAdmin(admin.ModelAdmin):
     list_display = ['bite_case', 'start_date', 'final_condition']
+
+
+@admin.register(SMSLog)
+class SMSLogAdmin(admin.ModelAdmin):
+    list_display = ['recipient', 'reminder_type', 'status', 'scheduled_date', 'dose', 'patient', 'sent_at']
+    list_filter = ['reminder_type', 'status', 'scheduled_date']
+    search_fields = ['recipient', 'patient__patient_number', 'patient__first_name', 'bite_case__case_number']
+    readonly_fields = ['api_response', 'semaphore_message_id', 'sent_at']

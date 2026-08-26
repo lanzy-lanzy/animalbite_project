@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 class Barangay(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -53,11 +54,38 @@ class Patient(models.Model):
     def __str__(self):
         return f"{self.last_name}, {self.first_name} ({self.patient_number})"
 
+    def clean(self):
+        super().clean()
+        from utils.phone import validate_ph_number
+        if self.contact_number:
+            validate_ph_number(self.contact_number)
+        if self.emergency_contact_number:
+            validate_ph_number(self.emergency_contact_number)
+
     def save(self, *args, **kwargs):
         from datetime import date
+        from utils.phone import normalize_to_09
+        # Auto-normalize to 09... local format for consistency (Semaphore will convert to 639...)
+        if self.contact_number:
+            n09 = normalize_to_09(self.contact_number)
+            if n09:
+                self.contact_number = n09
+        if self.emergency_contact_number:
+            n09 = normalize_to_09(self.emergency_contact_number)
+            if n09:
+                self.emergency_contact_number = n09
         if self.birthdate:
             today = date.today()
             self.age = today.year - self.birthdate.year - ((today.month, today.day) < (self.birthdate.month, self.birthdate.day))
+        # Validate before save (won't raise on already valid)
+        try:
+            self.full_clean(exclude=['patient_number', 'created_by', 'barangay', 'account'])
+        except ValidationError as e:
+            # If emergency/contact invalid, keep original but will still save? Let form handle validation.
+            # For direct model saves (like pre_reg conversion) we want to ensure valid; if invalid, keep original and let error surface via form next time.
+            # Re-raise only for contact_number which is critical for SMS
+            if 'contact_number' in e.message_dict:
+                raise
         super().save(*args, **kwargs)
 
     def full_name(self):

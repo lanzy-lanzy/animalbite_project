@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
@@ -119,10 +120,34 @@ class PreRegistration(models.Model):
     def __str__(self):
         return f"{self.pre_registration_number} - {self.full_name()}"
 
+    def clean(self):
+        super().clean()
+        from utils.phone import validate_ph_number
+        if self.contact_number:
+            validate_ph_number(self.contact_number)
+        if self.guardian_contact_number:
+            validate_ph_number(self.guardian_contact_number)
+        if self.emergency_contact_number:
+            validate_ph_number(self.emergency_contact_number)
+
     def save(self, *args, **kwargs):
+        from utils.phone import normalize_to_09
+        # Normalize to 09... for storage (Semaphore will use 639...)
+        for field in ["contact_number", "guardian_contact_number", "emergency_contact_number"]:
+            val = getattr(self, field, "")
+            if val:
+                n09 = normalize_to_09(val)
+                if n09:
+                    setattr(self, field, n09)
         if self.birthdate:
             today = timezone.localdate()
             self.age = self._calculate_age(self.birthdate, today)
+        # Validate (exclude auto fields to avoid false errors during conversion)
+        try:
+            self.full_clean(exclude=['pre_registration_number', 'qr_code', 'account', 'verified_by', 'converted_patient', 'converted_case'])
+        except ValidationError as e:
+            if 'contact_number' in e.message_dict:
+                raise
         if self.pre_registration_number:
             if not self.qr_code:
                 self.qr_code = self._qr_payload()

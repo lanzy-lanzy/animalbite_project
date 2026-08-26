@@ -42,15 +42,15 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                 <div><label class="form-label">Birthdate *</label>{{ form.birthdate }}{% if form.birthdate.errors %}<p class="text-red-600 text-xs mt-1">{{ form.birthdate.errors.0 }}</p>{% endif %}</div>
                 <div><label class="form-label">Sex *</label>{{ form.sex }}</div>
-                <div><label class="form-label">Contact number *</label>{{ form.contact_number }}</div>
+                <div><label class="form-label">Contact number *</label>{{ form.contact_number }}{% if form.contact_number.help_text %}<p class="text-xs text-muted mt-1">{{ form.contact_number.help_text }}</p>{% endif %}{% if form.contact_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.contact_number.errors.0 }}</p>{% endif %}<p class="text-xs text-emerald-700 mt-1">SMS via RHUDumingag</p></div>
                 <div><label class="form-label">Barangay *</label>{{ form.barangay }}</div>
             </div>
             <div class="mt-4"><label class="form-label">Complete address *</label>{{ form.address }}</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div><label class="form-label">Parent/guardian name if minor</label>{{ form.guardian_name }}</div>
-                <div><label class="form-label">Guardian contact number</label>{{ form.guardian_contact_number }}</div>
+                <div><label class="form-label">Guardian contact number</label>{{ form.guardian_contact_number }}{% if form.guardian_contact_number.help_text %}<p class="text-xs text-muted mt-1">{{ form.guardian_contact_number.help_text }}</p>{% endif %}{% if form.guardian_contact_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.guardian_contact_number.errors.0 }}</p>{% endif %}</div>
                 <div><label class="form-label">Emergency contact person</label>{{ form.emergency_contact_name }}</div>
-                <div><label class="form-label">Emergency contact number</label>{{ form.emergency_contact_number }}</div>
+                <div><label class="form-label">Emergency contact number</label>{{ form.emergency_contact_number }}{% if form.emergency_contact_number.help_text %}<p class="text-xs text-muted mt-1">{{ form.emergency_contact_number.help_text }}</p>{% endif %}{% if form.emergency_contact_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.emergency_contact_number.errors.0 }}</p>{% endif %}</div>
             </div>
         </section>
 

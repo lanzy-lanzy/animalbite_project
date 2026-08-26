@@ -91,6 +91,13 @@ def patient_portal(request):
 def change_password(request):
     if request.method == 'POST':
         form = PasswordChangeForm(request.user, request.POST)
+        # Style widgets to match app design system
+        for fname, field in form.fields.items():
+            field.widget.attrs.update({
+                'class': 'form-input pr-10',
+                'placeholder': '••••••••',
+                'autocomplete': 'new-password' if 'new' in fname else 'current-password',
+            })
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
@@ -98,6 +105,19 @@ def change_password(request):
             return redirect('accounts:profile')
     else:
         form = PasswordChangeForm(request.user)
+        for fname, field in form.fields.items():
+            field.widget.attrs.update({
+                'class': 'form-input pr-10',
+                'placeholder': '••••••••',
+                'autocomplete': 'new-password' if 'new' in fname else 'current-password',
+            })
+            if fname == 'old_password':
+                field.widget.attrs['autocomplete'] = 'current-password'
+                field.widget.attrs['placeholder'] = 'Current password'
+            if fname == 'new_password1':
+                field.widget.attrs['placeholder'] = 'New password (min 8 chars)'
+            if fname == 'new_password2':
+                field.widget.attrs['placeholder'] = 'Confirm new password'
     return render(request, 'accounts/change_password.html', {'form': form})
 
 @login_required

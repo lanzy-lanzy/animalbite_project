@@ -93,3 +93,10 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 AUTH_USER_MODEL = "accounts.User"
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
+
+# --- Semaphore SMS (RHUDumingag) ---
+SEMAPHORE_API_KEY = config('SEMAPHORE_API_KEY', default='')
+SEMAPHORE_SENDER_NAME = config('SEMAPHORE_SENDER_NAME', default='RHUDumingag')
+SEMAPHORE_ENABLED = config('SEMAPHORE_ENABLED', default=False, cast=bool)
+# Optional: base URL override (useful for mocking)
+SEMAPHORE_API_URL = config('SEMAPHORE_API_URL', default='https://api.semaphore.co/api/v4/messages')

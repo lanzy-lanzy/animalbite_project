@@ -73,3 +73,40 @@ class AnimalObservation(models.Model):
 
     def __str__(self):
         return f"Observation for {self.bite_case.case_number}"
+
+
+class SMSLog(models.Model):
+    REMINDER_CHOICES = [
+        ('3days_before', '3 Days Before'),
+        ('on_day', 'On Day'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('queued', 'Queued'),
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+    ]
+
+    dose = models.ForeignKey(VaccineDose, on_delete=models.CASCADE, related_name='sms_logs', null=True, blank=True)
+    patient = models.ForeignKey('patients.Patient', on_delete=models.CASCADE, related_name='sms_logs', null=True, blank=True)
+    bite_case = models.ForeignKey(AnimalBiteCase, on_delete=models.CASCADE, related_name='sms_logs', null=True, blank=True)
+    reminder_type = models.CharField(max_length=20, choices=REMINDER_CHOICES)
+    recipient = models.CharField(max_length=30)
+    message = models.TextField()
+    scheduled_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    semaphore_message_id = models.CharField(max_length=100, blank=True)
+    api_response = models.TextField(blank=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+        indexes = [
+            models.Index(fields=['scheduled_date', 'reminder_type']),
+            models.Index(fields=['recipient']),
+        ]
+
+    def __str__(self):
+        return f"SMS {self.get_reminder_type_display()} to {self.recipient} for {self.dose} - {self.status}"

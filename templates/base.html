@@ -63,7 +63,7 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2 7-7 7 7 2 2M5 10v10h14V10M9 20v-6h6v6"/></svg>
                     My Treatment
                 </a>
-                <a href="{% url 'pre_registrations:public_create' %}" class="sidebar-link {% if request.resolver_match.url_name == 'public_create' %}active{% endif %}">
+                <a href="{% url 'pre_registrations:patient_report' %}" class="sidebar-link {% if request.resolver_match.url_name == 'patient_report' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Report Another Bite
                 </a>
@@ -85,6 +85,10 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     Patients
                 </a>
+                <a href="{% url 'vaccination:patient_schedule_list' %}" class="sidebar-link {% if url_name == 'patient_schedule_list' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 13h2l.5 2.5-1.5 1.5-1.5-1.5L11 13z"/></svg>
+                    Vaccination Schedule
+                </a>
                 <a href="{% url 'pre_registrations:staff_list' %}" class="sidebar-link {% if url_name == 'staff_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h7l3 3v13H7z"/></svg>
                     Pre-Registrations
@@ -104,6 +108,10 @@
                 <a href="{% url 'vaccination:follow_up_list' %}" class="sidebar-link {% if url_name == 'follow_up_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                     Follow-Ups
+                </a>
+                <a href="{% url 'vaccination:sms_log_list' %}" class="sidebar-link {% if url_name == 'sms_log_list' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                    SMS Reminders
                 </a>
 
                 <div class="pt-3 pb-1">

@@ -4,6 +4,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from utils.phone import normalize_to_09, validate_ph_number
+
 from .models import PreRegistration
 
 
@@ -50,13 +52,13 @@ class PreRegistrationForm(forms.ModelForm):
             "suffix": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "birthdate": forms.DateInput(attrs={"type": "date", "class": INPUT_CLASS}),
             "sex": forms.Select(attrs={"class": INPUT_CLASS}),
-            "contact_number": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
             "address": forms.Textarea(attrs={"rows": 3, "class": INPUT_CLASS}),
             "barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "guardian_name": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "guardian_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "guardian_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
             "emergency_contact_name": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "emergency_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "emergency_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
             "bite_datetime": forms.DateTimeInput(attrs={"type": "datetime-local", "class": INPUT_CLASS}),
             "incident_place": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "incident_barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
@@ -77,6 +79,30 @@ class PreRegistrationForm(forms.ModelForm):
             "wound_washed": "Was the wound washed immediately?",
             "consent_given": "I confirm that the information I provided is true and correct. I agree that my information will be used by the Municipal Health Office for animal bite case recording, treatment processing, follow-up, and reporting purposes.",
         }
+        help_texts = {
+            "contact_number": "Required for SMS reminders (RHUDumingag): 09123456789 / 639123456789 / +639123456789.",
+            "guardian_contact_number": "Optional, must be valid PH mobile if for minor (fallback SMS).",
+            "emergency_contact_number": "Optional, valid PH mobile for fallback.",
+        }
+
+    def clean_contact_number(self):
+        val = self.cleaned_data.get("contact_number", "").strip()
+        validate_ph_number(val)
+        return normalize_to_09(val) or val
+
+    def clean_guardian_contact_number(self):
+        val = self.cleaned_data.get("guardian_contact_number", "").strip()
+        if not val:
+            return val
+        validate_ph_number(val)
+        return normalize_to_09(val) or val
+
+    def clean_emergency_contact_number(self):
+        val = self.cleaned_data.get("emergency_contact_number", "").strip()
+        if not val:
+            return val
+        validate_ph_number(val)
+        return normalize_to_09(val) or val
 
     def clean_consent_given(self):
         consent = self.cleaned_data.get("consent_given")

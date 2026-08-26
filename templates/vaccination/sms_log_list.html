@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}SMS Reminders — ABTC{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Hero -->
+    <div class="relative overflow-hidden rounded-[1.5rem] border text-white shadow-xl shadow-emerald-950/10" style="background:#0a1f1a; border-color:#0a1f1a;">
+        <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="absolute -top-16 -right-16 w-72 h-72 rounded-full blur-3xl opacity-15" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+        <div class="relative p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+                <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Semaphore · RHUDumingag · Auto 3-days & On-day
+                </p>
+                <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight mt-3">SMS Reminders (Semaphore)</h1>
+                <p class="text-sm font-medium text-sage-200 mt-1.5 max-w-2xl">Vaccine schedules trigger <span class="text-white font-bold">3 days before</span> and <span class="text-white font-bold">on-day</span>. Sender: <span class="text-white font-bold">RHUDumingag</span>. Uses <code class="text-sage-300">SEMAPHORE_API_KEY</code>. Disable via <code class="text-sage-300">SEMAPHORE_ENABLED=False</code> for dry-run.</p>
+                <div class="flex flex-wrap gap-2 mt-4 text-xs font-bold">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-ink">1 <span class="font-medium text-muted">Schedule</span></span>
+                    <span class="text-white/40">→</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-white">3 days before SMS</span>
+                    <span class="text-white/40">→</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white">On-day SMS</span>
+                </div>
+            </div>
+            <div class="flex gap-3 shrink-0 flex-wrap">
+                <div class="bg-white rounded-2xl p-4 min-w-[118px] shadow-xl">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Logs</p>
+                    <p class="font-display text-2xl font-bold text-ink">{{ total }}</p>
+                    <p class="text-xs font-medium text-muted">{{ sent }} sent · {{ failed }} failed</p>
+                </div>
+                <div class="hidden sm:flex flex-col gap-2">
+                    <div class="bg-emerald-500 text-white rounded-2xl px-4 py-3 shadow-xl min-w-[118px]">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Sent / Queued</p>
+                        <p class="font-display text-xl font-bold">{{ sent }} / {{ queued }}</p>
+                    </div>
+                    <div class="bg-red-500 text-white rounded-2xl px-4 py-3 shadow-xl min-w-[118px]">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Failed</p>
+                        <p class="font-display text-xl font-bold">{{ failed }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Trigger bar -->
+        <div class="relative px-6 pb-5 flex flex-wrap gap-2">
+            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="inline-flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="rtype" value="all">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-emerald-950 text-sm font-bold hover:bg-sage-50 shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Trigger Now (all due)
+                </button>
+            </form>
+            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="inline-flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="rtype" value="3days">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 shadow">
+                    Trigger 3-days only
+                </button>
+            </form>
+            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="inline-flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="rtype" value="on_day">
+                <input type="hidden" name="dry_run" value="1">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/15 text-white border border-white/15 text-sm font-bold hover:bg-white/20">
+                    Dry Run (simulate)
+                </button>
+            </form>
+            <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-sage-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Run via cron: <code class="bg-white/10 px-1.5 py-0.5 rounded">python manage.py send_vaccination_reminders</code>
+            </span>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+        <form method="GET" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <div class="lg:col-span-4">
+                    <label class="form-label">Search patient / case / number / message</label>
+                    <div class="relative">
+                        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" name="q" value="{{ q }}" placeholder="639..., PAT-..., Juan, ABC-..." class="form-input pl-9">
+                    </div>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="form-label">Reminder type</label>
+                    <select name="type" class="form-input">
+                        <option value="">All</option>
+                        <option value="3days_before" {% if reminder_type == '3days_before' %}selected{% endif %}>3 Days Before</option>
+                        <option value="on_day" {% if reminder_type == 'on_day' %}selected{% endif %}>On Day</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-input">
+                        <option value="">All</option>
+                        <option value="sent" {% if status == 'sent' %}selected{% endif %}>Sent</option>
+                        <option value="queued" {% if status == 'queued' %}selected{% endif %}>Queued</option>
+                        <option value="failed" {% if status == 'failed' %}selected{% endif %}>Failed</option>
+                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="form-label">From</label>
+                    <input type="date" name="from" value="{{ date_from }}" class="form-input">
+                </div>
+                <div class="lg:col-span-2 flex gap-2 items-end">
+                    <button type="submit" class="btn-primary flex-1">Filter</button>
+                    <a href="{% url 'vaccination:sms_log_list' %}" class="btn-secondary">Reset</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-medium text-muted">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sender <code class="bg-sage-50 border border-line px-1.5 py-0.5 rounded font-bold text-ink">RHUDumingag</code> · API <code class="bg-sage-50 border border-line px-1.5 py-0.5 rounded">https://api.semaphore.co/api/v4/messages</code>
+                <a href="https://semaphore.co/docs" target="_blank" class="ml-2 text-emerald-700 font-bold hover:underline">Docs →</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <h3 class="font-display text-sm font-bold text-ink">Logs · {{ page_obj.paginator.count }} found</h3>
+            <span class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Sent At</th>
+                        <th class="table-header">Patient</th>
+                        <th class="table-header">Dose · Scheduled</th>
+                        <th class="table-header">Type</th>
+                        <th class="table-header">Recipient</th>
+                        <th class="table-header">Status</th>
+                        <th class="table-header">Message</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for log in logs %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell">
+                            <span class="text-sm font-semibold text-ink">{{ log.sent_at|date:'M d, Y h:i A' }}</span>
+                            <span class="block text-xs text-muted">{{ log.sent_at|date:'D' }}</span>
+                        </td>
+                        <td class="table-cell">
+                            {% if log.patient %}
+                            <p class="text-sm font-semibold text-ink">{{ log.patient.full_name }}</p>
+                            <p class="text-xs font-mono text-muted">{{ log.patient.patient_number }} · {{ log.bite_case.case_number|default:'—' }}</p>
+                            {% else %}
+                            <span class="text-xs text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            {% if log.dose %}
+                                <p class="text-sm font-bold text-ink">{{ log.dose.dose_label }}</p>
+                                <p class="text-xs font-medium text-muted">{{ log.scheduled_date|date:'M d, Y' }}</p>
+                            {% else %}
+                                <span class="text-xs text-muted">{{ log.scheduled_date|date:'M d, Y'|default:'—' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold border {% if log.reminder_type == '3days_before' %}bg-amber-50 border-amber-200 text-amber-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %}">
+                                {{ log.get_reminder_type_display }}
+                            </span>
+                        </td>
+                        <td class="table-cell font-mono text-sm">{{ log.recipient }}</td>
+                        <td class="table-cell">
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold
+                                {% if log.status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800
+                                {% elif log.status == 'queued' %}bg-blue-50 border border-blue-200 text-blue-700
+                                {% elif log.status == 'failed' %}bg-red-50 border border-red-200 text-red-700
+                                {% else %}bg-sage-50 border border-line text-ink{% endif %}">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% if log.semaphore_message_id %}<span class="block text-xs font-mono text-muted mt-1">#{{ log.semaphore_message_id }}</span>{% endif %}
+                        </td>
+                        <td class="table-cell max-w-[320px]">
+                            <p class="text-sm text-ink truncate" title="{{ log.message }}">{{ log.message }}</p>
+                            {% if log.api_response %}<p class="text-xs font-mono text-muted truncate mt-1" title="{{ log.api_response }}">{{ log.api_response|truncatechars:80 }}</p>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-14">
+                        <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                        </div>
+                        <p class="text-sm font-bold text-ink mt-3">No SMS logs</p>
+                        <p class="text-xs font-medium text-muted mt-1">Trigger a dry-run or wait for scheduled doses.</p>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-between px-5 py-4 border-t border-line bg-sage-50">
+            <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+            <div class="flex gap-1">
+                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-secondary btn-xs">Prev</a>{% endif %}
+                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-secondary btn-xs">Next</a>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card bg-sage-50 border-dashed">
+        <h4 class="text-sm font-bold text-ink">Cron setup (Windows/Linux)</h4>
+        <p class="text-xs font-medium text-muted mt-1">Run daily at 08:00 AM Asia/Manila:</p>
+        <code class="block mt-2 p-3 rounded-xl bg-emerald-950 text-sage-100 text-xs font-mono overflow-x-auto">
+            python manage.py send_vaccination_reminders<br>
+            # For dry-run (no credits): python manage.py send_vaccination_reminders --dry-run<br>
+            # Specific date: python manage.py send_vaccination_reminders --date 2026-09-01 --verbose<br>
+            # Force resend: python manage.py send_vaccination_reminders --force
+        </code>
+        <p class="text-xs font-medium text-muted mt-2">Env needed: <code class="bg-white border border-line px-1 py-0.5 rounded">SEMAPHORE_API_KEY=xxx</code> <code class="bg-white border border-line px-1 py-0.5 rounded">SEMAPHORE_SENDER_NAME=RHUDumingag</code> <code class="bg-white border border-line px-1 py-0.5 rounded">SEMAPHORE_ENABLED=True</code></p>
+        <p class="text-xs font-medium text-muted mt-1">PowerShell Task Scheduler example:</p>
+        <code class="block mt-1 p-2 rounded-xl bg-white border border-line text-xs font-mono">schtasks /create /tn "ABTC_SMS_Reminders" /tr "powershell.exe -c 'cd C:\Users\gerla\2026\animalbite\animalbite_project; .\venv\Scripts\python.exe manage.py send_vaccination_reminders'" /sc daily /st 08:00</code>
+    </div>
+</div>
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 12, opacity: 0, duration: 0.45, stagger: 0.06, ease: 'power2.out' });
+    }
+</script>
+{% endblock %}

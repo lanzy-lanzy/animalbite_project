@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block title %}Report Another Bite - ABTC System{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-3">
+        <a href="{% url 'accounts:patient_portal' %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink leading-none">Report Another Bite</h1>
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mt-1">Direct case report · No need to refill personal info</p>
+        </div>
+        <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> {{ patient.patient_number }}
+        </span>
+    </div>
+
+    <!-- Patient info (read-only) -->
+    <div class="relative overflow-hidden rounded-[1.5rem] border bg-emerald-950 text-white shadow-xl shadow-emerald-950/10 p-6">
+        <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full blur-3xl opacity-15" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+        <div class="relative flex items-start gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-white text-emerald-950 flex items-center justify-center text-lg font-bold shadow-lg shrink-0">
+                {{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <h2 class="font-display text-lg font-bold leading-none">{{ patient.full_name }}</h2>
+                <p class="text-sm font-medium text-sage-200 mt-1">{{ patient.patient_number }} · {{ patient.get_sex_display }} · {{ patient.age }}y · {{ patient.barangay|default:patient.address|truncatechars:40 }}</p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-emerald-950">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        {{ patient.contact_number }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-sage-100">
+                        {{ patient.barangay|default:'No barangay' }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500 text-white">Verified patient</span>
+                </div>
+            </div>
+        </div>
+        <p class="relative mt-4 text-xs font-medium text-sage-300 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Your personal info is auto-filled. Just describe the new bite incident below — it will be reported directly as a case, no need to refill.
+        </p>
+    </div>
+
+    <!-- Info card -->
+    <div class="card bg-sage-50 border-dashed p-4 flex gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-900 text-white flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div>
+            <p class="text-sm font-bold text-ink">Direct to case — no re-encoding</p>
+            <p class="text-xs font-medium text-muted mt-1">This goes straight to your <span class="font-bold text-ink">Bite Case History</span> and auto-creates your vaccine schedule (Day 0·3·7·14·28). Staff will review without needing to re-enter your details. You’ll see it instantly in <span class="font-bold text-emerald-700">My Treatment</span>.</p>
+        </div>
+    </div>
+
+    <!-- Bite form -->
+    <div class="card p-0 overflow-hidden">
+        <div class="px-6 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <h3 class="font-display text-sm font-bold text-ink flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></span>
+                Bite Incident Details
+            </h3>
+            <span class="text-xs font-bold tracking-widest uppercase text-muted bg-white border border-line px-2.5 py-1 rounded-full">Required</span>
+        </div>
+
+        <form method="POST" class="p-6 space-y-6">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="rounded-xl bg-red-50 border border-red-200 p-3.5">
+                {% for e in form.non_field_errors %}<p class="text-sm font-bold text-red-700">{{ e }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Date & time of bite *</label>
+                    {{ form.date_time_bite }}
+                    {% if form.date_time_bite.errors %}<p class="text-red-600 text-xs mt-1">{{ form.date_time_bite.errors.0 }}</p>{% endif %}
+                    {% if form.date_time_bite.help_text %}<p class="text-muted text-xs mt-1">{{ form.date_time_bite.help_text }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Number of wounds *</label>
+                    {{ form.number_of_wounds }}
+                    {% if form.number_of_wounds.errors %}<p class="text-red-600 text-xs mt-1">{{ form.number_of_wounds.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Place of incident *</label>
+                    {{ form.place_of_incident }}
+                    {% if form.place_of_incident.errors %}<p class="text-red-600 text-xs mt-1">{{ form.place_of_incident.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Barangay of incident *</label>
+                    {{ form.incident_barangay }}
+                    {% if form.incident_barangay.errors %}<p class="text-red-600 text-xs mt-1">{{ form.incident_barangay.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Animal type *</label>
+                    {{ form.animal_type }}
+                    {% if form.animal_type.errors %}<p class="text-red-600 text-xs mt-1">{{ form.animal_type.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">If Other, specify</label>
+                    {{ form.animal_other }}
+                </div>
+                <div>
+                    <label class="form-label">Animal ownership *</label>
+                    {{ form.animal_ownership }}
+                </div>
+                <div>
+                    <label class="form-label">Animal vaccination status *</label>
+                    {{ form.animal_vax_status }}
+                </div>
+                <div>
+                    <label class="form-label">Animal condition *</label>
+                    {{ form.animal_condition }}
+                </div>
+                <div>
+                    <label class="form-label">Exposure type *</label>
+                    {{ form.exposure_type }}
+                </div>
+                <div class="md:col-span-2">
+                    <label class="form-label">Body part affected *</label>
+                    {{ form.body_part_affected }}
+                    {% if form.body_part_affected.errors %}<p class="text-red-600 text-xs mt-1">{{ form.body_part_affected.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label">Wound description</label>
+                {{ form.wound_description }}
+            </div>
+
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-sage-50 border border-line">
+                {{ form.wound_washed_immediately }}
+                <label for="{{ form.wound_washed_immediately.id_for_label }}" class="text-sm font-medium text-ink">Was the wound washed immediately with soap & water?</label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">First aid given</label>
+                    {{ form.first_aid_given }}
+                </div>
+                <div>
+                    <label class="form-label">Additional notes</label>
+                    {{ form.initial_consultation_notes }}
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button type="submit" class="btn-primary inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Report Bite Directly
+                </button>
+                <a href="{% url 'accounts:patient_portal' %}" class="btn-secondary">Cancel</a>
+                <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Goes to your Treatment now
+                </span>
+            </div>
+        </form>
+    </div>
+
+    <div class="card bg-emerald-950 border-emerald-950 text-white p-5 flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+            <p class="text-sm font-bold">What happens next?</p>
+            <p class="text-sm font-medium text-sage-200 mt-1">Your report appears instantly in <span class="text-white font-bold">My Treatment → Bite Case History</span> and a vaccine schedule (Day 0·3·7·14·28) is auto-prepared. No need to refill your name, address, or contact — we use your profile (<span class="text-white font-bold">{{ patient.contact_number }}</span>). Staff will review without re-encoding.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 10, opacity: 0, duration: 0.45, stagger: 0.07, ease: 'power2.out' });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+{% block title %}Patient Vaccination Schedules — ABTC{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Hero — Patient-centric -->
+    <div class="relative overflow-hidden rounded-[1.5rem] border text-white shadow-xl shadow-emerald-950/10" style="background:#0a1f1a; border-color:#0a1f1a;">
+        <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="absolute -top-16 -right-16 w-72 h-72 rounded-full blur-3xl opacity-15" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+        <div class="relative p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+                <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Patient Management · Vaccination Schedule
+                </p>
+                <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight mt-3">Patient Vaccination Schedules</h1>
+                <p class="text-sm font-medium text-sage-200 mt-1.5 max-w-2xl">Manage directly by patient — search name / ID / case #, see next due dose, progress & overdue. One tap to <span class="text-white font-bold">View Patient</span> or <span class="text-white font-bold">Manage Doses</span>.</p>
+                <div class="flex flex-wrap gap-2 mt-4 text-xs font-bold">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-ink">1 <span class="font-medium text-muted">Search patient</span></span>
+                    <span class="text-white/40">→</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 text-white border border-white/15">2 <span class="text-sage-300">Check due</span></span>
+                    <span class="text-white/40">→</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white">3 <span class="text-white/90">Update dose</span></span>
+                </div>
+            </div>
+            <div class="flex gap-3 shrink-0">
+                <div class="bg-white rounded-2xl p-4 min-w-[118px] shadow-xl">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Schedules</p>
+                    <p class="font-display text-2xl font-bold text-ink">{{ total }}</p>
+                    <p class="text-xs font-medium text-muted">{{ page_obj.paginator.count }} filtered</p>
+                </div>
+                <div class="hidden sm:flex flex-col gap-2">
+                    <div class="bg-amber-500 text-white rounded-2xl px-4 py-3 shadow-xl min-w-[118px]">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Due Today</p>
+                        <p class="font-display text-xl font-bold">{{ due_today_count }}</p>
+                    </div>
+                    <div class="bg-red-500 text-white rounded-2xl px-4 py-3 shadow-xl min-w-[118px]">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Overdue</p>
+                        <p class="font-display text-xl font-bold">{{ overdue_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats pills — quick filter -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if barangay_id %}barangay={{ barangay_id }}&{% endif %}" class="card p-4 text-center hover:shadow-md transition-shadow {% if not due %}ring-2 ring-emerald-950/15{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">All Schedules</p>
+            <p class="font-display text-xl font-bold text-ink">{{ total }}</p>
+            <p class="text-xs font-medium text-muted">Filtered</p>
+        </a>
+        <a href="?due=today{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if barangay_id %}&barangay={{ barangay_id }}{% endif %}" class="card p-4 text-center hover:shadow-md transition-shadow {% if due == 'today' %}ring-2 ring-amber-500/30 bg-amber-50/60{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-amber-700">Due Today</p>
+            <p class="font-display text-xl font-bold text-ink">{{ due_today_count }}</p>
+            <p class="text-xs font-medium text-muted">Tap to filter</p>
+        </a>
+        <a href="?due=overdue{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="card p-4 text-center hover:shadow-md transition-shadow {% if due == 'overdue' %}ring-2 ring-red-500/30 bg-red-50/60{% endif %}">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-red-600">Overdue</p>
+            <p class="font-display text-xl font-bold text-ink">{{ overdue_count }}</p>
+            <p class="text-xs font-medium text-muted">Needs action</p>
+        </a>
+        <div class="card p-4 text-center bg-emerald-50/50 border-emerald-200">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-emerald-700">Completed</p>
+            <p class="font-display text-xl font-bold text-ink">{{ completed_schedules }}</p>
+            <p class="text-xs font-medium text-muted">Has completed dose</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+        <form method="GET" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <div class="lg:col-span-4">
+                    <label class="form-label">Search patient / case / contact</label>
+                    <div class="relative">
+                        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" name="q" value="{{ q }}" placeholder="e.g., PAT-00001, Juan, ABC-00001, 0917..." class="form-input pl-9">
+                    </div>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="form-label">Barangay</label>
+                    <select name="barangay" class="form-input">
+                        <option value="">All barangays</option>
+                        {% for b in barangays %}<option value="{{ b.id }}" {% if barangay_id|stringformat:'s' == b.id|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="form-label">Dose status</label>
+                    <select name="status" class="form-input">
+                        <option value="">All</option>
+                        <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Has scheduled</option>
+                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>Has completed</option>
+                        <option value="missed" {% if status == 'missed' %}selected{% endif %}>Has missed</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="form-label">Due filter</label>
+                    <select name="due" class="form-input">
+                        <option value="">All due</option>
+                        <option value="today" {% if due == 'today' %}selected{% endif %}>Due today</option>
+                        <option value="overdue" {% if due == 'overdue' %}selected{% endif %}>Overdue</option>
+                        <option value="upcoming" {% if due == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2 flex gap-2 items-end">
+                    <button type="submit" class="btn-primary flex-1">Apply</button>
+                    <a href="{% url 'vaccination:patient_schedule_list' %}" class="btn-secondary">Reset</a>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="form-label">From (created)</label>
+                    <input type="date" name="from" value="{{ date_from }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label">To (created)</label>
+                    <input type="date" name="to" value="{{ date_to }}" class="form-input">
+                </div>
+                <div class="flex items-end">
+                    <span class="text-xs font-medium text-muted flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Direct patient manage — data is live
+                    </span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Patient Schedules Table / Cards -->
+    <div class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Patient Schedules · {{ page_obj.paginator.count }} found</h3>
+                <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }} · Tap <span class="font-bold text-ink">Manage</span> to update doses directly</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-700 bg-white border border-line px-2.5 py-1 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+                </span>
+                <a href="{% url 'patients:patient_list' %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">Patients →</a>
+            </div>
+        </div>
+
+        <!-- Desktop table -->
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Patient</th>
+                        <th class="table-header">Case #</th>
+                        <th class="table-header">Next Due</th>
+                        <th class="table-header">Progress</th>
+                        <th class="table-header">Status</th>
+                        <th class="table-header text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for s in schedules %}
+                    <tr class="hover:bg-sage-50 transition-colors group">
+                        <td class="table-cell">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-950 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                                    {{ s.bite_case.patient.full_name|first|upper }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-bold text-ink leading-none truncate">{{ s.bite_case.patient.full_name }}</p>
+                                    <p class="text-xs font-mono font-medium text-muted truncate">{{ s.bite_case.patient.patient_number }} · {{ s.bite_case.patient.contact_number }}</p>
+                                    <p class="text-xs font-medium text-muted truncate flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                        {{ s.bite_case.patient.barangay|default:'—' }}
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="table-cell">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-xs font-bold text-ink">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                {{ s.bite_case.case_number }}
+                            </span>
+                            <p class="text-xs font-medium text-muted mt-1 capitalize">{{ s.bite_case.get_animal_type_display }} · {{ s.bite_case.get_exposure_type_display }}</p>
+                        </td>
+                        <td class="table-cell">
+                            {% if s.next_dose %}
+                                <span class="text-sm font-bold {% if s.is_overdue %}text-red-600{% elif s.is_due_today %}text-amber-700{% else %}text-ink{% endif %}">{{ s.next_dose.scheduled_date|date:'M d, Y' }}</span>
+                                <span class="block text-xs font-bold {% if s.next_dose.scheduled_date == today %}bg-amber-500 text-white px-1.5 py-0.5 rounded-full inline-flex{% elif s.is_overdue %}bg-red-500 text-white px-1.5 py-0.5 rounded-full inline-flex{% else %}text-muted{% endif %}">
+                                    {{ s.next_dose.dose_label }}
+                                    {% if s.next_dose.scheduled_date == today %} · Today{% elif s.next_dose.scheduled_date < today and s.next_dose.dose_status in 'scheduled,rescheduled' %} · Overdue{% endif %}
+                                </span>
+                                {% if s.overdue_doses_count > 1 %}<span class="block text-xs font-medium text-red-600 mt-0.5">{{ s.overdue_doses_count }} overdue</span>{% endif %}
+                                {% if s.next_dose %}
+                                    {% if s.next_dose_sms_count %}
+                                        <span class="inline-flex mt-1 items-center gap-1 px-1.5 py-0.5 rounded-full {% if s.next_dose_sms_sent_today %}bg-emerald-50 border border-emerald-200 text-emerald-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %} text-xs font-bold">
+                                            <span class="w-1.5 h-1.5 rounded-full {% if s.next_dose_sms_sent_today %}bg-emerald-500{% else %}bg-blue-500{% endif %}"></span>
+                                            SMS {{ s.next_dose_sms_count }}×
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex mt-1 items-center gap-1 px-1.5 py-0.5 rounded-full bg-sage-50 border border-line text-muted text-xs font-medium">No SMS yet</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <span class="text-xs text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            <div class="min-w-[130px]">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold text-ink">{{ s.completed_computed }}/{{ s.total_doses_computed }}</span>
+                                    <span class="text-xs font-bold {% if s.progress_computed == 100 %}text-emerald-700{% else %}text-ink{% endif %}">{{ s.progress_computed }}%</span>
+                                </div>
+                                <div class="h-1.5 bg-sage-100 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full {% if s.progress_computed == 100 %}bg-emerald-600{% elif s.is_overdue %}bg-red-500{% else %}bg-emerald-700{% endif %}" style="width: {{ s.progress_computed }}%"></div>
+                                </div>
+                                <p class="text-xs font-medium text-muted mt-1">{% if s.missed_computed %}<span class="text-red-600 font-bold">{{ s.missed_computed }} missed</span> · {% endif %}{{ s.total_doses_computed }} doses</p>
+                            </div>
+                        </td>
+                        <td class="table-cell">
+                            <div class="flex flex-col gap-1">
+                                {% if s.is_overdue %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-bold w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> Overdue
+                                    </span>
+                                {% elif s.is_due_today %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Due Today
+                                    </span>
+                                {% elif s.progress_computed == 100 %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Completed
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-line text-ink text-xs font-bold w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> In Progress
+                                    </span>
+                                {% endif %}
+                                <span class="text-xs font-medium text-muted">{{ s.created_at|date:'M d, Y' }}</span>
+                            </div>
+                        </td>
+                        <td class="table-cell text-right">
+                            <div class="flex flex-col gap-1.5 items-end">
+                                <div class="flex gap-1">
+                                    <a href="{% url 'patients:patient_detail' s.bite_case.patient.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">Patient</a>
+                                    <a href="{% url 'vaccination:schedule_detail' s.pk %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow">
+                                        Manage
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    </a>
+                                </div>
+                                <a href="{% url 'bite_cases:case_detail' s.bite_case.pk %}" class="text-xs font-medium text-muted hover:text-emerald-700">Case →</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-14">
+                            <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <p class="text-sm font-bold text-ink mt-3">No patient schedules found</p>
+                            <p class="text-xs font-medium text-muted mt-1">Try clearing filters or create from a bite case.</p>
+                            <a href="{% url 'bite_cases:case_list' %}" class="inline-flex mt-4 btn-primary btn-sm">Go to Cases</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile cards -->
+        <div class="lg:hidden divide-y divide-sage-100">
+            {% for s in schedules %}
+            <div class="p-4 space-y-3 hover:bg-sage-50/50">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-full bg-emerald-950 text-white flex items-center justify-center text-sm font-bold shrink-0">{{ s.bite_case.patient.full_name|first|upper }}</div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-ink truncate">{{ s.bite_case.patient.full_name }}</p>
+                            <p class="text-xs font-mono text-muted truncate">{{ s.bite_case.patient.patient_number }}</p>
+                            <span class="inline-flex mt-1 items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-line text-xs font-bold text-ink">{{ s.bite_case.case_number }}</span>
+                        </div>
+                    </div>
+                    {% if s.is_overdue %}
+                        <span class="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-bold shrink-0">Overdue</span>
+                    {% elif s.is_due_today %}
+                        <span class="px-2 py-1 rounded-full bg-amber-500 text-white text-xs font-bold shrink-0">Today</span>
+                    {% endif %}
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="rounded-xl bg-white border border-line p-3">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Next Due</p>
+                        {% if s.next_dose %}
+                            <p class="text-sm font-bold {% if s.is_overdue %}text-red-600{% elif s.is_due_today %}text-amber-700{% else %}text-ink{% endif %}">{{ s.next_dose.dose_label }}</p>
+                            <p class="text-xs font-medium text-muted">{{ s.next_dose.scheduled_date|date:'M d, Y' }}</p>
+                            {% if s.next_dose_sms_count %}<p class="text-xs font-bold text-emerald-700 mt-1">SMS {{ s.next_dose_sms_count }}×</p>{% else %}<p class="text-xs text-muted mt-1">No SMS</p>{% endif %}
+                        {% else %}<p class="text-xs text-muted">—</p>{% endif %}
+                    </div>
+                    <div class="rounded-xl bg-sage-50 border border-line p-3">
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Progress</p>
+                        <p class="text-sm font-bold text-ink">{{ s.completed_computed }}/{{ s.total_doses_computed }} · {{ s.progress_computed }}%</p>
+                        <div class="h-1.5 bg-white rounded-full overflow-hidden mt-1 border border-line">
+                            <div class="h-full bg-emerald-700 rounded-full" style="width: {{ s.progress_computed }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{% url 'patients:patient_detail' s.bite_case.patient.pk %}" class="flex-1 inline-flex justify-center items-center gap-1 px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Patient</a>
+                    <a href="{% url 'vaccination:schedule_detail' s.pk %}" class="flex-1 inline-flex justify-center items-center gap-1 px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">Manage Doses</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-14 px-4">
+                <p class="text-sm font-bold text-ink">No patient schedules found</p>
+                <p class="text-xs font-medium text-muted mt-1">Try clearing filters or create from a bite case.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-t border-line bg-sage-50">
+            <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count }} total</p>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </a>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <span class="w-8 h-8 rounded-full bg-emerald-950 text-white flex items-center justify-center text-sm font-bold">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ num }}" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-sm font-medium text-ink hover:bg-sage-50">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Help card -->
+    <div class="card bg-sage-50 border-dashed flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div class="flex gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-950 text-white flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-ink">Direct patient management</p>
+                <p class="text-xs font-medium text-muted mt-1">Search a patient here → tap <span class="font-bold text-ink">Manage</span> → update each dose (Today / Completed / Missed). Use <span class="font-bold text-amber-700">Due Today</span> & <span class="font-bold text-red-600">Overdue</span> pills to triage daily. All changes are audited.</p>
+            </div>
+        </div>
+        <div class="flex gap-2 shrink-0">
+            <a href="{% url 'vaccination:schedule_list' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Schedules (by Case)</a>
+            <a href="{% url 'bite_cases:case_list' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Cases →</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.from('.card', { y: 12, opacity: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out' });
+    }
+</script>
+{% endblock %}

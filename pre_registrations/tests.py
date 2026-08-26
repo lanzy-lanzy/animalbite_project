@@ -340,10 +340,13 @@ class StaffPreRegistrationTests(TestCase):
         self.client.login(username="encoder", password="pass12345")
         self.client.post(reverse("pre_registrations:convert", args=[self.record.pk]))
         self.record.refresh_from_db()
-        schedule = VaccinationSchedule.objects.create(
-            bite_case=self.record.converted_case,
-            created_by=self.staff,
-        )
+        try:
+            schedule = self.record.converted_case.vaccination_schedule
+        except VaccinationSchedule.DoesNotExist:
+            schedule = VaccinationSchedule.objects.create(
+                bite_case=self.record.converted_case,
+                created_by=self.staff,
+            )
         VaccineDose.objects.create(
             schedule=schedule,
             dose_label="Day 3",

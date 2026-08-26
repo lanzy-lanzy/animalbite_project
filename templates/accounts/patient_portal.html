@@ -8,7 +8,7 @@
             <h1 class="text-2xl font-bold text-ink">Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
             <p class="mt-1 text-sm text-ink/70">Track your bite registrations, treatment history, and vaccine appointments.</p>
         </div>
-        <a href="{% url 'pre_registrations:public_create' %}" class="btn-primary">Report another bite</a>
+        <a href="{% url 'pre_registrations:patient_report' %}" class="btn-primary">Report another bite</a>
     </div>
 
     <section class="card">

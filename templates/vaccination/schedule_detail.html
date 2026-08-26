@@ -47,6 +47,39 @@
         </div>
     </div>
 
+    <!-- SMS Auto-Reminders (Semaphore RHUDumingag) -->
+    <div class="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
+        <div class="flex gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-ink flex items-center gap-2">
+                    SMS Reminders via Semaphore
+                    {% if semaphore_enabled %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">LIVE</span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">DRY-RUN</span>
+                    {% endif %}
+                    <span class="text-xs font-mono font-bold text-emerald-700 bg-white border border-emerald-200 px-1.5 py-0.5 rounded">{{ semaphore_sender|default:"RHUDumingag" }}</span>
+                </p>
+                <p class="text-xs font-medium text-muted mt-1">Auto: <span class="font-bold text-amber-700">3 days before</span> + <span class="font-bold text-emerald-700">on-day</span> to <span class="font-mono font-bold text-ink">{{ schedule.bite_case.patient.contact_number }}</span>. Manual send below per dose. <a href="{% url 'vaccination:sms_log_list' %}" class="font-bold text-emerald-700 hover:underline">View SMS Logs →</a></p>
+                {% if not semaphore_enabled %}
+                <p class="text-xs font-medium text-amber-700 mt-1">⚠️ SEMAPHORE_ENABLED=False — messages are simulated & logged as queued. Set <code class="bg-white px-1 rounded border">SEMAPHORE_API_KEY</code> + <code class="bg-white px-1 rounded border">SEMAPHORE_ENABLED=True</code> to actually send.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex gap-2 shrink-0 flex-wrap">
+            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}">
+                {% csrf_token %}
+                <input type="hidden" name="rtype" value="all">
+                <input type="hidden" name="dry_run" value="{% if semaphore_enabled %}0{% else %}1{% endif %}">
+                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Trigger Due SMS</button>
+            </form>
+            <a href="{% url 'vaccination:sms_log_list' %}?q={{ schedule.bite_case.case_number }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">Logs for this case</a>
+        </div>
+    </div>
+
     <!-- Patient & Case Info — bento -->
     <div class="card">
         <div class="flex items-center justify-between mb-4">
@@ -154,6 +187,43 @@
                             <div class="rounded-xl bg-sage-50 border border-line p-3">
                                 <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Remarks</p>
                                 <p class="text-xs font-medium text-ink mt-1 line-clamp-2">{{ dose.remarks|default:'—' }}</p>
+                            </div>
+                        </div>
+                        <!-- SMS per-dose -->
+                        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                            <div class="flex-1 min-w-0">
+                                {% if dose.sms_logs_cached %}
+                                    <div class="flex flex-wrap gap-1.5 items-center">
+                                        {% for log in dose.sms_logs_cached %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold border
+                                                {% if log.status == 'sent' %}bg-emerald-50 border-emerald-200 text-emerald-800
+                                                {% elif log.status == 'queued' %}bg-blue-50 border-blue-200 text-blue-700
+                                                {% elif log.status == 'failed' %}bg-red-50 border-red-200 text-red-700
+                                                {% else %}bg-sage-50 border-line text-ink{% endif %}">
+                                                {{ log.get_reminder_type_display }} · {{ log.get_status_display }} · {{ log.sent_at|date:'M d h:i A' }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-xs font-medium text-muted">No SMS yet for this dose</span>
+                                    {% if dose.scheduled_date|date:'Y-m-d' == today|date:'Y-m-d' %}
+                                        <span class="ml-1 inline-flex px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">Due today — SMS pending</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="flex gap-1.5 shrink-0">
+                                <form method="POST" action="{% url 'vaccination:send_sms_for_dose' dose.pk %}" class="inline-flex">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="reminder_type" value="3days_before">
+                                    {% if not semaphore_enabled %}<input type="hidden" name="dry_run" value="1">{% endif %}
+                                    <button type="submit" class="px-2.5 py-1.5 rounded-full border text-xs font-bold {% if dose.dose_status == 'completed' %}bg-sage-100 text-muted border-line cursor-not-allowed{% else %}bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100{% endif %}" {% if dose.dose_status == 'completed' %}disabled title="Already completed"{% endif %}>SMS 3-days</button>
+                                </form>
+                                <form method="POST" action="{% url 'vaccination:send_sms_for_dose' dose.pk %}" class="inline-flex">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="reminder_type" value="on_day">
+                                    {% if not semaphore_enabled %}<input type="hidden" name="dry_run" value="1">{% endif %}
+                                    <button type="submit" class="px-2.5 py-1.5 rounded-full border text-xs font-bold {% if dose.dose_status == 'completed' %}bg-sage-100 text-muted border-line cursor-not-allowed{% else %}bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100{% endif %}" {% if dose.dose_status == 'completed' %}disabled{% endif %}>SMS Today</button>
+                                </form>
                             </div>
                         </div>
                     </div>

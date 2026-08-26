@@ -22,6 +22,13 @@ def is_authorized_staff(user):
 
 
 def public_create(request):
+    # If logged-in patient on GET, redirect to direct case report (no need to refill personal info)
+    if request.method == 'GET' and request.user.is_authenticated and getattr(request.user, 'role', '') == 'patient':
+        try:
+            if hasattr(request.user, 'patient_profile') and request.user.patient_profile:
+                return redirect('pre_registrations:patient_report')
+        except Exception:
+            pass
     account = request.user if request.user.is_authenticated and request.user.role == "patient" else None
     if request.method == "POST":
         form = PatientSignupPreRegistrationForm(request.POST, account=account)
@@ -34,6 +41,55 @@ def public_create(request):
     else:
         form = PatientSignupPreRegistrationForm(account=account)
     return render(request, "pre_registrations/public_form.html", {"form": form, "existing_account": account})
+
+
+@login_required
+def patient_report_bite(request):
+    """For logged-in patients: report another bite directly as a case without refilling personal info."""
+    if getattr(request.user, 'role', '') != 'patient':
+        messages.info(request, "Please use the public pre-registration form.")
+        return redirect('pre_registrations:public_create')
+    try:
+        patient = request.user.patient_profile
+    except Exception:
+        messages.error(request, "No patient profile found. Your account is not linked to a patient record. Please contact the health office.")
+        return redirect('accounts:patient_portal')
+    if not patient:
+        messages.error(request, "No patient profile found.")
+        return redirect('accounts:patient_portal')
+
+    from bite_cases.forms import PatientBiteReportForm
+    from bite_cases.models import AnimalBiteCase
+    from patients.models import Patient as PatientModel
+
+    # Helper to generate case number
+    def _gen_case():
+        last = AnimalBiteCase.objects.filter(case_number__startswith='ABC-').order_by('-id').first()
+        return f"ABC-{int(last.case_number.split('-')[1]) + 1:05d}" if last else "ABC-00001"
+
+    if request.method == 'POST':
+        form = PatientBiteReportForm(request.POST)
+        if form.is_valid():
+            case = form.save(commit=False)
+            case.patient = patient
+            case.case_number = _gen_case()
+            case.created_by = request.user
+            # Also set patient contact for SMS fallback? Already linked
+            case.save()
+            # Auto-create schedule for SMS pipeline
+            try:
+                from vaccination.schedule_utils import ensure_vaccination_schedule
+                schedule, created = ensure_vaccination_schedule(case, created_by=request.user)
+                if created:
+                    AuditLog.objects.create(user=request.user, action='AUTO_CREATE_SCHEDULE', description=f'Auto-created schedule for patient-reported case {case.case_number}')
+            except Exception:
+                pass
+            AuditLog.objects.create(user=request.user, action='PATIENT_REPORT_BITE', description=f'Patient {patient.patient_number} reported new bite as {case.case_number}')
+            messages.success(request, f'Bite reported successfully as {case.case_number}. Staff will review and your vaccine schedule is already prepared. Check My Treatment for doses.')
+            return redirect('accounts:patient_portal')
+    else:
+        form = PatientBiteReportForm()
+    return render(request, 'pre_registrations/patient_report.html', {'form': form, 'patient': patient})
 
 
 def public_success(request, number):
@@ -194,8 +250,21 @@ def convert(request, pk):
             {"record": record, "duplicates": duplicates},
         )
 
-    _, case = convert_to_official_case(record, request.user)
-    messages.success(request, f"Pre-registration converted to official case {case.case_number}.")
+    patient, case = convert_to_official_case(record, request.user)
+    # If auto-created login (patient had no account), surface temp credentials
+    temp_user = getattr(patient, "_temp_username", None)
+    temp_pass = getattr(patient, "_temp_password", None)
+    if temp_user and temp_pass:
+        request.session[f'temp_creds_{patient.pk}'] = {
+            'username': temp_user,
+            'password': temp_pass,
+            'created': True,
+        }
+        messages.success(request, f"Pre-registration converted to {case.case_number} and patient login created: {temp_user} / Temp: {temp_pass} — SMS sent to {patient.contact_number} via RHUDumingag. Ask patient to change password after login.")
+        # Also store for case_detail display
+        request.session['temp_creds_last'] = {'patient_pk': patient.pk, 'username': temp_user, 'password': temp_pass}
+    else:
+        messages.success(request, f"Pre-registration converted to official case {case.case_number}.")
     return redirect("bite_cases:case_detail", pk=case.pk)
 
 
