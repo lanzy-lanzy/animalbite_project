@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Clinical Queue - Doctor Portal{% endblock %}
+{% block content %}
+<div class="max-w-[1440px] mx-auto">
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-ink flex items-center gap-3">
+        Clinical Queue
+        <span class="px-3 py-1 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold tracking-widest uppercase">{{ cases.paginator.count }} cases</span>
+      </h1>
+      <p class="text-sm font-medium text-muted mt-1.5">Bite cases needing clinical assessment — confirm WHO category, record findings, recommend treatment.</p>
+    </div>
+    <a href="{% url 'doctor:dashboard' %}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50 shadow-sm shrink-0">← Dashboard</a>
+  </div>
+
+  <div class="card mb-6">
+    <form method="GET" class="flex flex-col lg:flex-row gap-3">
+      <div class="flex-1 min-w-[260px]">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search case #, patient name, ID..." class="form-input w-full">
+      </div>
+      <div class="flex flex-wrap gap-3 lg:flex-nowrap">
+        <select name="status" class="form-input min-w-[180px] w-full lg:w-auto">
+          <option value="">All status</option>
+          <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending (no assessment)</option>
+          <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+          <option value="final" {% if status == 'final' %}selected{% endif %}>Final</option>
+        </select>
+        <select name="category" class="form-input min-w-[180px] w-full lg:w-auto">
+          <option value="">All categories</option>
+          <option value="category_i" {% if category == 'category_i' %}selected{% endif %}>Category I</option>
+          <option value="category_ii" {% if category == 'category_ii' %}selected{% endif %}>Category II</option>
+          <option value="category_iii" {% if category == 'category_iii' %}selected{% endif %}>Category III</option>
+        </select>
+        <button class="inline-flex items-center justify-center px-5 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Filter</button>
+        <a href="{% url 'doctor:queue' %}" class="inline-flex items-center justify-center px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card p-0 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[1100px]">
+        <colgroup>
+          <col style="width: 110px">
+          <col style="width: 210px">
+          <col style="width: 200px">
+          <col style="width: 120px">
+          <col style="width: 320px">
+          <col style="width: 140px">
+        </colgroup>
+        <thead>
+          <tr class="border-b border-line bg-sage-50/80">
+            <th class="table-header">Case #</th>
+            <th class="table-header">Patient</th>
+            <th class="table-header">Animal / Exposure</th>
+            <th class="table-header">Date</th>
+            <th class="table-header">Assessment</th>
+            <th class="table-header text-right pr-6">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-sage-100">
+          {% for c in cases %}
+          <tr class="hover:bg-sage-50/70 transition-colors">
+            <td class="table-cell">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-bold font-mono tracking-tight">{{ c.case_number }}</span>
+            </td>
+            <td class="table-cell">
+              <div class="font-semibold text-ink leading-tight">{{ c.patient.full_name }}</div>
+              <div class="text-xs font-medium text-muted mt-0.5 flex items-center gap-1.5">
+                <span class="font-mono bg-sage-100 border border-line px-1.5 py-0.5 rounded text-ink">{{ c.patient.patient_number }}</span>
+                <span>{{ c.patient.age }}y · {{ c.patient.get_sex_display }}</span>
+              </div>
+            </td>
+            <td class="table-cell">
+              <div class="text-sm font-semibold text-ink capitalize leading-tight">{{ c.get_animal_type_display }} <span class="text-muted font-normal">·</span> {{ c.get_exposure_type_display }}</div>
+              <div class="text-xs font-medium text-muted mt-0.5 truncate max-w-[180px]" title="{{ c.body_part_affected }} · {{ c.incident_barangay }}">{{ c.body_part_affected }} · {{ c.incident_barangay }}</div>
+            </td>
+            <td class="table-cell">
+              <div class="text-sm font-medium text-ink">{{ c.created_at|date:"M d, Y" }}</div>
+              <div class="text-xs text-muted">{{ c.created_at|date:"h:i A" }}</div>
+            </td>
+            <td class="table-cell">
+              {% if c.clinical_assessment %}
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap {% if c.clinical_assessment.status == 'final' %}bg-emerald-100 text-emerald-800 border-emerald-200{% else %}bg-amber-100 text-amber-800 border-amber-200{% endif %}">
+                    {% if c.clinical_assessment.status == 'final' %}● Final{% else %}○ Draft{% endif %}
+                  </span>
+                  {% if c.clinical_assessment.category_confirmed %}
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap
+                    {% if c.clinical_assessment.category_confirmed == 'category_iii' %}bg-red-50 text-red-700 border-red-200
+                    {% elif c.clinical_assessment.category_confirmed == 'category_ii' %}bg-amber-50 text-amber-800 border-amber-200
+                    {% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}"
+                    title="{{ c.clinical_assessment.get_category_confirmed_display }}">
+                    {% if c.clinical_assessment.category_confirmed == 'category_i' %}Category I
+                    {% elif c.clinical_assessment.category_confirmed == 'category_ii' %}Category II
+                    {% elif c.clinical_assessment.category_confirmed == 'category_iii' %}Category III{% endif %}
+                  </span>
+                  {% else %}
+                  <span class="inline-flex items-center px-2 py-1 rounded-full bg-sage-100 border border-line text-xs font-bold text-muted">Unclassified</span>
+                  {% endif %}
+                </div>
+                <div class="text-xs font-medium text-muted mt-1.5 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  by {{ c.clinical_assessment.assessed_by.get_full_name|default:c.clinical_assessment.assessed_by.username|default:"—" }}
+                </div>
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  No assessment
+                </span>
+                <div class="text-xs text-muted mt-1">Needs clinical review</div>
+              {% endif %}
+            </td>
+            <td class="table-cell text-right pr-6">
+              <a href="{% url 'doctor:assess_case' c.pk %}" class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm whitespace-nowrap min-w-[108px] transition">
+                {% if c.clinical_assessment and c.clinical_assessment.status == 'final' %}Review{% else %}Assess{% endif %}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center py-16">
+            <div class="w-12 h-12 rounded-full bg-sage-100 border border-line flex items-center justify-center mx-auto mb-3">
+              <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M9 8h6M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/></svg>
+            </div>
+            <p class="text-sm font-bold text-ink">No cases found</p>
+            <p class="text-xs text-muted mt-1">Try adjusting filters or create a new bite case.</p>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if cases.has_other_pages %}
+    <div class="flex items-center justify-between px-6 py-4 border-t border-line bg-sage-50/50">
+      <p class="text-sm font-medium text-muted">Page {{ cases.number }} of {{ cases.paginator.num_pages }} · {{ cases.paginator.count }} total</p>
+      <div class="flex gap-2">
+        {% if cases.has_previous %}<a href="?page={{ cases.previous_page_number }}&q={{ q }}&status={{ status }}&category={{ category }}" class="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Previous</a>{% endif %}
+        {% if cases.has_next %}<a href="?page={{ cases.next_page_number }}&q={{ q }}&status={{ status }}&category={{ category }}" class="inline-flex items-center px-4 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Next →</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

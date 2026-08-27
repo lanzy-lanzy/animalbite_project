@@ -94,6 +94,24 @@
                     Pre-Registrations
                 </a>
 
+                {% if request.user.role != 'patient' %}
+                <div class="pt-3 pb-1">
+                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Doctor Portal</p>
+                </div>
+                <a href="{% url 'doctor:dashboard' %}" class="sidebar-link {% if url_name == 'dashboard' and request.resolver_match.app_name == 'doctor' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M9 8h6M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 16v2m8-10h-2M4 12H2"/></svg>
+                    Doctor Dashboard
+                </a>
+                <a href="{% url 'doctor:queue' %}" class="sidebar-link {% if url_name == 'queue' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/><circle cx="15" cy="7" r="3"/></svg>
+                    Clinical Queue
+                </a>
+                <a href="{% url 'doctor:assessment_list' %}" class="sidebar-link {% if url_name == 'assessment_list' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    Assessments
+                </a>
+                {% endif %}
+
                 <div class="pt-3 pb-1">
                     <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Case Management</p>
                 </div>

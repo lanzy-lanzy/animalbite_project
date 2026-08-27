@@ -53,6 +53,42 @@
     </div>
     {% endif %}
 
+    {% if request.user.role != 'patient' %}
+    <div class="card mb-6 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M9 8h6M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/><path d="M12 3v2m0 16v2m8-10h-2M4 12H2"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-emerald-900">Doctor Clinical Assessment</h3>
+                    <p class="text-xs font-medium text-muted">Unified sheet — edit patient info + record findings, confirm category, recommend treatment.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {% for case in bite_cases|slice:":1" %}
+                <a href="{% url 'doctor:assess_case' case.pk %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Assess {% if bite_cases|length > 1 %}Latest Case{% endif %} → {{ case.case_number }}
+                </a>
+                {% empty %}
+                <a href="{% url 'doctor:assess_patient' patient.pk %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Start Assessment →</a>
+                {% endfor %}
+                <a href="{% url 'doctor:dashboard' %}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-emerald-200 text-emerald-800 text-sm font-bold hover:bg-emerald-50">Doctor Portal</a>
+            </div>
+        </div>
+        {% if bite_cases %}
+        <div class="mt-3 flex flex-wrap gap-1.5">
+            {% for case in bite_cases %}
+            <a href="{% url 'doctor:assess_case' case.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-line text-xs font-bold {% if case.clinical_assessment %}text-emerald-800 border-emerald-200{% else %}text-amber-800 border-amber-200{% endif %} hover:bg-sage-50">
+                {{ case.case_number }} {% if case.clinical_assessment %}· {{ case.clinical_assessment.get_category_confirmed_display|default:"Draft" }}{% else %}· Assess{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="card mb-6">
         <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Patient Information</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

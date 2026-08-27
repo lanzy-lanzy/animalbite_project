@@ -182,7 +182,7 @@ def patient_edit(request, pk):
 
 @login_required
 def patient_print(request, pk):
-    """HTML printable sheet — emerald style, with stored vital signs if available."""
+    """HTML printable sheet — emerald style, with stored vital signs and doctor clinical assessment if available."""
     patient = get_object_or_404(Patient.objects.select_related('barangay', 'account'), pk=pk)
     bite_cases = patient.bite_cases.select_related().prefetch_related('vaccination_schedule__doses').order_by('-created_at')[:5] if hasattr(patient, 'bite_cases') else []
     latest_case = bite_cases[0] if bite_cases else None
@@ -190,12 +190,35 @@ def patient_print(request, pk):
     latest_vitals = patient.get_latest_vitals() if hasattr(patient, 'get_latest_vitals') else None
     # Also recent vitals history for reference (last 3)
     recent_vitals = list(patient.vital_signs.order_by('-taken_at')[:3]) if hasattr(patient, 'vital_signs') else []
+    # Latest clinical assessment (for Section 3)
+    latest_assessment = None
+    clinical_by_case = {}
+    try:
+        from doctor.models import ClinicalAssessment
+        # latest for patient
+        latest_assessment = ClinicalAssessment.objects.select_related('assessed_by','bite_case').filter(patient=patient).order_by('-encounter_date','-updated_at').first()
+        # for latest_case specifically, prefer its assessment if exists
+        if latest_case and hasattr(latest_case, 'clinical_assessment') and latest_case.clinical_assessment:
+            latest_assessment = latest_case.clinical_assessment
+        # map case -> assessment for template convenience
+        for c in bite_cases:
+            if hasattr(c, 'clinical_assessment') and c.clinical_assessment:
+                clinical_by_case[c.pk] = c.clinical_assessment
+            else:
+                # try lookup
+                ca = ClinicalAssessment.objects.filter(bite_case=c).first()
+                if ca:
+                    clinical_by_case[c.pk] = ca
+    except Exception:
+        pass
     ctx = {
         'patient': patient,
         'bite_cases': bite_cases,
         'latest_case': latest_case,
         'latest_vitals': latest_vitals,
         'recent_vitals': recent_vitals,
+        'latest_assessment': latest_assessment,
+        'clinical_by_case': clinical_by_case,
         'now': datetime.now(),
         'print_mode': True,
     }
@@ -211,6 +234,16 @@ def patient_print_pdf(request, pk):
         bite_cases = list(bite_cases_qs[:5])
     except Exception:
         bite_cases = list(patient.bite_cases.order_by('-created_at')[:5]) if hasattr(patient, 'bite_cases') else []
+
+    # Latest clinical assessment for PDF Section 3
+    latest_assessment = None
+    try:
+        from doctor.models import ClinicalAssessment
+        latest_assessment = ClinicalAssessment.objects.select_related('assessed_by','bite_case').filter(patient=patient).order_by('-encounter_date','-updated_at').first()
+        if bite_cases and hasattr(bite_cases[0], 'clinical_assessment') and bite_cases[0].clinical_assessment:
+            latest_assessment = bite_cases[0].clinical_assessment
+    except Exception:
+        pass
 
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -441,15 +474,38 @@ def patient_print_pdf(request, pk):
         story.append(Paragraph("&nbsp; _______________________________________________________________________________", s_note))
     story.append(Spacer(1, 8))
 
-    # Section 3: Clinical Assessment
-    story.append(section_header("3 &nbsp;·&nbsp; Initial Assessment <font color=\"#c8d8c6\" size=\"6\">— blank for clinician</font>"))
-    story.append(Spacer(1, 4))
-    assessment_data = [
-        [cell("<b>Chief Complaint / History of Present Illness:</b><br/><br/>___________________________________________________________________________________________<br/>___________________________________________________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass', parent=s_td, leading=9))],
-        [cell("<b>Exposure Narrative (if animal bite):</b> Animal: ________ &nbsp; Owned / Stray &nbsp; Vax: ________ &nbsp; Wound wash: ○ Yes ○ No<br/>Body part: _________________ &nbsp; No. of wounds: ______ &nbsp; Date/time of bite: ______________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass2', parent=s_td, leading=9))],
-        [cell("<b>Physical Exam / System Review:</b><br/><br/>HEENT: ________________________________ &nbsp; Chest/Lungs: ________________________________<br/>Cardiac: ________________________________ &nbsp; Abdomen: ________________________________<br/>Skin/Wound description: __________________________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass3', parent=s_td, leading=9))],
-        [cell("<b>Assessment & Plan:</b><br/><br/>○ Category I &nbsp; ○ Category II &nbsp; ○ Category III &nbsp;&nbsp; | &nbsp; PEP: ○ Yes ○ No &nbsp; RIG: ○ Yes ○ No &nbsp; TT: ○ Yes ○ No<br/>Plan / Vaccine brand / Dose schedule: _____________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass4', parent=s_td, leading=9))],
-    ]
+    # Section 3: Clinical Assessment — doctor-filled or blank
+    if latest_assessment:
+        cat_label = latest_assessment.get_category_confirmed_display() if latest_assessment.category_confirmed else "—"
+        story.append(section_header(f"3 &nbsp;·&nbsp; Clinical Assessment <font color=\"#c8d8c6\" size=\"6\">— Dr. {(latest_assessment.assessed_by.get_full_name() if latest_assessment.assessed_by else '—')} · {latest_assessment.encounter_date.strftime('%b %d, %Y %H:%M') if latest_assessment.encounter_date else ''} · {cat_label} · {latest_assessment.get_status_display()}</font>"))
+        story.append(Spacer(1, 4))
+        # helper to format wash
+        wash = "Yes" if latest_assessment.wound_washed_verified else ("No" if latest_assessment.wound_washed_verified is False else "—")
+        cat_marks = {
+            'category_i': "● Category I ○ Category II ○ Category III",
+            'category_ii': "○ Category I ● Category II ○ Category III",
+            'category_iii': "○ Category I ○ Category II ● Category III",
+        }.get(latest_assessment.category_confirmed, "○ Category I ○ Category II ○ Category III")
+        pep = "● Yes" if latest_assessment.pep_indicated else "○ Yes"
+        rig = "● Yes" if latest_assessment.rig_indicated else "○ Yes"
+        tt = "● Yes" if latest_assessment.tt_indicated else "○ Yes"
+        import html as _html
+        def esc(t): return _html.escape(t or "—") if t else "—"
+        assessment_data = [
+            [cell(f"<b>Chief Complaint / HPI:</b><br/><b>CC:</b> {esc(latest_assessment.chief_complaint)}<br/><b>HPI:</b> {esc(latest_assessment.history_present_illness)}<br/>{'<b>Exposure Narrative:</b> ' + esc(latest_assessment.exposure_narrative) if latest_assessment.exposure_narrative else ''}", ParagraphStyle('ass', parent=s_td, leading=9))],
+            [cell(f"<b>Exposure (verified):</b> Animal: <b>{esc(latest_assessment.animal_type_verified or '—')}</b> &nbsp; Owned/Stray: <b>{esc(latest_assessment.animal_owned_verified or '—')}</b> &nbsp; Vax: <b>{esc(latest_assessment.animal_vax_verified or '—')}</b> &nbsp; Wound wash: <b>{wash}</b><br/>Body part: <b>{esc(latest_assessment.body_part_verified)}</b> &nbsp; No. of wounds: <b>{esc(str(latest_assessment.number_of_wounds_verified) if latest_assessment.number_of_wounds_verified else '—')}</b> &nbsp; Date/time bite: <b>{esc(latest_assessment.date_time_bite_verified.strftime('%b %d, %Y %H:%M') if latest_assessment.date_time_bite_verified else '—')}</b>", ParagraphStyle('ass2', parent=s_td, leading=9))],
+            [cell(f"<b>Physical Exam / System Review:</b><br/>HEENT: {esc(latest_assessment.exam_heent)} &nbsp; Chest/Lungs: {esc(latest_assessment.exam_chest_lungs)}<br/>Cardiac: {esc(latest_assessment.exam_cardiac)} &nbsp; Abdomen: {esc(latest_assessment.exam_abdomen)}<br/><b>Skin/Wound:</b> {esc(latest_assessment.skin_wound_description)}<br/>{'<b>Systemic review:</b> ' + esc(latest_assessment.systemic_review) if latest_assessment.systemic_review else ''}", ParagraphStyle('ass3', parent=s_td, leading=9))],
+            [cell(f"<b>Assessment & Plan:</b> {cat_marks} &nbsp;|&nbsp; PEP: {pep} &nbsp; RIG: {rig} &nbsp; TT: {tt}<br/><b>Plan / Vaccine brand / Dose schedule:</b> {esc(latest_assessment.vaccine_brand_plan)} {esc('· ' + latest_assessment.dose_schedule_plan) if latest_assessment.dose_schedule_plan else ''}<br/><b>Treatment plan:</b> {esc(latest_assessment.treatment_plan)}<br/>{'<b>Prescription:</b> ' + esc(latest_assessment.prescription) + '<br/>' if latest_assessment.prescription else ''}{'<b>Follow-up:</b> ' + esc(latest_assessment.follow_up_instructions) + '<br/>' if latest_assessment.follow_up_instructions else ''}{'<b>Notes:</b> ' + esc(latest_assessment.additional_notes) if latest_assessment.additional_notes else ''}<br/><font color=\"#5a6b63\" size=\"5\">Assessed by {esc(latest_assessment.assessed_by.get_full_name() if latest_assessment.assessed_by else '—')} {esc('· PRC ' + latest_assessment.prc_number) if latest_assessment.prc_number else ''} · {latest_assessment.encounter_date.strftime('%b %d, %Y %H:%M') if latest_assessment.encounter_date else ''} · {latest_assessment.get_status_display()}</font>", ParagraphStyle('ass4', parent=s_td, leading=9))],
+        ]
+    else:
+        story.append(section_header("3 &nbsp;·&nbsp; Clinical Assessment <font color=\"#c8d8c6\" size=\"6\">— blank for clinician (via Doctor Portal)</font>"))
+        story.append(Spacer(1, 4))
+        assessment_data = [
+            [cell("<b>Chief Complaint / History of Present Illness:</b><br/><br/>___________________________________________________________________________________________<br/>___________________________________________________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass', parent=s_td, leading=9))],
+            [cell("<b>Exposure Narrative (if animal bite):</b> Animal: ________ &nbsp; Owned / Stray &nbsp; Vax: ________ &nbsp; Wound wash: ○ Yes ○ No<br/>Body part: _________________ &nbsp; No. of wounds: ______ &nbsp; Date/time of bite: ______________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass2', parent=s_td, leading=9))],
+            [cell("<b>Physical Exam / System Review:</b><br/><br/>HEENT: ________________________________ &nbsp; Chest/Lungs: ________________________________<br/>Cardiac: ________________________________ &nbsp; Abdomen: ________________________________<br/>Skin/Wound description: __________________________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass3', parent=s_td, leading=9))],
+            [cell("<b>Assessment & Plan:</b><br/><br/>○ Category I &nbsp; ○ Category II &nbsp; ○ Category III &nbsp;&nbsp; | &nbsp; PEP: ○ Yes ○ No &nbsp; RIG: ○ Yes ○ No &nbsp; TT: ○ Yes ○ No<br/>Plan / Vaccine brand / Dose schedule: _____________________________________________________<br/>___________________________________________________________________________________________<br/><font color=\"#5a6b63\" size=\"6\"><i>No doctor assessment yet — use Doctor Portal → Clinical Queue → Assess to fill digitally.</i></font>", ParagraphStyle('ass4', parent=s_td, leading=9))],
+        ]
     ass_tbl = Table(assessment_data, colWidths=[170*mm])
     ass_tbl.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 0.4, sage_line),

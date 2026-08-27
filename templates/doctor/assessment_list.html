@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Assessments - Doctor Portal{% endblock %}
+{% block content %}
+<div class="max-w-[1440px] mx-auto">
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
+    <h1 class="text-2xl font-bold text-ink">Clinical Assessments</h1>
+    <div class="flex gap-2">
+      <a href="{% url 'doctor:dashboard' %}" class="btn-secondary btn-sm">Dashboard</a>
+      <a href="{% url 'doctor:queue' %}" class="btn-primary btn-sm">Queue →</a>
+    </div>
+  </div>
+
+  <div class="card mb-6">
+    <form method="GET" class="flex gap-2">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search patient, case #, category..." class="form-input flex-1">
+      <button class="btn-primary btn-sm">Search</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-line">
+            <th class="table-header">Date</th>
+            <th class="table-header">Patient</th>
+            <th class="table-header">Case</th>
+            <th class="table-header">Category</th>
+            <th class="table-header">Status</th>
+            <th class="table-header">Doctor</th>
+            <th class="table-header text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-sage-100">
+          {% for a in assessments %}
+          <tr class="hover:bg-sage-50">
+            <td class="table-cell text-muted">{{ a.encounter_date|date:"M d, Y h:i A" }}</td>
+            <td class="table-cell">
+              <div class="font-medium">{{ a.patient.full_name }}</div>
+              <div class="text-xs text-muted">{{ a.patient.patient_number }}</div>
+            </td>
+            <td class="table-cell font-mono text-sm">{{ a.bite_case.case_number|default:"—" }}</td>
+            <td class="table-cell">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap {% if a.category_confirmed == 'category_iii' %}bg-red-50 text-red-700 border-red-200{% elif a.category_confirmed == 'category_ii' %}bg-amber-50 text-amber-800 border-amber-200{% elif a.category_confirmed == 'category_i' %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-sage-100 text-muted border-line{% endif %}" title="{{ a.get_category_confirmed_display }}">
+                {% if a.category_confirmed == 'category_i' %}Category I
+                {% elif a.category_confirmed == 'category_ii' %}Category II
+                {% elif a.category_confirmed == 'category_iii' %}Category III
+                {% else %}—{% endif %}
+              </span>
+              <div class="text-xs font-medium text-muted mt-1">{% if a.pep_indicated %}PEP{% endif %} {% if a.rig_indicated %}· RIG{% endif %} {% if a.tt_indicated %}· TT{% endif %}</div>
+            </td>
+            <td class="table-cell">
+              <span class="px-2 py-1 rounded-full text-xs font-bold {% if a.status == 'final' %}bg-emerald-600 text-white{% else %}bg-amber-500 text-white{% endif %}">{{ a.get_status_display }}</span>
+            </td>
+            <td class="table-cell text-muted">{{ a.assessed_by|default:"—" }}</td>
+            <td class="table-cell text-right">
+              {% if a.bite_case %}
+              <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="btn-secondary btn-xs">Open</a>
+              {% else %}
+              <a href="{% url 'doctor:assess_patient' a.patient.pk %}" class="btn-secondary btn-xs">Open</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center py-10 text-muted">No assessments yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if assessments.has_other_pages %}
+    <div class="flex items-center justify-between pt-4 border-t border-line mt-4">
+      <p class="text-sm text-muted">Page {{ assessments.number }} of {{ assessments.paginator.num_pages }}</p>
+      <div class="flex gap-1">
+        {% if assessments.has_previous %}<a href="?page={{ assessments.previous_page_number }}&q={{ q }}" class="btn-secondary btn-xs">Prev</a>{% endif %}
+        {% if assessments.has_next %}<a href="?page={{ assessments.next_page_number }}&q={{ q }}" class="btn-secondary btn-xs">Next</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}Doctor Portal - ABTC{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-ink flex items-center gap-3">
+        <span class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center text-sm font-bold">Dr</span>
+        Doctor Portal
+        <span class="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-widest uppercase">Clinical</span>
+      </h1>
+      <p class="text-sm font-medium text-muted mt-1">Conduct clinical assessment, record findings, confirm bite category, recommend treatment — unified with patient information sheet.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'doctor:queue' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Clinical Queue →</a>
+      <a href="{% url 'patients:patient_list' %}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">All Patients</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+    <div class="card p-4 border-l-4 border-l-emerald-800">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Pending Assessment</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ pending_assess }}</p>
+      <p class="text-xs text-muted mt-1">Cases without assessment</p>
+    </div>
+    <div class="card p-4 border-l-4 border-l-amber-500">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Draft Assessments</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ draft_assess }}</p>
+      <p class="text-xs text-muted mt-1">Need sign-off</p>
+    </div>
+    <div class="card p-4 border-l-4 border-l-emerald-500">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Final Today</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ final_today }}</p>
+      <p class="text-xs text-muted mt-1">Completed today</p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Total Patients</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ total_patients }}</p>
+      <p class="text-xs text-muted mt-1">In system</p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Upcoming Doses</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ upcoming_doses }}</p>
+      <p class="text-xs text-muted mt-1">Scheduled</p>
+    </div>
+  </div>
+
+  <!-- Category breakdown -->
+  <div class="card mb-6">
+    <h3 class="text-sm font-bold text-ink mb-3">Confirmed WHO Categories</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="rounded-xl bg-sage-50 border border-line p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold tracking-widest uppercase text-muted">Category I</p>
+          <p class="text-sm font-medium text-muted">Licks intact skin</p>
+        </div>
+        <span class="text-2xl font-bold text-emerald-900">{{ cat_map.category_i|default:0 }}</span>
+      </div>
+      <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold tracking-widest uppercase text-amber-800">Category II</p>
+          <p class="text-sm font-medium text-amber-700">Minor scratches, no bleeding</p>
+        </div>
+        <span class="text-2xl font-bold text-amber-800">{{ cat_map.category_ii|default:0 }}</span>
+      </div>
+      <div class="rounded-xl bg-red-50 border border-red-200 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold tracking-widest uppercase text-red-800">Category III</p>
+          <p class="text-sm font-medium text-red-700">Transdermal / bat</p>
+        </div>
+        <span class="text-2xl font-bold text-red-800">{{ cat_map.category_iii|default:0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <!-- Queue -->
+    <div class="lg:col-span-3 card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">Clinical Queue — Needs Assessment</h3>
+        <a href="{% url 'doctor:queue' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
+      </div>
+      <div class="space-y-2">
+        {% for c in queue %}
+        <div class="flex items-center justify-between p-3 rounded-xl border {% if c.needs_assess %}border-amber-200 bg-amber-50{% else %}border-line bg-white{% endif %} hover:shadow-sm transition">
+          <div class="min-w-0">
+            <p class="text-sm font-bold text-ink truncate">{{ c.case_number }} · {{ c.patient.full_name }} <span class="text-xs font-medium text-muted">({{ c.patient.patient_number }})</span></p>
+            <p class="text-xs font-medium text-muted mt-0.5">{{ c.get_animal_type_display }} · {{ c.get_exposure_type_display }} · {{ c.body_part_affected }} · {{ c.created_at|date:"M d, Y" }}</p>
+            <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {% if c.clinical_assessment %}
+                {% if c.clinical_assessment.status == 'draft' %}<span class="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">Draft</span>
+                {% elif c.clinical_assessment.status == 'final' %}<span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">Final</span>{% endif %}
+                {% if c.clinical_assessment.category_confirmed %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-bold border
+                    {% if c.clinical_assessment.category_confirmed == 'category_iii' %}bg-red-50 text-red-700 border-red-200
+                    {% elif c.clinical_assessment.category_confirmed == 'category_ii' %}bg-amber-50 text-amber-800 border-amber-200
+                    {% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
+                    {% if c.clinical_assessment.category_confirmed == 'category_i' %}Category I
+                    {% elif c.clinical_assessment.category_confirmed == 'category_ii' %}Category II
+                    {% elif c.clinical_assessment.category_confirmed == 'category_iii' %}Category III{% endif %}
+                  </span>
+                {% else %}
+                  <span class="text-xs font-medium text-muted">Unclassified</span>
+                {% endif %}
+              {% else %}
+                <span class="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">Pending</span>
+                <span class="text-xs font-medium text-muted">No assessment</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5 shrink-0 ml-3">
+            <a href="{% url 'doctor:assess_case' c.pk %}" class="inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm whitespace-nowrap min-w-[96px]">
+              {% if c.needs_assess %}Assess{% else %}Review{% endif %}
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+            <a href="{% url 'patients:patient_detail' c.patient.pk %}" class="text-xs font-bold text-muted hover:text-emerald-800 text-center">Patient</a>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-8 rounded-xl border border-dashed border-line bg-sage-50">
+          <p class="text-sm font-bold text-muted">No cases in queue</p>
+          <p class="text-xs text-muted mt-1">All cases have finalized assessments.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Recent assessments -->
+    <div class="lg:col-span-2 card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">Recent Assessments</h3>
+        <a href="{% url 'doctor:assessment_list' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
+      </div>
+      <div class="space-y-3">
+        {% for a in recent_assessments %}
+        <div class="p-3 rounded-xl border border-line bg-white hover:bg-sage-50 transition">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-ink truncate">{{ a.patient.full_name }} <span class="text-xs font-medium text-muted">{{ a.patient.patient_number }}</span></p>
+              <p class="text-xs font-bold text-emerald-800">{{ a.get_category_confirmed_display|default:"Draft" }} {% if a.bite_case %}· {{ a.bite_case.case_number }}{% endif %}</p>
+              <p class="text-xs text-muted mt-1">by {{ a.assessed_by|default:"—" }} · {{ a.updated_at|date:"M d, h:i A" }}</p>
+            </div>
+            <span class="shrink-0 px-2 py-1 rounded-full text-xs font-bold {% if a.status == 'final' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">{{ a.get_status_display }}</span>
+          </div>
+          {% if a.bite_case %}
+          <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Open →</a>
+          {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-sm text-muted text-center py-6">No assessments yet.</p>
+        {% endfor %}
+      </div>
+      <div class="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+        <p class="text-xs font-bold text-emerald-800">Unified Workflow</p>
+        <p class="text-xs font-medium text-muted mt-1">Doctor can edit patient demographics + record vitals + conduct clinical assessment in one page — patient information sheet becomes the encounter form.</p>
+        <a href="{% url 'doctor:queue' %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Start assessing →</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

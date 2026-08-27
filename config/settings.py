@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "settings_app",
     "audit",
     "pre_registrations",
+    "doctor",
 ]
 
 MIDDLEWARE = [
