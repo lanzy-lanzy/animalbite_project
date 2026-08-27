@@ -9,3 +9,4 @@ uv run python manage.py collectstatic --no-input \
   --ignore package.json \
   --ignore package-lock.json
 uv run python manage.py migrate
+uv run python manage.py create_render_admin
