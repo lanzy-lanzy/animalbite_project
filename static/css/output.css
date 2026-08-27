@@ -268,9 +268,6 @@
   }
 }
 @layer utilities {
-  .pointer-events-auto {
-    pointer-events: auto;
-  }
   .pointer-events-none {
     pointer-events: none;
   }
@@ -501,6 +498,9 @@
   }
   .my-6 {
     margin-block: calc(var(--spacing) * 6);
+  }
+  .my-auto {
+    margin-block: auto;
   }
   .mt-0\.5 {
     margin-top: calc(var(--spacing) * 0.5);
@@ -736,6 +736,9 @@
   .min-h-\[460px\] {
     min-height: 460px;
   }
+  .min-h-\[720px\] {
+    min-height: 720px;
+  }
   .min-h-\[calc\(100vh-92px-40px\)\] {
     min-height: calc(100vh - 92px - 40px);
   }
@@ -927,6 +930,9 @@
   }
   .flex-1 {
     flex: 1;
+  }
+  .flex-shrink-0 {
+    flex-shrink: 0;
   }
   .shrink-0 {
     flex-shrink: 0;
@@ -1156,6 +1162,9 @@
   }
   .overflow-y-auto {
     overflow-y: auto;
+  }
+  .overscroll-contain {
+    overscroll-behavior: contain;
   }
   .rounded {
     border-radius: 0.25rem;

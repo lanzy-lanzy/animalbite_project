@@ -97,9 +97,9 @@
 
 <!-- Print Preview Modal — patient sheet with blank vitals -->
 <div id="patientPreviewModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
-  <div class="absolute inset-0 bg-emerald-950/55 backdrop-blur-sm" onclick="closePatientPreview()"></div>
-  <div class="absolute inset-0 flex flex-col p-3 sm:p-6 pointer-events-none">
-    <div onclick="event.stopPropagation()" class="flex-1 flex flex-col bg-white rounded-2xl shadow-2xl shadow-emerald-950/20 border border-line overflow-hidden pointer-events-auto max-w-[880px] w-full mx-auto max-h-[92vh]">
+  <div class="absolute inset-0 bg-emerald-950/55 backdrop-blur-sm" aria-hidden="true"></div>
+  <div id="patientPreviewOuter" class="absolute inset-0 flex flex-col p-3 sm:p-6 overflow-y-auto overscroll-contain">
+    <div onclick="event.stopPropagation()" class="flex flex-col bg-white rounded-2xl shadow-2xl shadow-emerald-950/20 border border-line overflow-hidden max-w-[880px] w-full mx-auto my-auto max-h-[92vh] flex-shrink-0">
       <!-- Modal header -->
       <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-line bg-sage-50 shrink-0">
         <div class="min-w-0">
@@ -147,15 +147,15 @@
         <button type="button" onclick="event.stopPropagation(); togglePreviewMode('pdf')" id="tabPdf" class="px-3 py-1.5 rounded-full text-xs font-bold bg-white text-ink border border-line hover:bg-sage-100">PDF Preview</button>
         <span id="pdfHint" class="ml-2 text-xs font-medium text-muted hidden">PDF is A4 print-ready — use Export to download.</span>
       </div>
-      <!-- Preview body: HTML -->
-      <div class="flex-1 overflow-hidden bg-sage-100 relative flex flex-col min-h-[280px]">
+      <!-- Preview body: HTML — scrollable with mouse wheel / trackpad -->
+      <div id="previewScrollBody" class="flex-1 overflow-y-auto overscroll-contain bg-sage-100 relative flex flex-col min-h-[280px]" tabindex="0" style="-webkit-overflow-scrolling: touch;">
         <div id="previewLoader" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 backdrop-blur-sm z-10">
           <div class="w-8 h-8 border-2 border-emerald-800 border-t-transparent rounded-full animate-spin"></div>
           <p class="text-sm font-bold text-muted">Loading preview…</p>
         </div>
-        <iframe id="previewFrame" class="flex-1 w-full h-full border-0 bg-white" title="Patient print preview" loading="lazy"></iframe>
-        <div id="pdfPreviewWrap" class="flex-1 w-full h-full hidden flex-col bg-white">
-          <iframe id="pdfPreviewFrame" class="flex-1 w-full h-full border-0 bg-white" title="PDF preview"></iframe>
+        <iframe id="previewFrame" class="flex-1 w-full min-h-[720px] border-0 bg-white block" title="Patient print preview" loading="lazy" scrolling="yes"></iframe>
+        <div id="pdfPreviewWrap" class="flex-1 w-full min-h-[720px] hidden flex-col bg-white">
+          <iframe id="pdfPreviewFrame" class="flex-1 w-full min-h-[720px] border-0 bg-white block" title="PDF preview" scrolling="yes"></iframe>
         </div>
       </div>
       <!-- Footer hint -->
@@ -178,6 +178,53 @@
   let _pdfUrl = '';
   let _previewMode = 'html';
 
+  function resizePreviewFrameToContent(frame){
+    try{
+      const doc = frame.contentDocument || frame.contentWindow.document;
+      if(!doc) return;
+      // allow content to determine height; reset first to auto to measure correctly
+      const body = doc.body;
+      const html = doc.documentElement;
+      if(!body || !html) return;
+      // compute max scroll height
+      const h = Math.max(body.scrollHeight, html.scrollHeight, body.offsetHeight, html.offsetHeight);
+      // clamp between min and large max so parent scroll handles overflow, but no internal scrollbar needed
+      const target = Math.max(720, h + 24);
+      frame.style.height = target + 'px';
+      // also ensure iframe document allows scrolling — but we want parent to scroll, so disable iframe scroll
+      // keep internal scroll as fallback if resize fails: do not force overflow hidden inside
+    }catch(e){ /* cross-origin or not ready */ }
+  }
+
+  function enableIframeWheelForward(frame, scrollContainer){
+    try{
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument || (win && win.document);
+      if(!win || !doc) return;
+      // forward wheel from iframe to parent container for natural mouse-wheel feel when iframe is taller than container
+      // only attach once
+      if(doc._wheelForwardAttached) return;
+      doc._wheelForwardAttached = true;
+      doc.addEventListener('wheel', function(ev){
+        // if iframe internal can still scroll, let it scroll; otherwise scroll parent
+        const html = doc.documentElement;
+        const body = doc.body;
+        const canScrollUp = (win.scrollY > 0) || (html.scrollTop > 0) || (body.scrollTop > 0);
+        const canScrollDown = (win.scrollY + win.innerHeight < html.scrollHeight - 2) || (win.scrollY + win.innerHeight < body.scrollHeight - 2);
+        const delta = ev.deltaY;
+        const scrollingDown = delta > 0;
+        const scrollingUp = delta < 0;
+        const iframeCanScroll = (scrollingDown && canScrollDown) || (scrollingUp && canScrollUp);
+        if(!iframeCanScroll && scrollContainer){
+          // bubble to parent container
+          ev.preventDefault();
+          scrollContainer.scrollTop += delta;
+        }
+        // else allow iframe to handle naturally
+      }, { passive: false });
+    }catch(e){ /* ignore */ }
+  }
+
   function openPatientPreview(htmlUrl, pdfUrl, label){
     _previewUrl = htmlUrl;
     _pdfUrl = pdfUrl;
@@ -187,17 +234,16 @@
     const openTab = document.getElementById('previewOpenNewTab');
     const labelEl = document.getElementById('previewPatientLabel');
     const loader = document.getElementById('previewLoader');
+    const scrollBody = document.getElementById('previewScrollBody');
+    const outer = document.getElementById('patientPreviewOuter');
     labelEl.textContent = label || '';
     pdfLink.href = pdfUrl;
     openTab.href = htmlUrl;
     const editLink = document.getElementById('previewEditLink');
     if(editLink){
-      // derive edit url from htmlUrl: replace /print/ with /<id>/edit/ — simpler: use pdfUrl to derive patient id and build
-      // htmlUrl is /patients/<id>/print/ — convert to /patients/<id>/edit/
       const editUrl = htmlUrl.replace(/\/print\/?$/, '/edit/');
       editLink.href = editUrl;
       editLink.classList.remove('hidden');
-      // Only show for non-patient roles — check via template? For now show always; backend will guard
     }
     // default to HTML preview
     togglePreviewMode('html');
@@ -205,9 +251,22 @@
     loader.style.display = 'flex';
     const btnPrint = document.getElementById('btnPrintNow');
     if(btnPrint) btnPrint.disabled = true;
+    // reset scroll positions for fresh preview
+    if(scrollBody) scrollBody.scrollTop = 0;
+    if(outer) outer.scrollTop = 0;
+    // ensure iframe starts with base height
+    frame.style.height = '720px';
     frame.onload = function(){
       if(_previewMode==='html') loader.style.display = 'none';
       if(btnPrint) btnPrint.disabled = false;
+      // auto-resize to content for single smooth scroll (parent container scrolls)
+      setTimeout(function(){
+        resizePreviewFrameToContent(frame);
+        enableIframeWheelForward(frame, scrollBody);
+      }, 80);
+      setTimeout(function(){ resizePreviewFrameToContent(frame); }, 350);
+      // allow wheel/trackpad to work immediately by focusing scroll container
+      if(scrollBody) scrollBody.focus({preventScroll:true});
     };
     const embedUrl = htmlUrl + (htmlUrl.includes('?') ? '&' : '?') + 'embed=1';
     frame.src = embedUrl;
@@ -221,11 +280,11 @@
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden','false');
     document.body.style.overflow = 'hidden';
+    // focus trap — focus scroll body after open
+    setTimeout(function(){ if(scrollBody) scrollBody.focus({preventScroll:true}); }, 120);
   }
   function togglePreviewMode(mode){
-    // keep loader handling for mode switch
     const _btnPrint = document.getElementById('btnPrintNow');
-
     _previewMode = mode;
     const htmlFrame = document.getElementById('previewFrame');
     const pdfWrap = document.getElementById('pdfPreviewWrap');
@@ -234,22 +293,24 @@
     const loader = document.getElementById('previewLoader');
     const pdfHint = document.getElementById('pdfHint');
     const btnPdfPreview = document.getElementById('btnPdfPreview');
+    const scrollBody = document.getElementById('previewScrollBody');
     if(mode === 'pdf'){
       htmlFrame.classList.add('hidden');
       pdfWrap.classList.remove('hidden');
       pdfWrap.style.display = 'flex';
+      // ensure pdf takes full scroll height
+      const pf = document.getElementById('pdfPreviewFrame');
+      if(pf) pf.style.height = '720px';
       tabPdf.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-950 text-white border border-emerald-950';
       tabHtml.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-white text-ink border border-line hover:bg-sage-100';
       if(btnPdfPreview) btnPdfPreview.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold border border-emerald-950';
       if(pdfHint) pdfHint.classList.remove('hidden');
       if(_btnPrint) _btnPrint.disabled = false;
-      // show loader until pdf loads, then hide via onload
       loader.style.display = 'flex';
-      const pf = document.getElementById('pdfPreviewFrame');
-      if(pf.src && pf.src !== 'about:blank'){
-        // if already loaded, hide loader quickly
+      if(pf && pf.src && pf.src !== 'about:blank'){
         setTimeout(()=>{ loader.style.display='none'; }, 600);
       }
+      if(scrollBody) scrollBody.scrollTop = 0;
     } else {
       pdfWrap.classList.add('hidden');
       pdfWrap.style.display = 'none';
@@ -260,6 +321,12 @@
       if(pdfHint) pdfHint.classList.add('hidden');
       loader.style.display = 'none';
       if(_btnPrint) _btnPrint.disabled = false;
+      if(scrollBody){
+        scrollBody.scrollTop = 0;
+        // re-apply height after switch back
+        setTimeout(function(){ resizePreviewFrameToContent(htmlFrame); }, 60);
+        setTimeout(function(){ scrollBody.focus({preventScroll:true}); }, 80);
+      }
     }
   }
   function closePatientPreview(){
@@ -269,8 +336,42 @@
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden','true');
     document.body.style.overflow = '';
+    // reset heights
+    if(frame) frame.style.height = '720px';
+    if(pdfFrame) pdfFrame.style.height = '720px';
     setTimeout(()=>{ if(modal.classList.contains('hidden')) { frame.src = 'about:blank'; pdfFrame.src='about:blank'; } }, 200);
   }
+  // Prevent blank-area clicks from closing — only X / Close / ESC close
+  (function(){
+    const outer = document.getElementById('patientPreviewOuter');
+    const modal = document.getElementById('patientPreviewModal');
+    const scrollBody = document.getElementById('previewScrollBody');
+    if(outer){
+      outer.addEventListener('click', function(e){
+        // clicks on the outer padding (outside the white card) should NOT close
+        if(e.target === outer){
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      });
+    }
+    if(scrollBody){
+      // ensure mouse wheel over scroll body works even when iframe is focused
+      scrollBody.addEventListener('wheel', function(e){
+        // allow natural scrolling — do not bubble to body behind modal
+        e.stopPropagation();
+      }, { passive: true });
+    }
+    // backdrop is visual only — ensure it never closes
+    if(modal){
+      modal.addEventListener('click', function(e){
+        // only close if explicitly called via button; ignore clicks on backdrop/outer
+        if(e.target === modal){
+          e.stopPropagation();
+        }
+      });
+    }
+  })();
   function printPreviewFrame(e){
     if(e){ e.preventDefault(); if(e.stopPropagation) e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
     // Keep modal open — never close on print (print dialog is native, modal stays)
