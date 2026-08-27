@@ -252,6 +252,8 @@ def convert(request, pk):
 
     patient, case = convert_to_official_case(record, request.user)
     # If auto-created login (patient had no account), surface temp credentials
+    # No SMS is sent for pre-registration credentials — patient already provided
+    # username/password during public signup; staff shares temp creds verbally if needed.
     temp_user = getattr(patient, "_temp_username", None)
     temp_pass = getattr(patient, "_temp_password", None)
     if temp_user and temp_pass:
@@ -260,7 +262,7 @@ def convert(request, pk):
             'password': temp_pass,
             'created': True,
         }
-        messages.success(request, f"Pre-registration converted to {case.case_number} and patient login created: {temp_user} / Temp: {temp_pass} — SMS sent to {patient.contact_number} via RHUDumingag. Ask patient to change password after login.")
+        messages.success(request, f"Pre-registration converted to {case.case_number} and patient login created: {temp_user} / Temp: {temp_pass} — please ask patient to change password after login (no SMS sent for credentials).")
         # Also store for case_detail display
         request.session['temp_creds_last'] = {'patient_pk': patient.pk, 'username': temp_user, 'password': temp_pass}
     else:

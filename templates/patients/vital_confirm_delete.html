@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Delete Vital Signs - ABTC System{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="card">
+    <h2 class="text-lg font-bold text-ink">Delete Vital Signs?</h2>
+    <p class="text-sm text-muted mt-2">This will delete the vital signs taken on <b class="text-ink">{{ vital.taken_at|date:"M d, Y h:i A" }}</b> for <b class="text-ink">{{ patient.full_name }}</b> ({{ patient.patient_number }}).</p>
+    <div class="mt-4 rounded-xl bg-sage-50 border border-line p-3 text-sm">
+      <p><b>BP:</b> {{ vital.bp_display|default:"—" }} · <b>Temp:</b> {{ vital.temperature|default:"—" }}°C · <b>Pulse:</b> {{ vital.pulse_rate|default:"—" }}</p>
+      <p class="text-xs text-muted mt-1">Taken by {{ vital.taken_by|default:"—" }} on {{ vital.taken_at|date:"M d, Y h:i A" }}</p>
+    </div>
+    <form method="POST" class="flex gap-2 mt-6">
+      {% csrf_token %}
+      <button type="submit" class="btn-danger">Yes, Delete</button>
+      <a href="{% url 'patients:patient_detail' patient.pk %}#vitals" class="btn-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

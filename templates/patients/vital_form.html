@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - ABTC System{% endblock %}
+{% block extra_head %}
+<style>
+  .section{border:1.5px solid #c8d8c6; border-radius:12px; overflow:hidden; background:white; margin-top:16px}
+  .section-head{background:#143d33; color:white; padding:7px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .section-head h3{margin:0; font-size:11px; font-weight:800; letter-spacing:.10em; text-transform:uppercase; display:flex; align-items:center; gap:8px}
+  .section-head .hint{font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#c8d8c6; opacity:.95}
+  .vitals-grid-form{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+  @media(min-width:768px){ .vitals-grid-form{grid-template-columns:repeat(4,1fr)} }
+  .vital-input-card{border:1px solid #c8d8c6; border-radius:10px; padding:10px; background:white; display:flex; flex-direction:column; gap:6px}
+  .vital-input-card label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#5a6b63}
+</style>
+{% endblock %}
+{% block content %}
+<div class="max-w-[850px] mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'patients:patient_detail' patient.pk %}" class="w-9 h-9 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-50 shadow-sm">←</a>
+      <div>
+        <h1 class="text-[15px] font-bold tracking-wide uppercase text-ink flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-emerald-950 text-white flex items-center justify-center text-xs">♥</span>
+          {{ title }}
+        </h1>
+        <p class="text-xs font-medium text-muted mt-0.5">Same layout as print sheet — vital signs will appear instantly on preview & PDF. Admin only.</p>
+      </div>
+    </div>
+    <div class="hidden sm:flex items-center gap-2">
+      <span class="px-3 py-1 rounded-full bg-sage-50 border border-line text-xs font-bold text-muted">{{ patient.patient_number }}</span>
+      <a href="{% url 'patients:patient_print' patient.pk %}" target="_blank" class="text-xs font-bold text-emerald-700 hover:underline">View print sheet ↗</a>
+    </div>
+  </div>
+
+  {% if latest_vitals and is_create %}
+  <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 mb-4 flex gap-3">
+    <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">!</div>
+    <div>
+      <p class="text-sm font-bold text-amber-900">Latest vitals: {{ latest_vitals.taken_at|date:"M d, Y h:i A" }} — {{ latest_vitals.bp_display|default:"—" }}, {{ latest_vitals.temperature|default:"—" }}°C</p>
+      <p class="text-xs text-amber-800 mt-1">You are adding a new entry. Previous values shown for reference. <a href="{% url 'patients:patient_vital_edit' latest_vitals.pk %}?next={{ request.get_full_path|urlencode }}" class="font-bold underline">Edit latest instead?</a></p>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="POST" class="space-y-0">
+    {% csrf_token %}
+    {% if next_url %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+    {% endif %}
+    {% if form.non_field_errors %}
+    <div class="rounded-xl bg-red-50 border border-red-200 p-3 mb-4">
+      {% for e in form.non_field_errors %}<p class="text-sm font-bold text-red-700">{{ e }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Section 2 style -->
+    <div class="section">
+      <div class="section-head">
+        <h3><span style="width:22px; height:22px; background:white; color:#143d33; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">2</span> Vital Signs & Baseline</h3>
+        <span class="hint">Admin input — appears on print</span>
+      </div>
+      <div class="p-4 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="form-label">Date / Time Taken *</label>
+            {{ form.taken_at }}
+            {% if form.taken_at.errors %}<p class="text-red-600 text-xs mt-1">{{ form.taken_at.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="flex items-end">
+            <p class="text-xs font-medium text-muted bg-sage-50 border border-line rounded-lg px-3 py-2">Taken by: <b class="text-ink">{{ request.user.get_full_name|default:request.user.username }}</b> · will be saved automatically.</p>
+          </div>
+        </div>
+
+        <div class="vitals-grid-form">
+          <!-- BP as two fields in one card -->
+          <div class="vital-input-card">
+            <label>Blood Pressure <span class="font-normal normal-case tracking-normal text-muted2">(mmHg)</span></label>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs font-semibold text-muted">Systolic</label>
+                {{ form.bp_systolic }}
+                {% if form.bp_systolic.errors %}<p class="text-red-600 text-xs">{{ form.bp_systolic.errors.0 }}</p>{% endif %}
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-muted">Diastolic</label>
+                {{ form.bp_diastolic }}
+                {% if form.bp_diastolic.errors %}<p class="text-red-600 text-xs">{{ form.bp_diastolic.errors.0 }}</p>{% endif %}
+              </div>
+            </div>
+            <p class="text-xs text-muted">e.g. 120 / 80</p>
+          </div>
+
+          <div class="vital-input-card">
+            <label>Temperature (°C)</label>
+            {{ form.temperature }}
+            {% if form.temperature.errors %}<p class="text-red-600 text-xs">{{ form.temperature.errors.0 }}</p>{% endif %}
+          </div>
+
+          <div class="vital-input-card">
+            <label>Pulse Rate (bpm)</label>
+            {{ form.pulse_rate }}
+            {% if form.pulse_rate.errors %}<p class="text-red-600 text-xs">{{ form.pulse_rate.errors.0 }}</p>{% endif %}
+          </div>
+
+          <div class="vital-input-card">
+            <label>Respiratory Rate (/min)</label>
+            {{ form.respiratory_rate }}
+            {% if form.respiratory_rate.errors %}<p class="text-red-600 text-xs">{{ form.respiratory_rate.errors.0 }}</p>{% endif %}
+          </div>
+
+          <div class="vital-input-card">
+            <label>SpO₂ (%)</label>
+            {{ form.spo2 }}
+          </div>
+
+          <div class="vital-input-card">
+            <label>Weight (kg)</label>
+            {{ form.weight }}
+          </div>
+
+          <div class="vital-input-card">
+            <label>Height (cm)</label>
+            {{ form.height }}
+          </div>
+
+          <div class="vital-input-card">
+            <label>BMI</label>
+            {{ form.bmi }}
+            <p class="text-xs text-muted">Auto if blank (from WT/HT)</p>
+          </div>
+
+          <div class="vital-input-card">
+            <label>Pain Score (0-10)</label>
+            {{ form.pain_score }}
+          </div>
+
+          <div class="vital-input-card">
+            <label>Blood Glucose (mg/dL)</label>
+            {{ form.blood_glucose }}
+            <div class="mt-2">
+              <label class="text-xs font-semibold text-muted">Type</label>
+              {{ form.glucose_type }}
+            </div>
+          </div>
+
+          <div class="vital-input-card">
+            <label>General Appearance</label>
+            {{ form.general_appearance }}
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Additional Notes / Allergy Re-check</label>
+          {{ form.notes }}
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 rounded-xl bg-sage-50 border border-line border-dashed p-3 flex gap-3">
+      <div class="w-8 h-8 rounded-lg bg-emerald-950 text-white flex items-center justify-center shrink-0">✓</div>
+      <div>
+        <p class="text-sm font-bold text-ink">Appears instantly on print sheet</p>
+        <p class="text-xs font-medium text-muted mt-0.5">After save, open <b class="text-ink">Print Preview</b> from Patient List → values fill the vital grid and PDF. Leave fields blank if not taken — sheet stays blank for handwriting.</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 pt-5">
+      <button type="submit" class="btn-primary inline-flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        {% if is_create %}Save Vital Signs{% else %}Update Vital Signs{% endif %}
+      </button>
+      <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'patients:patient_detail' patient.pk %}{% endif %}" class="btn-secondary">Cancel</a>
+      {% if not is_create %}
+      <a href="{% url 'patients:patient_vital_create' patient.pk %}?next={{ next_url|default:request.path|urlencode }}" class="ml-auto text-xs font-bold text-emerald-700 hover:underline">+ Add new entry instead</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+  (function(){
+    const wEl = document.querySelector('[name="weight"]');
+    const hEl = document.querySelector('[name="height"]');
+    const bmiEl = document.querySelector('[name="bmi"]');
+    function calcBMI(){
+      const w = parseFloat(wEl?.value);
+      const h = parseFloat(hEl?.value);
+      if(w && h && h>0 && bmiEl){
+        const v = (w / ((h/100)*(h/100))).toFixed(2);
+        if(!bmiEl.value) bmiEl.value = v;
+        else if(Math.abs(parseFloat(bmiEl.value) - parseFloat(v)) > 0.3){
+          // suggest update but don't override if user manually set
+          if(confirm('Auto-update BMI to ' + v + ' (from ' + w + 'kg / ' + h + 'cm)?')) bmiEl.value = v;
+        }
+      }
+    }
+    wEl?.addEventListener('blur', calcBMI);
+    hEl?.addEventListener('blur', calcBMI);
+  })();
+</script>
+{% endblock %}

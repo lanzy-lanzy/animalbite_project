@@ -51,7 +51,10 @@ def convert_to_official_case(pre_registration, user):
             remarks=pre_registration.remarks,
             created_by=user,
         )
-        # Auto-create patient login if no account linked (e.g., staff-entered pre-reg or public without account)
+        # Auto-create patient login if no account linked (e.g., staff-entered pre-reg)
+        # No SMS for credentials here: public pre-registrations already provide their own
+        # username/password during signup, so SMS is redundant. Staff can share temp
+        # creds verbally via the one-time display on the detail page.
         if patient.account_id is None:
             try:
                 from utils.credentials import create_patient_user
@@ -59,17 +62,6 @@ def convert_to_official_case(pre_registration, user):
                 # Attach for view to display one-time
                 patient._temp_username = new_user.username
                 patient._temp_password = temp_pwd
-                # SMS credentials via RHUDumingag
-                try:
-                    from vaccination.sms import send_semaphore_sms
-                    sms_msg = (
-                        f"ABTC Dumingag: Hello {patient.first_name}, your patient portal is ready. "
-                        f"Username: {new_user.username} Temp Password: {temp_pwd}. "
-                        f"Login and change password via Profile > Change Password. -RHUDumingag"
-                    )
-                    send_semaphore_sms(patient.contact_number, sms_msg)
-                except Exception:
-                    pass
             except Exception:
                 pass
     case = AnimalBiteCase.objects.create(

@@ -7,7 +7,15 @@
             <a href="{% url 'patients:patient_list' %}" class="p-2 rounded-lg hover:bg-sage-100">&larr; Back</a>
             <h1 class="text-xl font-bold text-ink">{{ patient.full_name }}</h1>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
+            <a href="{% url 'patients:patient_print' patient.pk %}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-emerald-800 text-emerald-900 text-sm font-bold hover:bg-emerald-50 shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+                Print Sheet
+            </a>
+            <a href="{% url 'patients:patient_print_pdf' patient.pk %}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                PDF
+            </a>
             <a href="{% url 'patients:patient_edit' patient.pk %}" class="btn-secondary btn-sm">Edit</a>
             <a href="{% url 'bite_cases:case_create' %}?patient={{ patient.pk }}" class="btn-primary btn-sm">+ New Case</a>
         </div>
@@ -67,6 +75,116 @@
         </div>
         {% endif %}
         {% if patient.remarks %}<div class="mt-4 pt-4 border-t border-line"><label class="text-xs text-muted uppercase tracking-wider">Remarks</label><p class="text-sm">{{ patient.remarks }}</p></div>{% endif %}
+    </div>
+
+    <!-- Vital Signs — dynamic admin input (same layout as print) -->
+    <div class="card mb-6" id="vitals">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-emerald-800 text-white flex items-center justify-center">♥</span>
+                Vital Signs
+                {% if latest_vitals %}<span class="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{{ latest_vitals.taken_at|date:"M d, Y h:i A" }}</span>{% else %}<span class="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">No vitals yet</span>{% endif %}
+            </h3>
+            <div class="flex items-center gap-1.5">
+                {% if request.user.role != 'patient' %}
+                  {% if latest_vitals %}
+                    <a href="{% url 'patients:patient_vital_edit' latest_vitals.pk %}?next={{ request.path }}#vitals" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">✎ Edit Latest</a>
+                  {% endif %}
+                  <a href="{% url 'patients:patient_vital_create' patient.pk %}?next={{ request.path }}#vitals" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">{% if latest_vitals %}+ New Entry{% else %}+ Add Vitals{% endif %}</a>
+                {% endif %}
+                <a href="{% url 'patients:patient_print' patient.pk %}" target="_blank" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sage-50 border border-line text-xs font-bold text-muted hover:bg-white">Print sheet ↗</a>
+            </div>
+        </div>
+
+        {% if latest_vitals %}
+        <div class="rounded-xl border border-line overflow-hidden">
+            <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-y divide-sage-100">
+                <div class="p-3 bg-white">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Blood Pressure</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.bp_systolic or latest_vitals.bp_diastolic %}{{ latest_vitals.bp_display|default:"—" }} <span class="text-xs font-medium text-muted">mmHg</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-sage-50">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Temperature</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.temperature %}{{ latest_vitals.temperature }} <span class="text-xs font-medium text-muted">°C</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-white">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Pulse Rate</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }} <span class="text-xs font-medium text-muted">bpm</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-sage-50">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Respiratory Rate</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.respiratory_rate %}{{ latest_vitals.respiratory_rate }} <span class="text-xs font-medium text-muted">/min</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-white">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">SpO₂</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.spo2 %}{{ latest_vitals.spo2 }} <span class="text-xs font-medium text-muted">%</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-sage-50">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Weight</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.weight %}{{ latest_vitals.weight }} <span class="text-xs font-medium text-muted">kg</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-white">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Height</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.height %}{{ latest_vitals.height }} <span class="text-xs font-medium text-muted">cm</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-sage-50">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">BMI</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.bmi %}{{ latest_vitals.bmi }}{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-white">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Pain Score</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.pain_score is not None %}{{ latest_vitals.pain_score }} <span class="text-xs font-medium text-muted">/10</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-sage-50">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Blood Glucose</p>
+                    <p class="text-sm font-bold text-ink mt-1">{% if latest_vitals.blood_glucose %}{{ latest_vitals.blood_glucose }} <span class="text-xs font-medium text-muted">mg/dL</span> <span class="text-xs px-1.5 py-0.5 rounded-full bg-white border border-line">{{ latest_vitals.get_glucose_type_display|default:"" }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                </div>
+                <div class="p-3 bg-white col-span-2 md:col-span-2">
+                    <p class="text-[10px] font-bold tracking-widest uppercase text-muted">General Appearance & Notes</p>
+                    <p class="text-sm font-medium text-ink mt-1">{% if latest_vitals.general_appearance %}<span class="px-1.5 py-0.5 rounded-full bg-sage-100 border border-line text-xs font-bold">{{ latest_vitals.get_general_appearance_display }}</span>{% endif %} {% if latest_vitals.notes %}{{ latest_vitals.notes }}{% else %}<span class="text-muted">—</span>{% endif %}</p>
+                    <p class="text-xs text-muted mt-1">Taken: {{ latest_vitals.taken_at|date:"M d, Y h:i A" }} · by {{ latest_vitals.taken_by|default:"—" }}</p>
+                </div>
+            </div>
+        </div>
+        {% if recent_vitals|length > 1 %}
+        <div class="mt-4">
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mb-2">Recent History (last {{ recent_vitals|length }})</p>
+            <div class="overflow-x-auto rounded-xl border border-line">
+                <table class="w-full text-xs">
+                    <thead class="bg-sage-50"><tr><th class="text-left p-2 font-bold text-muted">Date/Time</th><th class="text-left p-2 font-bold text-muted">BP</th><th class="text-left p-2 font-bold text-muted">Temp</th><th class="text-left p-2 font-bold text-muted">WT/HT</th><th class="text-right p-2 font-bold text-muted">Actions</th></tr></thead>
+                    <tbody class="divide-y divide-sage-100">
+                        {% for v in recent_vitals %}
+                        <tr class="hover:bg-sage-50">
+                            <td class="p-2 font-medium">{{ v.taken_at|date:"M d h:i A" }}</td>
+                            <td class="p-2">{{ v.bp_display|default:"—" }}</td>
+                            <td class="p-2">{% if v.temperature %}{{ v.temperature }}°C{% else %}—{% endif %}</td>
+                            <td class="p-2">{% if v.weight %}{{ v.weight }}kg{% endif %} {% if v.height %}/ {{ v.height }}cm{% else %}{% endif %}</td>
+                            <td class="p-2 text-right flex items-center justify-end gap-1">
+                                <a href="{% url 'patients:patient_vital_edit' v.pk %}?next={{ request.path }}#vitals" class="btn-secondary btn-xs">Edit</a>
+                                <a href="{% url 'patients:patient_vital_delete' v.pk %}" class="btn-secondary btn-xs text-red-600">Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% elif latest_vitals %}
+        <div class="mt-3 flex items-center gap-1 justify-end">
+            <a href="{% url 'patients:patient_vital_edit' latest_vitals.pk %}?next={{ request.path }}#vitals" class="text-xs font-bold text-emerald-700 hover:underline">Edit this entry</a>
+            <span class="text-muted">·</span>
+            <a href="{% url 'patients:patient_vital_delete' latest_vitals.pk %}" class="text-xs font-bold text-red-600 hover:underline">Delete</a>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="rounded-xl bg-sage-50 border border-dashed border-line p-6 text-center">
+            <p class="text-sm font-bold text-muted">No vital signs recorded yet</p>
+            <p class="text-xs font-medium text-muted mt-1">Vitals are blank on the print sheet for handwriting. Click <b class="text-ink">+ Add Vitals</b> to input dynamically — they will appear instantly on preview & PDF.</p>
+            {% if request.user.role != 'patient' %}
+            <a href="{% url 'patients:patient_vital_create' patient.pk %}?next={{ request.path }}#vitals" class="mt-3 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">+ Add Vital Signs</a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <!-- Patient Portal Login -->

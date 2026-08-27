@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}Patients - ABTC System{% endblock %}
+{% block extra_head %}
+<style>
+  @media print { .no-print { display:none !important } }
+</style>
+{% endblock %}
 {% block content %}
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-xl font-bold text-ink">Patient Records</h1>
@@ -59,6 +64,16 @@
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 Schedules
                             </a>
+                            <button type="button" onclick="openPatientPreview('{% url 'patients:patient_print' p.pk %}', '{% url 'patients:patient_print_pdf' p.pk %}', '{{ p.full_name|escapejs }} — {{ p.patient_number }}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-emerald-800 text-emerald-900 text-xs font-bold hover:bg-emerald-50 shadow-sm" title="Preview & Print patient sheet — vitals editable by admin">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+                                Print
+                            </button>
+                            {% if request.user.role != 'patient' %}
+                            <a href="{% url 'patients:patient_vital_create' p.pk %}?next={{ request.get_full_path|urlencode }}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-amber-300 text-amber-800 text-xs font-bold hover:bg-amber-50 shadow-sm" title="Input vital signs dynamically — appears on print/PDF">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                                Vitals
+                            </a>
+                            {% endif %}
                             <a href="{% url 'patients:patient_edit' p.pk %}" class="btn-secondary btn-xs">Edit</a>
                         </div>
                     </td>
@@ -79,4 +94,221 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Print Preview Modal — patient sheet with blank vitals -->
+<div id="patientPreviewModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-emerald-950/55 backdrop-blur-sm" onclick="closePatientPreview()"></div>
+  <div class="absolute inset-0 flex flex-col p-3 sm:p-6 pointer-events-none">
+    <div onclick="event.stopPropagation()" class="flex-1 flex flex-col bg-white rounded-2xl shadow-2xl shadow-emerald-950/20 border border-line overflow-hidden pointer-events-auto max-w-[880px] w-full mx-auto max-h-[92vh]">
+      <!-- Modal header -->
+      <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-line bg-sage-50 shrink-0">
+        <div class="min-w-0">
+          <h3 class="text-sm font-bold text-ink flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-emerald-950 text-white flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+            </span>
+            <span class="truncate">Print Preview — <span id="previewPatientLabel" class="font-bold text-emerald-800"></span></span>
+          </h3>
+          <p class="text-xs font-medium text-muted mt-0.5 hidden sm:block">Visually appealing patient information sheet · Blank vital signs to be filled on-site. Preview before printing.</p>
+        </div>
+        <button type="button" onclick="event.stopPropagation(); closePatientPreview()" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-100 shrink-0" title="Close">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <!-- Actions bar -->
+      <div class="flex flex-wrap items-center gap-2 px-4 sm:px-5 py-3 border-b border-line bg-white shrink-0">
+        <span class="text-xs font-bold tracking-widest uppercase text-muted hidden sm:inline">Actions:</span>
+        <button type="button" id="btnPrintNow" onclick="event.stopPropagation(); printPreviewFrame(event)" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+          Print Now
+        </button>
+        <button type="button" onclick="event.stopPropagation(); togglePreviewMode('pdf')" id="btnPdfPreview" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-sage-50 border border-line text-xs font-bold text-ink hover:bg-white">
+          <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF Preview
+        </button>
+        <a id="previewEditLink" href="#" class="hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </a>
+        <a id="previewPdfLink" href="#" download class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-emerald-200 text-emerald-800 text-sm font-bold hover:bg-emerald-50">
+          <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Export PDF
+        </a>
+        <a id="previewOpenNewTab" href="#" target="_blank" rel="noopener" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-sage-50 border border-line text-xs font-bold text-muted hover:bg-white">
+          Open in new tab ↗
+        </a>
+        <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Blank vitals included
+        </span>
+      </div>
+      <!-- Preview mode tabs -->
+      <div class="flex items-center gap-1 px-4 sm:px-5 py-2 bg-sage-50 border-b border-line shrink-0">
+        <button type="button" onclick="event.stopPropagation(); togglePreviewMode('html')" id="tabHtml" class="px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-950 text-white border border-emerald-950">Sheet Preview</button>
+        <button type="button" onclick="event.stopPropagation(); togglePreviewMode('pdf')" id="tabPdf" class="px-3 py-1.5 rounded-full text-xs font-bold bg-white text-ink border border-line hover:bg-sage-100">PDF Preview</button>
+        <span id="pdfHint" class="ml-2 text-xs font-medium text-muted hidden">PDF is A4 print-ready — use Export to download.</span>
+      </div>
+      <!-- Preview body: HTML -->
+      <div class="flex-1 overflow-hidden bg-sage-100 relative flex flex-col min-h-[280px]">
+        <div id="previewLoader" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 backdrop-blur-sm z-10">
+          <div class="w-8 h-8 border-2 border-emerald-800 border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-sm font-bold text-muted">Loading preview…</p>
+        </div>
+        <iframe id="previewFrame" class="flex-1 w-full h-full border-0 bg-white" title="Patient print preview" loading="lazy"></iframe>
+        <div id="pdfPreviewWrap" class="flex-1 w-full h-full hidden flex-col bg-white">
+          <iframe id="pdfPreviewFrame" class="flex-1 w-full h-full border-0 bg-white" title="PDF preview"></iframe>
+        </div>
+      </div>
+      <!-- Footer hint -->
+      <div class="px-4 sm:px-5 py-2.5 bg-sage-50 border-t border-line flex items-center justify-between gap-2 shrink-0">
+        <p class="text-xs font-medium text-muted flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Vital signs are blank — fill on-site with ballpen after triage. PDF is print-ready A4.
+        </p>
+        <button type="button" onclick="event.stopPropagation(); closePatientPreview()" class="text-xs font-bold text-ink hover:text-emerald-800 underline">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let _previewUrl = '';
+  let _pdfUrl = '';
+  let _previewMode = 'html';
+
+  function openPatientPreview(htmlUrl, pdfUrl, label){
+    _previewUrl = htmlUrl;
+    _pdfUrl = pdfUrl;
+    const modal = document.getElementById('patientPreviewModal');
+    const frame = document.getElementById('previewFrame');
+    const pdfLink = document.getElementById('previewPdfLink');
+    const openTab = document.getElementById('previewOpenNewTab');
+    const labelEl = document.getElementById('previewPatientLabel');
+    const loader = document.getElementById('previewLoader');
+    labelEl.textContent = label || '';
+    pdfLink.href = pdfUrl;
+    openTab.href = htmlUrl;
+    const editLink = document.getElementById('previewEditLink');
+    if(editLink){
+      // derive edit url from htmlUrl: replace /print/ with /<id>/edit/ — simpler: use pdfUrl to derive patient id and build
+      // htmlUrl is /patients/<id>/print/ — convert to /patients/<id>/edit/
+      const editUrl = htmlUrl.replace(/\/print\/?$/, '/edit/');
+      editLink.href = editUrl;
+      editLink.classList.remove('hidden');
+      // Only show for non-patient roles — check via template? For now show always; backend will guard
+    }
+    // default to HTML preview
+    togglePreviewMode('html');
+    // show loader — use embed=1 to hide inner toolbar when in preview iframe
+    loader.style.display = 'flex';
+    const btnPrint = document.getElementById('btnPrintNow');
+    if(btnPrint) btnPrint.disabled = true;
+    frame.onload = function(){
+      if(_previewMode==='html') loader.style.display = 'none';
+      if(btnPrint) btnPrint.disabled = false;
+    };
+    const embedUrl = htmlUrl + (htmlUrl.includes('?') ? '&' : '?') + 'embed=1';
+    frame.src = embedUrl;
+    // preload pdf for quick switch (inline)
+    const pdfFrame = document.getElementById('pdfPreviewFrame');
+    pdfFrame.src = pdfUrl + (pdfUrl.includes('?') ? '&' : '?') + 'preview=1';
+    pdfFrame.onload = function(){
+      if(_previewMode==='pdf') loader.style.display = 'none';
+      if(btnPrint) btnPrint.disabled = false;
+    };
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+  function togglePreviewMode(mode){
+    // keep loader handling for mode switch
+    const _btnPrint = document.getElementById('btnPrintNow');
+
+    _previewMode = mode;
+    const htmlFrame = document.getElementById('previewFrame');
+    const pdfWrap = document.getElementById('pdfPreviewWrap');
+    const tabHtml = document.getElementById('tabHtml');
+    const tabPdf = document.getElementById('tabPdf');
+    const loader = document.getElementById('previewLoader');
+    const pdfHint = document.getElementById('pdfHint');
+    const btnPdfPreview = document.getElementById('btnPdfPreview');
+    if(mode === 'pdf'){
+      htmlFrame.classList.add('hidden');
+      pdfWrap.classList.remove('hidden');
+      pdfWrap.style.display = 'flex';
+      tabPdf.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-950 text-white border border-emerald-950';
+      tabHtml.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-white text-ink border border-line hover:bg-sage-100';
+      if(btnPdfPreview) btnPdfPreview.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold border border-emerald-950';
+      if(pdfHint) pdfHint.classList.remove('hidden');
+      if(_btnPrint) _btnPrint.disabled = false;
+      // show loader until pdf loads, then hide via onload
+      loader.style.display = 'flex';
+      const pf = document.getElementById('pdfPreviewFrame');
+      if(pf.src && pf.src !== 'about:blank'){
+        // if already loaded, hide loader quickly
+        setTimeout(()=>{ loader.style.display='none'; }, 600);
+      }
+    } else {
+      pdfWrap.classList.add('hidden');
+      pdfWrap.style.display = 'none';
+      htmlFrame.classList.remove('hidden');
+      tabHtml.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-950 text-white border border-emerald-950';
+      tabPdf.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-white text-ink border border-line hover:bg-sage-100';
+      if(btnPdfPreview) btnPdfPreview.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-sage-50 border border-line text-xs font-bold text-ink hover:bg-white';
+      if(pdfHint) pdfHint.classList.add('hidden');
+      loader.style.display = 'none';
+      if(_btnPrint) _btnPrint.disabled = false;
+    }
+  }
+  function closePatientPreview(){
+    const modal = document.getElementById('patientPreviewModal');
+    const frame = document.getElementById('previewFrame');
+    const pdfFrame = document.getElementById('pdfPreviewFrame');
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    setTimeout(()=>{ if(modal.classList.contains('hidden')) { frame.src = 'about:blank'; pdfFrame.src='about:blank'; } }, 200);
+  }
+  function printPreviewFrame(e){
+    if(e){ e.preventDefault(); if(e.stopPropagation) e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
+    // Keep modal open — never close on print (print dialog is native, modal stays)
+    if(_previewMode === 'pdf'){
+      const pdfUrlWithPreview = _pdfUrl + (_pdfUrl.includes('?')?'&':'?') + 'preview=1';
+      const pf = document.getElementById('pdfPreviewFrame');
+      if(pf && pf.contentWindow && pf.src && pf.src !== 'about:blank'){
+        try{
+          pf.contentWindow.focus();
+          // Try direct print — keep synchronous to preserve user gesture
+          pf.contentWindow.print();
+          return;
+        }catch(err){}
+      }
+      // Fallback: open PDF in new tab (native viewer handles print)
+      window.open(pdfUrlWithPreview, '_blank');
+      return;
+    }
+    const frame = document.getElementById('previewFrame');
+    const fallbackUrl = _previewUrl + (_previewUrl.includes('?')?'&':'?') + 'autoprint=1';
+    if(!frame || !frame.contentWindow || !frame.src || frame.src === 'about:blank'){
+      window.open(fallbackUrl, '_blank');
+      return;
+    }
+    try{
+      frame.contentWindow.focus();
+      // Synchronous print preserves user gesture; no setTimeout to avoid popup blocker
+      frame.contentWindow.print();
+    }catch(err){
+      window.open(fallbackUrl, '_blank');
+    }
+  }
+  // Close on ESC
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      const modal = document.getElementById('patientPreviewModal');
+      if(modal && !modal.classList.contains('hidden')) closePatientPreview();
+    }
+  });
+</script>
 {% endblock %}

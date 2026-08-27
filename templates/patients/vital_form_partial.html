@@ -1,0 +1,26 @@
+{# HTMX partial for vital form — used inside modal #}
+<form method="POST" action="{% if is_create %}{% url 'patients:patient_vital_create' patient.pk %}{% else %}{% url 'patients:patient_vital_edit' vital.pk %}{% endif %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="space-y-4">
+  {% csrf_token %}
+  {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+  <div class="grid grid-cols-2 gap-3">
+    <div class="col-span-2"><label class="form-label">Date / Time Taken *</label>{{ form.taken_at }}</div>
+    <div><label class="form-label">BP Systolic</label>{{ form.bp_systolic }}</div>
+    <div><label class="form-label">BP Diastolic</label>{{ form.bp_diastolic }}</div>
+    <div><label class="form-label">Temperature °C</label>{{ form.temperature }}</div>
+    <div><label class="form-label">Pulse bpm</label>{{ form.pulse_rate }}</div>
+    <div><label class="form-label">Resp. Rate</label>{{ form.respiratory_rate }}</div>
+    <div><label class="form-label">SpO₂ %</label>{{ form.spo2 }}</div>
+    <div><label class="form-label">Weight kg</label>{{ form.weight }}</div>
+    <div><label class="form-label">Height cm</label>{{ form.height }}</div>
+    <div><label class="form-label">BMI</label>{{ form.bmi }}</div>
+    <div><label class="form-label">Pain 0-10</label>{{ form.pain_score }}</div>
+    <div><label class="form-label">Glucose mg/dL</label>{{ form.blood_glucose }}</div>
+    <div><label class="form-label">Glucose Type</label>{{ form.glucose_type }}</div>
+    <div><label class="form-label">Appearance</label>{{ form.general_appearance }}</div>
+    <div class="col-span-2"><label class="form-label">Notes</label>{{ form.notes }}</div>
+  </div>
+  <div class="flex gap-2 pt-2">
+    <button type="submit" class="btn-primary btn-sm">{% if is_create %}Save{% else %}Update{% endif %}</button>
+    <button type="button" onclick="this.closest('[data-vital-modal]')?.remove()" class="btn-secondary btn-sm">Cancel</button>
+  </div>
+</form>
