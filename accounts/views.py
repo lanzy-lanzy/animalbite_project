@@ -54,6 +54,11 @@ def profile_view(request):
     return render(request, 'accounts/profile.html', {'user_obj': request.user})
 
 @login_required
+def account_settings(request):
+    """Unified account settings page — profile info + quick actions."""
+    return render(request, 'accounts/account_settings.html', {'user_obj': request.user})
+
+@login_required
 def profile_edit(request):
     user = request.user
     if request.method == 'POST':
