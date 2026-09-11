@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
         admin = User.objects.create_superuser('admin', 'admin@abtc.gov.ph', 'admin123', role='admin', first_name='System', last_name='Admin')
         User.objects.create_user('doctor1', 'doctor@abtc.gov.ph', 'doctor123', role='doctor', first_name='Maria', last_name='Santos')
-        User.objects.create_user('nurse1', 'nurse@abtc.gov.ph', 'nurse123', role='health_worker', first_name='Juan', last_name='Dela Cruz')
+        User.objects.create_user('nurse1', 'nurse@abtc.gov.ph', 'nurse123', role='nurse', first_name='Juan', last_name='Dela Cruz')
         User.objects.create_user('encoder1', 'encoder@abtc.gov.ph', 'encoder123', role='encoder', first_name='Pedro', last_name='Gonzales')
 
         barangays = ['Poblacion', 'San Jose', 'San Juan', 'Santo Nino', 'San Isidro', 'San Vicente', 'San Miguel', 'San Roque', 'San Rafael', 'Santa Cruz']

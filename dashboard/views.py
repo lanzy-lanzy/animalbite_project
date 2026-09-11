@@ -10,9 +10,11 @@ from inventory.models import VaccineInventory
 
 @login_required
 def index(request):
-    # Doctors use their own portal only (RBAC) — keep admin dashboard staff-only
+    # Doctors and nurses use their own portals only (RBAC) — keep admin dashboard staff-only
     if getattr(request.user, 'role', '') == 'doctor':
         return redirect('doctor:dashboard')
+    if getattr(request.user, 'role', '') == 'nurse':
+        return redirect('nurse:dashboard')
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
     month_start = today.replace(day=1)

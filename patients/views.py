@@ -188,8 +188,9 @@ def patient_reset_password(request, pk):
 @login_required
 def patient_edit(request, pk):
     # Only staff/admin can edit patient info (same layout as print sheet)
-    if getattr(request.user, 'role', '') == 'patient':
-        messages.error(request, 'Not authorized to edit patient information.')
+    # Nurses are read-only on patient records (View Patient Record use case)
+    if getattr(request.user, 'role', '') in ('patient', 'nurse'):
+        messages.error(request, 'Not authorized — nurses have read-only access to patient records.')
         return redirect('patients:patient_detail', pk=pk)
     patient = get_object_or_404(Patient, pk=pk)
     if request.method == 'POST':

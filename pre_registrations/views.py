@@ -18,7 +18,7 @@ from .services import convert_to_official_case
 
 
 def is_authorized_staff(user):
-    return user.is_authenticated and user.role in {"admin", "encoder", "health_worker", "doctor"}
+    return user.is_authenticated and user.role in {"admin", "encoder", "health_worker", "doctor", "nurse"}
 
 
 def public_create(request):

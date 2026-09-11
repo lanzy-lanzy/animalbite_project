@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "audit",
     "pre_registrations",
     "doctor",
+    "nurse",
 ]
 
 MIDDLEWARE = [

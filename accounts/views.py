@@ -16,6 +16,8 @@ def landing_view(request):
             return redirect('accounts:patient_portal')
         if request.user.role == 'doctor':
             return redirect('doctor:dashboard')
+        if request.user.role == 'nurse':
+            return redirect('nurse:dashboard')
         return redirect('dashboard:index')
     return render(request, 'accounts/landing.html')
 
@@ -26,6 +28,8 @@ def login_view(request):
             return redirect('accounts:patient_portal')
         if request.user.role == 'doctor':
             return redirect('doctor:dashboard')
+        if request.user.role == 'nurse':
+            return redirect('nurse:dashboard')
         return redirect('dashboard:index')
     form = LoginForm()
     if request.method == 'POST':
@@ -43,6 +47,8 @@ def login_view(request):
                     return redirect('accounts:patient_portal')
                 if user.role == 'doctor':
                     return redirect('doctor:dashboard')
+                if user.role == 'nurse':
+                    return redirect('nurse:dashboard')
                 return redirect('dashboard:index')
             else:
                 messages.error(request, 'Account is inactive.')

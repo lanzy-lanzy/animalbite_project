@@ -9,7 +9,7 @@
         </div>
         <div class="flex gap-2">
             <span class="status-badge status-{{ case.case_status }} text-sm">{{ case.get_case_status_display }}</span>
-            {% if not case.is_locked %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-sm">Edit</a>{% endif %}
+            {% if not case.is_locked and request.user.role != 'nurse' %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-sm">Edit</a>{% endif %}
         </div>
     </div>
 
@@ -108,7 +108,7 @@
             <div class="card">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-sm font-semibold text-muted uppercase tracking-wider">Exposure Classification</h3>
-                    {% if not case.exposure or not case.exposure.category %}<a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-primary btn-xs">Classify</a>{% endif %}
+                    {% if not case.exposure or not case.exposure.category %}{% if request.user.role != 'nurse' %}<a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-primary btn-xs">Classify</a>{% endif %}{% endif %}
                 </div>
                 {% with exposure=case.exposure %}
                 {% if exposure and exposure.category %}
@@ -205,7 +205,7 @@
                     <a href="{% url 'doctor:assess_case' case.pk %}" class="btn-primary btn-sm w-full justify-center">{% if clinical_assessment %}Edit Clinical Assessment{% else %}Input Clinical Assessment{% endif %}</a>
                     {% endif %}
                     <a href="{% url 'vaccination:schedule_create' case.pk %}" class="btn-primary btn-sm w-full justify-center">Create Vaccination Schedule</a>
-                    <a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Classify Exposure</a>
+                    {% if request.user.role != 'nurse' %}<a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Classify Exposure</a>{% endif %}
                     <a href="{% url 'vaccination:follow_up_create' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Add Follow-Up</a>
                     <a href="{% url 'vaccination:observation_create' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Animal Observation</a>
                 </div>

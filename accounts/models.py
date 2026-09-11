@@ -5,7 +5,8 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('admin', 'Admin'),
         ('health_worker', 'Health Worker / ABTC Staff'),
-        ('doctor', 'Doctor / Nurse'),
+        ('doctor', 'Doctor'),
+        ('nurse', 'Nurse'),
         ('encoder', 'Encoder'),
         ('patient', 'Patient'),
     ]

@@ -92,6 +92,10 @@ def case_detail(request, pk):
 
 @login_required
 def case_edit(request, pk):
+    # Nurses are read-only on bite cases (View Doctor Findings use case)
+    if getattr(request.user, 'role', '') in ('patient', 'nurse'):
+        messages.error(request, 'Not authorized — nurses have read-only access to bite cases.')
+        return redirect('bite_cases:case_detail', pk=pk)
     case = get_object_or_404(AnimalBiteCase, pk=pk)
     if case.is_locked:
         messages.error(request, 'This case is locked and cannot be edited.')
@@ -109,6 +113,10 @@ def case_edit(request, pk):
 
 @login_required
 def classify_exposure(request, pk):
+    # Exposure classification is a clinical (doctor) decision — nurses view only
+    if getattr(request.user, 'role', '') in ('patient', 'nurse'):
+        messages.error(request, 'Not authorized — exposure classification is restricted to doctors.')
+        return redirect('bite_cases:case_detail', pk=pk)
     case = get_object_or_404(AnimalBiteCase, pk=pk)
     try:
         exposure = case.exposure
