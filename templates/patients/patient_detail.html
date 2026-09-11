@@ -53,7 +53,7 @@
     </div>
     {% endif %}
 
-    {% if request.user.role != 'patient' %}
+    {% if request.user.role == 'doctor' %}
     <div class="card mb-6 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -81,11 +81,26 @@
         <div class="mt-3 flex flex-wrap gap-1.5">
             {% for case in bite_cases %}
             <a href="{% url 'doctor:assess_case' case.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-line text-xs font-bold {% if case.clinical_assessment %}text-emerald-800 border-emerald-200{% else %}text-amber-800 border-amber-200{% endif %} hover:bg-sage-50">
-                {{ case.case_number }} {% if case.clinical_assessment %}· {{ case.clinical_assessment.get_category_confirmed_display|default:"Draft" }}{% else %}· Assess{% endif %}
+                {{ case.case_number }} {% if case.clinical_assessment %}· {{ case.clinical_assessment.get_category_confirmed_display|default:"Draft" }} · Edit{% else %}· Assess{% endif %}
             </a>
             {% endfor %}
         </div>
         {% endif %}
+    </div>
+    {% elif request.user.role != 'patient' %}
+    <div class="card mb-6 border-line bg-sage-50">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white border border-line text-emerald-900 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M9 8h6M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-ink">Clinical Assessment (Section 3) — Doctor only</h3>
+                    <p class="text-xs font-medium text-muted">Read-only for your role. Only Doctors can input / edit via Doctor Portal → Clinical Queue → Assess.</p>
+                </div>
+            </div>
+            <a href="{% url 'patients:patient_print' patient.pk %}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-white">View on Print Sheet ↗</a>
+        </div>
     </div>
     {% endif %}
 
@@ -218,6 +233,100 @@
             <p class="text-xs font-medium text-muted mt-1">Vitals are blank on the print sheet for handwriting. Click <b class="text-ink">+ Add Vitals</b> to input dynamically — they will appear instantly on preview & PDF.</p>
             {% if request.user.role != 'patient' %}
             <a href="{% url 'patients:patient_vital_create' patient.pk %}?next={{ request.path }}#vitals" class="mt-3 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">+ Add Vital Signs</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 3 · Clinical Assessment — existing record from patient file, doctor can edit/update -->
+    <div class="card mb-6 border-emerald-800" id="clinical-assessment">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h3 class="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-emerald-800 text-white flex items-center justify-center text-xs font-bold">3</span>
+                Clinical Assessment
+                {% if latest_assessment %}
+                    {% if latest_assessment.is_finalized %}<span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">Finalized</span>
+                    {% else %}<span class="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">Draft</span>{% endif %}
+                    <span class="px-2 py-0.5 rounded-full bg-sage-50 border border-line text-xs font-bold text-ink">{{ latest_assessment.get_category_confirmed_display|default:"Unclassified" }}</span>
+                {% else %}
+                    <span class="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">No assessment yet</span>
+                {% endif %}
+            </h3>
+            <div class="flex items-center gap-1.5">
+                {% if request.user.role == 'doctor' %}
+                    {% for case in bite_cases|slice:":1" %}
+                    <a href="{% url 'doctor:assess_case' case.pk %}#clinical-assessment" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">{% if latest_assessment %}✎ Edit / Update{% else %}+ Input Assessment{% endif %}</a>
+                    {% empty %}
+                    <a href="{% url 'doctor:assess_patient' patient.pk %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">+ Input Assessment</a>
+                    {% endfor %}
+                {% endif %}
+                <a href="{% url 'patients:patient_print' patient.pk %}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sage-50 border border-line text-xs font-bold text-muted hover:bg-white">Print sheet ↗</a>
+            </div>
+        </div>
+
+        {% if latest_assessment %}
+        <div class="rounded-xl border border-line overflow-hidden">
+            <div class="bg-emerald-950 text-white px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs font-bold">Dr. {{ latest_assessment.assessed_by.get_full_name|default:latest_assessment.assessed_by.username|default:"—" }} · {{ latest_assessment.encounter_date|date:"M d, Y h:i A" }}{% if latest_assessment.bite_case %} · {{ latest_assessment.bite_case.case_number }}{% endif %}{% if latest_assessment.prc_number %} · PRC {{ latest_assessment.prc_number }}{% endif %}</p>
+                <p class="text-xs text-emerald-100">{{ latest_assessment.get_status_display }}</p>
+            </div>
+            <div class="p-4 space-y-3 bg-white">
+                <div class="rounded-xl bg-sage-50 border border-line p-3">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Chief Complaint / HPI</p>
+                    <p class="text-sm mt-1"><b>CC:</b> {{ latest_assessment.chief_complaint|default:"—" }}</p>
+                    <p class="text-sm mt-1"><b>HPI:</b> {{ latest_assessment.history_present_illness|default:"—" }}</p>
+                    {% if latest_assessment.exposure_narrative %}<p class="text-sm mt-2 bg-white border border-line rounded-lg p-2"><b>Exposure Narrative:</b> {{ latest_assessment.exposure_narrative }}</p>{% endif %}
+                </div>
+                <div class="rounded-xl bg-white border border-line p-3">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Exposure (verified) — Animal: <b class="text-ink">{{ latest_assessment.animal_type_verified|default:"—" }}</b> · Owned/Stray: <b class="text-ink">{{ latest_assessment.animal_owned_verified|default:"—" }}</b> · Vax: <b class="text-ink">{{ latest_assessment.animal_vax_verified|default:"—" }}</b> · Wash: <b class="text-ink">{% if latest_assessment.wound_washed_verified %}Yes{% elif latest_assessment.wound_washed_verified == False %}No{% else %}—{% endif %}</b></p>
+                    <p class="text-sm mt-1">Body part: <b>{{ latest_assessment.body_part_verified|default:"—" }}</b> · Wounds: <b>{{ latest_assessment.number_of_wounds_verified|default:"—" }}</b> · Bite: <b>{{ latest_assessment.date_time_bite_verified|date:"M d, Y h:i A"|default:"—" }}</b></p>
+                </div>
+                <div class="rounded-xl bg-sage-50 border border-line p-3">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Physical Exam / System Review</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1 text-sm">
+                        <p><b>HEENT:</b> {{ latest_assessment.exam_heent|default:"—" }}</p>
+                        <p><b>Chest/Lungs:</b> {{ latest_assessment.exam_chest_lungs|default:"—" }}</p>
+                        <p><b>Cardiac:</b> {{ latest_assessment.exam_cardiac|default:"—" }}</p>
+                        <p><b>Abdomen:</b> {{ latest_assessment.exam_abdomen|default:"—" }}</p>
+                    </div>
+                    <p class="text-sm mt-2"><b>Skin/Wound:</b> {{ latest_assessment.skin_wound_description|default:"—" }}</p>
+                    {% if latest_assessment.systemic_review %}<p class="text-sm mt-1"><b>Systemic:</b> {{ latest_assessment.systemic_review }}</p>{% endif %}
+                </div>
+                <div class="rounded-xl bg-white border-2 border-emerald-800 p-3">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-emerald-800">Assessment & Plan — {{ latest_assessment.get_category_confirmed_display|default:"Unclassified" }} | PEP: {% if latest_assessment.pep_indicated %}Yes{% else %}No{% endif %} · RIG: {% if latest_assessment.rig_indicated %}Yes{% else %}No{% endif %} · TT: {% if latest_assessment.tt_indicated %}Yes{% else %}No{% endif %}</p>
+                    <p class="text-sm mt-1"><b>Plan / Brand / Schedule:</b> {{ latest_assessment.vaccine_brand_plan|default:"—" }} {% if latest_assessment.dose_schedule_plan %}· {{ latest_assessment.dose_schedule_plan }}{% endif %}</p>
+                    <p class="text-sm mt-1"><b>Treatment:</b> {{ latest_assessment.treatment_plan|default:"—" }}</p>
+                    {% if latest_assessment.prescription %}<p class="text-sm mt-1"><b>Rx:</b> {{ latest_assessment.prescription }}</p>{% endif %}
+                    {% if latest_assessment.follow_up_instructions %}<p class="text-sm mt-1"><b>Follow-up:</b> {{ latest_assessment.follow_up_instructions }}</p>{% endif %}
+                    {% if latest_assessment.additional_notes %}<p class="text-xs mt-2 bg-amber-50 border border-amber-200 rounded-lg p-2"><b>Notes:</b> {{ latest_assessment.additional_notes }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% if assessments|length > 1 %}
+        <div class="mt-3">
+            <p class="text-xs font-bold tracking-widest uppercase text-muted mb-2">History (last {{ assessments|length }})</p>
+            <div class="flex flex-wrap gap-1.5">
+                {% for a in assessments %}
+                {% if a.bite_case %}
+                <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border text-xs font-bold {% if a.pk == latest_assessment.pk %}border-emerald-300 text-emerald-800{% else %}border-line text-muted hover:bg-sage-50{% endif %}">{{ a.bite_case.case_number }} · {{ a.get_category_confirmed_display|default:"Draft" }} ({{ a.get_status_display }})</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if request.user.role != 'doctor' %}<p class="text-xs text-muted mt-2">History links are viewable by Doctors for edit/update. Other roles see this summary read-only.</p>{% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="rounded-xl bg-sage-50 border border-dashed border-line p-6 text-center">
+            <p class="text-sm font-bold text-muted">No doctor assessment yet — blank for clinician</p>
+            <p class="text-xs font-medium text-muted mt-1">Chief Complaint / HPI, Exposure Narrative, Physical Exam, Assessment & Plan (Category I/II/III, PEP / RIG / TT) will appear here once filled.</p>
+            {% if request.user.role == 'doctor' %}
+                {% for case in bite_cases|slice:":1" %}
+                <a href="{% url 'doctor:assess_case' case.pk %}" class="mt-3 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Doctor Portal → Clinical Queue → Assess to fill digitally</a>
+                {% empty %}
+                <a href="{% url 'doctor:assess_patient' patient.pk %}" class="mt-3 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Start Assessment →</a>
+                {% endfor %}
+            {% else %}
+                <p class="text-xs font-medium text-muted mt-3">Use Doctor Portal → Clinical Queue → Assess to fill digitally (Doctor role required).</p>
             {% endif %}
         </div>
         {% endif %}

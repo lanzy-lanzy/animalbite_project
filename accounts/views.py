@@ -14,12 +14,18 @@ def landing_view(request):
     if request.user.is_authenticated:
         if request.user.role == 'patient':
             return redirect('accounts:patient_portal')
+        if request.user.role == 'doctor':
+            return redirect('doctor:dashboard')
         return redirect('dashboard:index')
     return render(request, 'accounts/landing.html')
 
 
 def login_view(request):
     if request.user.is_authenticated:
+        if request.user.role == 'patient':
+            return redirect('accounts:patient_portal')
+        if request.user.role == 'doctor':
+            return redirect('doctor:dashboard')
         return redirect('dashboard:index')
     form = LoginForm()
     if request.method == 'POST':
@@ -35,6 +41,8 @@ def login_view(request):
                 messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
                 if user.role == 'patient':
                     return redirect('accounts:patient_portal')
+                if user.role == 'doctor':
+                    return redirect('doctor:dashboard')
                 return redirect('dashboard:index')
             else:
                 messages.error(request, 'Account is inactive.')

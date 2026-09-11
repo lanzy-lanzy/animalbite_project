@@ -126,6 +126,58 @@
                 {% endwith %}
             </div>
 
+            <!-- 3 · Clinical Assessment — doctor inputs/edits on this record form -->
+            <div class="card border-emerald-800" id="clinical-assessment">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h3 class="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-xl bg-emerald-800 text-white flex items-center justify-center text-xs font-bold">3</span>
+                        Clinical Assessment
+                        {% if clinical_assessment %}
+                            {% if clinical_assessment.is_finalized %}<span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">Finalized</span>
+                            {% else %}<span class="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">Draft</span>{% endif %}
+                            <span class="px-2 py-0.5 rounded-full bg-sage-50 border border-line text-xs font-bold text-ink">{{ clinical_assessment.get_category_confirmed_display|default:"Unclassified" }}</span>
+                        {% else %}
+                            <span class="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">No assessment yet</span>
+                        {% endif %}
+                    </h3>
+                    {% if request.user.role == 'doctor' %}
+                    <a href="{% url 'doctor:assess_case' case.pk %}" class="btn-primary btn-xs">{% if clinical_assessment %}✎ Edit / Update{% else %}+ Input Assessment{% endif %}</a>
+                    {% endif %}
+                </div>
+                {% if clinical_assessment %}
+                <div class="rounded-xl border border-line overflow-hidden">
+                    <div class="bg-emerald-950 text-white px-4 py-2">
+                        <p class="text-xs font-bold">Dr. {{ clinical_assessment.assessed_by.get_full_name|default:clinical_assessment.assessed_by.username|default:"—" }} · {{ clinical_assessment.encounter_date|date:"M d, Y h:i A" }}{% if clinical_assessment.prc_number %} · PRC {{ clinical_assessment.prc_number }}{% endif %} · {{ clinical_assessment.get_status_display }}</p>
+                    </div>
+                    <div class="p-4 space-y-3 bg-white">
+                        <div><label class="text-xs text-muted uppercase">Chief Complaint / HPI</label><p class="text-sm font-medium">CC: {{ clinical_assessment.chief_complaint|default:"—" }}</p><p class="text-sm">HPI: {{ clinical_assessment.history_present_illness|default:"—" }}</p>{% if clinical_assessment.exposure_narrative %}<p class="text-sm mt-1 bg-sage-50 border border-line rounded-lg p-2"><b>Exposure:</b> {{ clinical_assessment.exposure_narrative }}</p>{% endif %}</div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="text-xs text-muted uppercase">Category (confirmed)</label><p class="text-sm font-bold">{{ clinical_assessment.get_category_confirmed_display|default:"—" }}</p></div>
+                            <div><label class="text-xs text-muted uppercase">PEP / RIG / TT</label><p class="text-sm font-medium">PEP: {% if clinical_assessment.pep_indicated %}Yes{% else %}No{% endif %} · RIG: {% if clinical_assessment.rig_indicated %}Yes{% else %}No{% endif %} · TT: {% if clinical_assessment.tt_indicated %}Yes{% else %}No{% endif %}</p></div>
+                            <div><label class="text-xs text-muted uppercase">Skin / Wound</label><p class="text-sm">{{ clinical_assessment.skin_wound_description|default:"—"|truncatechars:160 }}</p></div>
+                            <div><label class="text-xs text-muted uppercase">Plan / Brand</label><p class="text-sm">{{ clinical_assessment.vaccine_brand_plan|default:"—" }} {% if clinical_assessment.dose_schedule_plan %}· {{ clinical_assessment.dose_schedule_plan }}{% endif %}</p></div>
+                        </div>
+                        {% if clinical_assessment.treatment_plan %}<div><label class="text-xs text-muted uppercase">Treatment Plan</label><p class="text-sm">{{ clinical_assessment.treatment_plan|truncatechars:240 }}</p></div>{% endif %}
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <a href="{% url 'patients:patient_detail' case.patient.pk %}#clinical-assessment" class="btn-secondary btn-xs">Full record on Patient File →</a>
+                            <a href="{% url 'patients:patient_print' case.patient.pk %}" target="_blank" class="btn-secondary btn-xs">Print Sheet ↗</a>
+                            {% if request.user.role == 'doctor' %}<a href="{% url 'doctor:assess_case' case.pk %}" class="btn-primary btn-xs">Open in Doctor Portal →</a>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="rounded-xl bg-sage-50 border border-dashed border-line p-5 text-center">
+                    <p class="text-sm font-bold text-muted">Blank for clinician — no doctor assessment yet</p>
+                    <p class="text-xs font-medium text-muted mt-1">Chief Complaint, Exposure Narrative, Physical Exam, Assessment & Plan (Category I/II/III, PEP / RIG / TT).</p>
+                    {% if request.user.role == 'doctor' %}
+                    <a href="{% url 'doctor:assess_case' case.pk %}" class="mt-3 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Doctor Portal → Clinical Queue → Assess to fill digitally</a>
+                    {% else %}
+                    <p class="text-xs font-medium text-muted mt-3">Doctor role required to input / edit. Other roles see this section read-only.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Medical Notes -->
             <div class="card">
                 <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Medical Notes</h3>
@@ -149,6 +201,9 @@
             <div class="card">
                 <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Quick Actions</h3>
                 <div class="space-y-2">
+                    {% if request.user.role == 'doctor' %}
+                    <a href="{% url 'doctor:assess_case' case.pk %}" class="btn-primary btn-sm w-full justify-center">{% if clinical_assessment %}Edit Clinical Assessment{% else %}Input Clinical Assessment{% endif %}</a>
+                    {% endif %}
                     <a href="{% url 'vaccination:schedule_create' case.pk %}" class="btn-primary btn-sm w-full justify-center">Create Vaccination Schedule</a>
                     <a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Classify Exposure</a>
                     <a href="{% url 'vaccination:follow_up_create' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Add Follow-Up</a>

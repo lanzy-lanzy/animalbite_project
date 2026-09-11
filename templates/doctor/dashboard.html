@@ -7,49 +7,45 @@
     <div>
       <h1 class="text-2xl font-bold text-ink flex items-center gap-3">
         <span class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center text-sm font-bold">Dr</span>
-        Doctor Portal
-        <span class="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-widest uppercase">Clinical</span>
+        My Clinic
+        <span class="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-widest uppercase">My Work Only</span>
       </h1>
-      <p class="text-sm font-medium text-muted mt-1">Conduct clinical assessment, record findings, confirm bite category, recommend treatment — unified with patient information sheet.</p>
+      <p class="text-sm font-medium text-muted mt-1">Hi Dr. {{ request.user.get_full_name|default:request.user.username }} — your assessments, drafts and queue. Other doctors' work is hidden.</p>
     </div>
     <div class="flex items-center gap-2">
-      <a href="{% url 'doctor:queue' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Clinical Queue →</a>
-      <a href="{% url 'patients:patient_list' %}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">All Patients</a>
+      <a href="{% url 'doctor:queue' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">My Queue →</a>
+      <a href="{% url 'doctor:assessment_list' %}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">My Assessments</a>
     </div>
   </div>
 
-  <!-- Stats -->
-  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+  <!-- Stats — personal only -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
     <div class="card p-4 border-l-4 border-l-emerald-800">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">Pending Assessment</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ pending_assess }}</p>
-      <p class="text-xs text-muted mt-1">Cases without assessment</p>
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">My Assessments</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ my_total }}</p>
+      <p class="text-xs text-muted mt-1">Total by me</p>
     </div>
     <div class="card p-4 border-l-4 border-l-amber-500">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">Draft Assessments</p>
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">My Drafts</p>
       <p class="text-2xl font-bold text-ink mt-1">{{ draft_assess }}</p>
-      <p class="text-xs text-muted mt-1">Need sign-off</p>
+      <p class="text-xs text-muted mt-1">Need my sign-off</p>
     </div>
     <div class="card p-4 border-l-4 border-l-emerald-500">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">Final Today</p>
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">My Finals Today</p>
       <p class="text-2xl font-bold text-ink mt-1">{{ final_today }}</p>
-      <p class="text-xs text-muted mt-1">Completed today</p>
+      <p class="text-xs text-muted mt-1">Signed by me today</p>
     </div>
-    <div class="card p-4">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">Total Patients</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ total_patients }}</p>
-      <p class="text-xs text-muted mt-1">In system</p>
-    </div>
-    <div class="card p-4">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">Upcoming Doses</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ upcoming_doses }}</p>
-      <p class="text-xs text-muted mt-1">Scheduled</p>
+    <div class="card p-4 border-l-4 border-l-amber-400">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Waiting in Queue</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ pending_assess }}</p>
+      <p class="text-xs text-muted mt-1">Unclaimed — pick up</p>
     </div>
   </div>
 
-  <!-- Category breakdown -->
+  <!-- My category breakdown -->
   <div class="card mb-6">
-    <h3 class="text-sm font-bold text-ink mb-3">Confirmed WHO Categories</h3>
+    <h3 class="text-sm font-bold text-ink mb-1">My WHO Categories</h3>
+    <p class="text-xs text-muted mb-3">Only cases you confirmed.</p>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="rounded-xl bg-sage-50 border border-line p-3 flex items-center justify-between">
         <div>
@@ -79,7 +75,7 @@
     <!-- Queue -->
     <div class="lg:col-span-3 card">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">Clinical Queue — Needs Assessment</h3>
+        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">My Queue — Pending + My Work</h3>
         <a href="{% url 'doctor:queue' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
       </div>
       <div class="space-y-2">
@@ -120,8 +116,8 @@
         </div>
         {% empty %}
         <div class="text-center py-8 rounded-xl border border-dashed border-line bg-sage-50">
-          <p class="text-sm font-bold text-muted">No cases in queue</p>
-          <p class="text-xs text-muted mt-1">All cases have finalized assessments.</p>
+          <p class="text-sm font-bold text-muted">Nothing waiting</p>
+          <p class="text-xs text-muted mt-1">No pending cases and no drafts of yours.</p>
         </div>
         {% endfor %}
       </div>
@@ -130,7 +126,7 @@
     <!-- Recent assessments -->
     <div class="lg:col-span-2 card">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">Recent Assessments</h3>
+        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">My Recent Assessments</h3>
         <a href="{% url 'doctor:assessment_list' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
       </div>
       <div class="space-y-3">
@@ -149,13 +145,13 @@
           {% endif %}
         </div>
         {% empty %}
-        <p class="text-sm text-muted text-center py-6">No assessments yet.</p>
+        <p class="text-sm text-muted text-center py-6">You have no assessments yet. Pick a pending case to start.</p>
         {% endfor %}
       </div>
       <div class="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-        <p class="text-xs font-bold text-emerald-800">Unified Workflow</p>
-        <p class="text-xs font-medium text-muted mt-1">Doctor can edit patient demographics + record vitals + conduct clinical assessment in one page — patient information sheet becomes the encounter form.</p>
-        <a href="{% url 'doctor:queue' %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Start assessing →</a>
+        <p class="text-xs font-bold text-emerald-800">My Workflow</p>
+        <p class="text-xs font-medium text-muted mt-1">Pick a pending case → Assess → Save draft or Finalize. You only see your own work.</p>
+        <a href="{% url 'doctor:queue' %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Go to My Queue →</a>
       </div>
     </div>
   </div>

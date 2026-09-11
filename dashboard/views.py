@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Q
 from django.db import models
@@ -10,6 +10,9 @@ from inventory.models import VaccineInventory
 
 @login_required
 def index(request):
+    # Doctors use their own portal only (RBAC) — keep admin dashboard staff-only
+    if getattr(request.user, 'role', '') == 'doctor':
+        return redirect('doctor:dashboard')
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
     month_start = today.replace(day=1)

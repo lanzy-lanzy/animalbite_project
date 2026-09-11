@@ -40,10 +40,10 @@
             <div class="h-1 w-full bg-gradient-to-r from-emerald-700 via-emerald-600 to-sage-300 shrink-0"></div>
             <!-- Logo -->
             <div class="h-16 flex items-center gap-3 px-5 border-b border-white/10 shrink-0 bg-emerald-950">
-                <div class="w-10 h-10 rounded-xl bg-white text-emerald-950 flex items-center justify-center text-[13px] font-bold tracking-wide shadow-lg shadow-black/20 shrink-0">AB</div>
+                <div class="w-10 h-10 rounded-xl bg-white text-emerald-950 flex items-center justify-center text-[13px] font-bold tracking-wide shadow-lg shadow-black/20 shrink-0">{% if request.user.role == 'doctor' %}Dr{% else %}AB{% endif %}</div>
                 <div class="min-w-0">
-                    <h1 class="text-sm font-bold text-white leading-tight truncate tracking-tight">ABTC System</h1>
-                    <p class="text-xs text-sage-300 font-medium">Municipal Health Office</p>
+                    <h1 class="text-sm font-bold text-white leading-tight truncate tracking-tight">{% if request.user.role == 'doctor' %}Doctor Portal{% else %}ABTC System{% endif %}</h1>
+                    <p class="text-xs text-sage-300 font-medium">{% if request.user.role == 'doctor' %}My Clinic · ABTC{% else %}Municipal Health Office{% endif %}</p>
                 </div>
             </div>
 
@@ -71,6 +71,45 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21a8 8 0 10-16 0m8-9a4 4 0 100-8 4 4 0 000 8z"/></svg>
                     My Profile
                 </a>
+                {% elif request.user.role == 'doctor' %}
+                {% with request.resolver_match.url_name as url_name %}
+                <div class="pt-1 pb-1">
+                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Doctor Portal</p>
+                </div>
+                <p class="px-4 pb-2 text-[11px] font-medium text-sage-300/50">My work only — other doctors hidden</p>
+                <a href="{% url 'doctor:dashboard' %}" class="sidebar-link {% if url_name == 'dashboard' and request.resolver_match.app_name == 'doctor' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    My Clinic
+                </a>
+                <a href="{% url 'doctor:queue' %}" class="sidebar-link {% if url_name == 'queue' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/><circle cx="15" cy="7" r="3"/></svg>
+                    My Queue
+                </a>
+                <a href="{% url 'doctor:assessment_list' %}" class="sidebar-link {% if url_name == 'assessment_list' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    My Assessments
+                </a>
+
+                <div class="pt-3 pb-1">
+                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Records · Read-Only</p>
+                </div>
+                <a href="{% url 'patients:patient_list' %}" class="sidebar-link {% if url_name == 'patient_list' or url_name == 'patient_detail' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Find Patient
+                </a>
+                <a href="{% url 'bite_cases:case_list' %}" class="sidebar-link {% if url_name == 'case_list' or url_name == 'case_detail' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Bite Cases
+                </a>
+
+                <div class="pt-3 pb-1">
+                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Account</p>
+                </div>
+                <a href="{% url 'accounts:profile' %}" class="sidebar-link {% if url_name == 'profile' %}active{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21a8 8 0 10-16 0m8-9a4 4 0 100-8 4 4 0 000 8z"/></svg>
+                    My Profile
+                </a>
+                {% endwith %}
                 {% else %}
                 {% with request.resolver_match.url_name as url_name %}
                 <a href="{% url 'dashboard:index' %}" class="sidebar-link {% if url_name == 'index' %}active{% endif %}">
@@ -93,24 +132,6 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h7l3 3v13H7z"/></svg>
                     Pre-Registrations
                 </a>
-
-                {% if request.user.role != 'patient' %}
-                <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Doctor Portal</p>
-                </div>
-                <a href="{% url 'doctor:dashboard' %}" class="sidebar-link {% if url_name == 'dashboard' and request.resolver_match.app_name == 'doctor' %}active{% endif %}">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M9 8h6M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 16v2m8-10h-2M4 12H2"/></svg>
-                    Doctor Dashboard
-                </a>
-                <a href="{% url 'doctor:queue' %}" class="sidebar-link {% if url_name == 'queue' %}active{% endif %}">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/><circle cx="15" cy="7" r="3"/></svg>
-                    Clinical Queue
-                </a>
-                <a href="{% url 'doctor:assessment_list' %}" class="sidebar-link {% if url_name == 'assessment_list' %}active{% endif %}">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    Assessments
-                </a>
-                {% endif %}
 
                 <div class="pt-3 pb-1">
                     <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Case Management</p>

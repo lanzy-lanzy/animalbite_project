@@ -3,7 +3,10 @@
 {% block content %}
 <div class="max-w-[1440px] mx-auto">
   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
-    <h1 class="text-2xl font-bold text-ink">Clinical Assessments</h1>
+    <div>
+      <h1 class="text-2xl font-bold text-ink">My Assessments</h1>
+      <p class="text-sm font-medium text-muted mt-1">Only your clinical assessments — other doctors' work is hidden.</p>
+    </div>
     <div class="flex gap-2">
       <a href="{% url 'doctor:dashboard' %}" class="btn-secondary btn-sm">Dashboard</a>
       <a href="{% url 'doctor:queue' %}" class="btn-primary btn-sm">Queue →</a>
@@ -27,7 +30,6 @@
             <th class="table-header">Case</th>
             <th class="table-header">Category</th>
             <th class="table-header">Status</th>
-            <th class="table-header">Doctor</th>
             <th class="table-header text-right">Action</th>
           </tr>
         </thead>
@@ -52,7 +54,6 @@
             <td class="table-cell">
               <span class="px-2 py-1 rounded-full text-xs font-bold {% if a.status == 'final' %}bg-emerald-600 text-white{% else %}bg-amber-500 text-white{% endif %}">{{ a.get_status_display }}</span>
             </td>
-            <td class="table-cell text-muted">{{ a.assessed_by|default:"—" }}</td>
             <td class="table-cell text-right">
               {% if a.bite_case %}
               <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="btn-secondary btn-xs">Open</a>
@@ -62,7 +63,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="7" class="text-center py-10 text-muted">No assessments yet.</td></tr>
+          <tr><td colspan="6" class="text-center py-10 text-muted">You have no assessments yet. Pick a case from My Queue to start.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -16,29 +16,48 @@ from vaccination.models import VaccineDose
 from django.db.models import Sum
 
 def is_doctor_user(user):
-    return user.is_authenticated and user.role in ['doctor', 'health_worker', 'admin']
+    """RBAC: only users with role == 'doctor' may input/edit Clinical Assessments (Section 3)."""
+    return user.is_authenticated and getattr(user, 'role', '') == 'doctor'
+
 
 def doctor_required(view_func):
-    from django.contrib.auth.decorators import user_passes_test
-    return user_passes_test(lambda u: is_doctor_user(u), login_url='accounts:login')(view_func)
+    from functools import wraps
+
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.urls import reverse
+            from urllib.parse import quote
+            login_url = reverse('accounts:login')
+            return redirect(f"{login_url}?next={quote(request.get_full_path())}")
+        if getattr(request.user, 'role', '') != 'doctor':
+            messages.error(request, 'Not authorized — Clinical Assessment (Section 3) is restricted to Doctor role.')
+            return redirect('dashboard:index')
+        return view_func(request, *args, **kwargs)
+    return _wrapped
 
 
 @login_required
 @doctor_required
 def dashboard(request):
+    """Simple personal dashboard — doctor only sees/manages their own usage."""
     today = timezone.localdate()
-    # Stats
-    total_patients = Patient.objects.filter(is_archived=False).count()
-    total_cases = AnimalBiteCase.objects.count()
+    me = request.user
+    my_qs = ClinicalAssessment.objects.filter(assessed_by=me)
+    # Personal stats only
+    my_total = my_qs.count()
+    draft_assess = my_qs.filter(status='draft').count()
+    final_today = my_qs.filter(updated_at__date=today, status='final').count()
+    # Pending queue is global (unclaimed work available to pick up)
     pending_assess = AnimalBiteCase.objects.filter(clinical_assessment__isnull=True).count()
-    draft_assess = ClinicalAssessment.objects.filter(status='draft').count()
-    final_today = ClinicalAssessment.objects.filter(updated_at__date=today, status='final').count()
-    # Category breakdown
-    cat_counts = ClinicalAssessment.objects.values('category_confirmed').annotate(c=Count('id'))
+    # My category breakdown only
+    cat_counts = my_qs.values('category_confirmed').annotate(c=Count('id'))
     cat_map = {r['category_confirmed']: r['c'] for r in cat_counts}
-    # Queue: recent cases without assessment or draft
-    queue_qs = AnimalBiteCase.objects.select_related('patient').prefetch_related('clinical_assessment').order_by('-created_at')[:12]
-    # Mark pending if no assessment or draft — handle reverse OneToOne safely
+    # My queue: pending (unclaimed) + my own work only — hide other doctors' assessments
+    queue_qs = AnimalBiteCase.objects.filter(
+        Q(clinical_assessment__isnull=True) | Q(clinical_assessment__assessed_by=me)
+    ).select_related('patient').order_by('-created_at')[:8]
+    # Mark pending if no assessment or my draft — handle reverse OneToOne safely
     for c in queue_qs:
         try:
             ca = c.clinical_assessment
@@ -48,21 +67,16 @@ def dashboard(request):
         # also attach for template reuse
         c._cached_assessment = ca
 
-    recent_assessments = ClinicalAssessment.objects.select_related('patient', 'bite_case', 'assessed_by').order_by('-updated_at')[:10]
-
-    # Upcoming doses for doctor awareness
-    upcoming_doses = VaccineDose.objects.filter(dose_status='scheduled', scheduled_date__gte=today).count()
+    recent_assessments = my_qs.select_related('patient', 'bite_case', 'assessed_by').order_by('-updated_at')[:8]
 
     context = {
-        'total_patients': total_patients,
-        'total_cases': total_cases,
+        'my_total': my_total,
         'pending_assess': pending_assess,
         'draft_assess': draft_assess,
         'final_today': final_today,
         'cat_map': cat_map,
         'queue': queue_qs,
         'recent_assessments': recent_assessments,
-        'upcoming_doses': upcoming_doses,
     }
     return render(request, 'doctor/dashboard.html', context)
 
@@ -70,10 +84,14 @@ def dashboard(request):
 @login_required
 @doctor_required
 def queue_list(request):
+    """My queue only: pending (unclaimed) + my own assessments. Hides other doctors' work."""
     q = request.GET.get('q', '')
     status = request.GET.get('status', '')  # pending, draft, final, all
     category = request.GET.get('category', '')
-    cases = AnimalBiteCase.objects.select_related('patient').all()
+    # Own-usage scope: unclaimed OR mine
+    cases = AnimalBiteCase.objects.filter(
+        Q(clinical_assessment__isnull=True) | Q(clinical_assessment__assessed_by=request.user)
+    ).select_related('patient')
     if q:
         cases = cases.filter(
             Q(case_number__icontains=q) |
@@ -116,7 +134,8 @@ def queue_list(request):
 @login_required
 @doctor_required
 def assessment_list(request):
-    qs = ClinicalAssessment.objects.select_related('patient', 'bite_case', 'assessed_by').order_by('-updated_at')
+    """My assessments only."""
+    qs = ClinicalAssessment.objects.filter(assessed_by=request.user).select_related('patient', 'bite_case', 'assessed_by').order_by('-updated_at')
     q = request.GET.get('q','')
     if q:
         qs = qs.filter(
@@ -140,8 +159,15 @@ def assess_case(request, pk):
     bite_case = get_object_or_404(AnimalBiteCase.objects.select_related('patient__barangay', 'patient__account'), pk=pk)
     patient = bite_case.patient
 
-    # Get or prepare assessment
-    assessment = getattr(bite_case, 'clinical_assessment', None)
+    # Own-usage guard: if this case is already assessed by another doctor, block takeover
+    existing = ClinicalAssessment.objects.select_related('assessed_by').filter(bite_case=bite_case).first()
+    if existing and existing.assessed_by_id and existing.assessed_by_id != request.user.id:
+        owner = existing.assessed_by.get_full_name() or existing.assessed_by.username if existing.assessed_by else 'another doctor'
+        messages.error(request, f'This case is already handled by {owner} — you can only manage your own assessments.')
+        return redirect('doctor:queue')
+
+    # Get or prepare assessment (mine or new)
+    assessment = existing
     # Do not auto-create on GET; create blank for form initial
     if assessment is None:
         assessment = ClinicalAssessment(patient=patient, bite_case=bite_case, assessed_by=request.user)
@@ -160,9 +186,8 @@ def assess_case(request, pk):
                 obj.patient = patient_saved
                 obj.bite_case = bite_case
                 obj.assessed_by = request.user
-                # handle finalized status
-                if obj.status == 'final':
-                    obj.is_finalized = True
+                # handle finalized status — support edit/update both ways (finalize or revert to draft)
+                obj.is_finalized = (obj.status == 'final')
                 obj.save()
                 # Sync exposure classification category if doctor confirmed category
                 if obj.category_confirmed:
@@ -213,8 +238,8 @@ def assess_case(request, pk):
     # Vital signs for context
     latest_vitals = patient.get_latest_vitals()
     recent_vitals = list(patient.vital_signs.select_related('taken_by').order_by('-taken_at')[:3])
-    # History of assessments for this patient
-    history = ClinicalAssessment.objects.filter(patient=patient).select_related('bite_case','assessed_by').order_by('-encounter_date')[:5]
+    # History: my assessments for this patient only (own usage)
+    history = ClinicalAssessment.objects.filter(patient=patient, assessed_by=request.user).select_related('bite_case', 'assessed_by').order_by('-encounter_date')[:5]
 
     return render(request, 'doctor/assess_form.html', {
         'patient': patient,
@@ -240,8 +265,15 @@ def assess_patient(request, pk):
     if latest_case:
         return redirect('doctor:assess_case', pk=latest_case.pk)
     # No case yet - create a general assessment without bite_case (doctor will fill exposure)
-    assessment = ClinicalAssessment.objects.filter(patient=patient, bite_case__isnull=True).order_by('-created_at').first()
+    # Own-usage: only my general assessment
+    assessment = ClinicalAssessment.objects.filter(patient=patient, bite_case__isnull=True, assessed_by=request.user).order_by('-created_at').first()
     if assessment is None:
+        # If another doctor owns a general assessment for this patient, block
+        other = ClinicalAssessment.objects.filter(patient=patient, bite_case__isnull=True).exclude(assessed_by=request.user).select_related('assessed_by').first()
+        if other and other.assessed_by_id:
+            owner = other.assessed_by.get_full_name() or other.assessed_by.username
+            messages.error(request, f'This patient is already handled by {owner} — you can only manage your own assessments.')
+            return redirect('doctor:queue')
         assessment = ClinicalAssessment(patient=patient, bite_case=None, assessed_by=request.user)
 
     if request.method == 'POST':
@@ -254,8 +286,7 @@ def assess_patient(request, pk):
                 obj.patient = p
                 obj.bite_case = None
                 obj.assessed_by = request.user
-                if obj.status == 'final':
-                    obj.is_finalized = True
+                obj.is_finalized = (obj.status == 'final')
                 obj.save()
                 AuditLog.objects.create(user=request.user, action='DOCTOR_ASSESSMENT', description=f'Doctor general assessment for {p.patient_number}')
                 messages.success(request, f'Clinical assessment saved for {p.full_name()}.')
@@ -273,6 +304,6 @@ def assess_patient(request, pk):
         'assessment': assessment,
         'latest_vitals': latest_vitals,
         'recent_vitals': list(patient.vital_signs.order_by('-taken_at')[:3]),
-        'history': ClinicalAssessment.objects.filter(patient=patient).order_by('-encounter_date')[:5],
+        'history': ClinicalAssessment.objects.filter(patient=patient, assessed_by=request.user).order_by('-encounter_date')[:5],
         'is_new': assessment.pk is None,
     })

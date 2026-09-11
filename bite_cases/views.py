@@ -74,7 +74,21 @@ def case_detail(request, pk):
         last = request.session.get('temp_creds_last')
         if last and str(last.get('patient_pk')) == str(case.patient_id):
             temp_creds = request.session.pop('temp_creds_last')
-    return render(request, 'bite_cases/case_detail.html', {'case': case, 'temp_creds': temp_creds})
+    # Clinical Assessment (Section 3) for this case — doctor inputs/edits on this record form
+    clinical_assessment = None
+    try:
+        from doctor.models import ClinicalAssessment
+        clinical_assessment = ClinicalAssessment.objects.select_related('assessed_by', 'patient').filter(bite_case=case).first()
+        if clinical_assessment is None:
+            # fallback via reverse relation (safe)
+            try:
+                ca = case.clinical_assessment
+                clinical_assessment = ca
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return render(request, 'bite_cases/case_detail.html', {'case': case, 'temp_creds': temp_creds, 'clinical_assessment': clinical_assessment})
 
 @login_required
 def case_edit(request, pk):

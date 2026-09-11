@@ -5,10 +5,10 @@
   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
     <div>
       <h1 class="text-2xl font-bold text-ink flex items-center gap-3">
-        Clinical Queue
+        My Queue
         <span class="px-3 py-1 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold tracking-widest uppercase">{{ cases.paginator.count }} cases</span>
       </h1>
-      <p class="text-sm font-medium text-muted mt-1.5">Bite cases needing clinical assessment — confirm WHO category, record findings, recommend treatment.</p>
+      <p class="text-sm font-medium text-muted mt-1.5">Pending cases + your own assessments only — other doctors' work is hidden.</p>
     </div>
     <a href="{% url 'doctor:dashboard' %}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50 shadow-sm shrink-0">← Dashboard</a>
   </div>
