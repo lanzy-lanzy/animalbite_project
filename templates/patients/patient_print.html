@@ -374,17 +374,6 @@
           <div style="font-size:10px; color:var(--muted2);">Linked case: {{ latest_assessment.bite_case.case_number }} · {{ latest_assessment.bite_case.get_animal_type_display }} · {{ latest_assessment.bite_case.get_exposure_type_display }}</div>
           {% endif %}
         </div>
-        <div class="assessment-box">
-          <div class="as-title">Physical Exam / System Review</div>
-          <div style="font-size:11px; color:var(--muted); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
-            <div><b>HEENT:</b> {{ latest_assessment.exam_heent|default:"—" }}</div><div><b>Chest/Lungs:</b> {{ latest_assessment.exam_chest_lungs|default:"—" }}</div>
-            <div><b>Cardiac:</b> {{ latest_assessment.exam_cardiac|default:"—" }}</div><div><b>Abdomen:</b> {{ latest_assessment.exam_abdomen|default:"—" }}</div>
-          </div>
-          <div style="margin-top:8px; font-size:11px; background:var(--sage-50); border:1px solid var(--line); border-radius:6px; padding:6px 8px;">
-            <b>Skin / Wound description:</b> {{ latest_assessment.skin_wound_description|default:"—" }}<br>
-            {% if latest_assessment.systemic_review %}<b>Systemic review:</b> {{ latest_assessment.systemic_review }}{% endif %}
-          </div>
-        </div>
         <div class="assessment-box white" style="border-color:var(--emerald-800)">
           <div class="as-title">Assessment & Plan
             <span style="font-weight:700; font-size:11px; margin-left:8px;">
@@ -407,14 +396,6 @@
         <div class="assessment-box"><div class="as-title">Chief Complaint / History of Present Illness</div><div class="line-blank"></div><div class="line-blank"></div><div class="line-blank dotted"></div></div>
         <div class="assessment-box white"><div class="as-title">Exposure Narrative (if animal bite) <span style="font-weight:500; color:var(--muted2); font-size:10px;">— Animal: <span class="inline-blank"></span> &nbsp; Owned / Stray &nbsp; Vax: <span class="inline-blank" style="min-width:60px"></span> &nbsp; Wound wash: ○ Yes ○ No</span></div>
           <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">Body part: <span class="inline-blank"></span> &nbsp; No. of wounds: <span class="inline-blank" style="min-width:40px"></span> &nbsp; Date/time of bite: <span class="inline-blank" style="min-width:110px"></span></div>
-          <div class="line-blank"></div><div class="line-blank dotted"></div>
-        </div>
-        <div class="assessment-box"><div class="as-title">Physical Exam / System Review</div>
-          <div style="font-size:11px; color:var(--muted); display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;">
-            <div>HEENT: <span class="inline-blank" style="min-width:120px"></span></div><div>Chest/Lungs: <span class="inline-blank" style="min-width:120px"></span></div>
-            <div>Cardiac: <span class="inline-blank" style="min-width:120px"></span></div><div>Abdomen: <span class="inline-blank" style="min-width:120px"></span></div>
-          </div>
-          <div style="margin-top:6px; font-size:11px;"><b>Skin / Wound description:</b> <span class="inline-blank" style="min-width:260px"></span></div>
           <div class="line-blank"></div><div class="line-blank dotted"></div>
         </div>
         <div class="assessment-box white" style="border-color:var(--emerald-800)"><div class="as-title">Assessment & Plan <span style="font-weight:500; color:var(--muted2); font-size:10px;">— ○ Category I &nbsp; ○ Category II &nbsp; ○ Category III &nbsp;&nbsp;|&nbsp;&nbsp; PEP: ○ Yes ○ No &nbsp; RIG: ○ Yes ○ No &nbsp; TT: ○ Yes ○ No</span></div>

@@ -8,8 +8,6 @@ class ClinicalAssessmentForm(forms.ModelForm):
             'chief_complaint', 'history_present_illness',
             'exposure_narrative', 'animal_type_verified', 'animal_owned_verified', 'animal_vax_verified',
             'wound_washed_verified', 'body_part_verified', 'number_of_wounds_verified', 'date_time_bite_verified',
-            'exam_heent', 'exam_chest_lungs', 'exam_cardiac', 'exam_abdomen',
-            'skin_wound_description', 'systemic_review',
             'category_confirmed', 'pep_indicated', 'rig_indicated', 'tt_indicated',
             'vaccine_brand_plan', 'dose_schedule_plan', 'treatment_plan', 'prescription',
             'follow_up_instructions', 'additional_notes',
@@ -25,12 +23,6 @@ class ClinicalAssessmentForm(forms.ModelForm):
             'body_part_verified': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., Left lower leg, anterior'}),
             'number_of_wounds_verified': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
             'date_time_bite_verified': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-input'}),
-            'exam_heent': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'HEENT findings'}),
-            'exam_chest_lungs': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Chest / Lungs'}),
-            'exam_cardiac': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Cardiac'}),
-            'exam_abdomen': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Abdomen'}),
-            'skin_wound_description': forms.Textarea(attrs={'rows': 3, 'class': 'form-input', 'placeholder': 'Size, depth, edges, bleeding, contamination...'}),
-            'systemic_review': forms.Textarea(attrs={'rows': 2, 'class': 'form-input', 'placeholder': 'Fever, neuro signs, other systems...'}),
             'category_confirmed': forms.Select(attrs={'class': 'form-input font-bold'}),
             'vaccine_brand_plan': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., Verorab / Abhayrab'}),
             'dose_schedule_plan': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., Days 0, 3, 7, 14, 28 (Essen)'}),
@@ -49,5 +41,5 @@ class ClinicalAssessmentForm(forms.ModelForm):
             choices=[('', '— Select —'), ('dog','Dog'),('cat','Cat'),('monkey','Monkey'),('bat','Bat'),('other','Other')],
             attrs={'class': 'form-input'}
         )
-        for f in ['chief_complaint','history_present_illness','exposure_narrative','skin_wound_description','treatment_plan','prescription']:
+        for f in ['chief_complaint','history_present_illness','exposure_narrative','treatment_plan','prescription']:
             self.fields[f].required = False

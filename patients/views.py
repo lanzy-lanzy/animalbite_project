@@ -11,6 +11,33 @@ from .models import Patient, Barangay, VitalSign
 from .forms import PatientForm, VitalSignForm
 from audit.models import AuditLog
 
+# Case statuses considered "active / being treated" for the doctor Live view.
+DOCTOR_ACTIVE_CASE_STATUSES = ('new', 'under_treatment')
+
+
+def _doctor_owned_or_unclaimed_q(user):
+    """Q limiting a Patient queryset to a doctor's own patients plus patients
+    that still have an unclaimed (assessment-less) bite case any doctor can pick up."""
+    from doctor.models import ClinicalAssessment
+    from bite_cases.models import AnimalBiteCase
+    own_ids = ClinicalAssessment.objects.filter(assessed_by=user).values_list('patient_id', flat=True)
+    unclaimed_ids = AnimalBiteCase.objects.filter(clinical_assessment__isnull=True).values_list('patient_id', flat=True)
+    return Q(pk__in=own_ids) | Q(pk__in=unclaimed_ids)
+
+
+def _doctor_can_access_patient(user, patient):
+    """Ownership check: a doctor may open a patient only if it is their own
+    (they assessed it) or the patient still has an unassigned case. Handover is
+    performed by an admin reassigning ClinicalAssessment.assessed_by."""
+    from doctor.models import ClinicalAssessment
+    from bite_cases.models import AnimalBiteCase
+    if ClinicalAssessment.objects.filter(patient=patient, assessed_by=user).exists():
+        return True
+    if AnimalBiteCase.objects.filter(patient=patient, clinical_assessment__isnull=True).exists():
+        return True
+    return False
+
+
 def generate_patient_number():
     last = Patient.objects.filter(patient_number__startswith='PAT-').order_by('-id').first()
     if last:
@@ -36,9 +63,30 @@ def patient_list(request):
     if sex:
         patients_qs = patients_qs.filter(sex=sex)
 
+    # Access control (RBAC): doctors only see their own patients + unassigned cases.
+    is_doctor = getattr(request.user, 'role', '') == 'doctor'
+    if is_doctor:
+        patients_qs = patients_qs.filter(_doctor_owned_or_unclaimed_q(request.user))
+
     paginator = Paginator(patients_qs.order_by('-created_at'), 20)
     page = paginator.get_page(request.GET.get('page'))
     barangays = Barangay.objects.filter(is_active=True)
+
+    # "View on Live": attach the patient's current active, claimable case for doctors.
+    if is_doctor:
+        from bite_cases.models import AnimalBiteCase
+        page_ids = [p.pk for p in page]
+        live_cases = AnimalBiteCase.objects.filter(
+            patient_id__in=page_ids,
+            case_status__in=DOCTOR_ACTIVE_CASE_STATUSES,
+        ).filter(
+            Q(clinical_assessment__isnull=True) | Q(clinical_assessment__assessed_by=request.user)
+        ).order_by('patient_id', '-created_at')
+        live_map = {}
+        for c in live_cases:
+            live_map.setdefault(c.patient_id, c.pk)
+        for p in page:
+            p.live_case_pk = live_map.get(p.pk)
 
     return render(request, 'patients/patient_list.html', {
         'patients': page, 'barangays': barangays, 'query': query,
@@ -106,6 +154,10 @@ def patient_create(request):
 @login_required
 def patient_detail(request, pk):
     patient = get_object_or_404(Patient.objects.select_related('account', 'barangay'), pk=pk)
+    # Access control (RBAC): doctors may only open their own patients or unassigned cases.
+    if getattr(request.user, 'role', '') == 'doctor' and not _doctor_can_access_patient(request.user, patient):
+        messages.error(request, 'You do not have access to this patient record — you can only view your own patients or unassigned cases.')
+        return redirect('patients:patient_list')
     bite_cases = patient.bite_cases.select_related().prefetch_related('vaccination_schedule__doses').order_by('-created_at') if hasattr(patient, 'bite_cases') else []
     # One-time temp credentials from session (set after auto-creation)
     temp_creds = request.session.pop(f'temp_creds_{patient.pk}', None)
@@ -209,6 +261,10 @@ def patient_edit(request, pk):
 def patient_print(request, pk):
     """HTML printable sheet — emerald style, with stored vital signs and doctor clinical assessment if available."""
     patient = get_object_or_404(Patient.objects.select_related('barangay', 'account'), pk=pk)
+    # Access control (RBAC): doctors may only print their own patients or unassigned cases.
+    if getattr(request.user, 'role', '') == 'doctor' and not _doctor_can_access_patient(request.user, patient):
+        messages.error(request, 'You do not have access to this patient record.')
+        return redirect('patients:patient_list')
     bite_cases = patient.bite_cases.select_related().prefetch_related('vaccination_schedule__doses').order_by('-created_at')[:5] if hasattr(patient, 'bite_cases') else []
     latest_case = bite_cases[0] if bite_cases else None
     # Latest vitals for filling the sheet
@@ -254,6 +310,10 @@ def patient_print(request, pk):
 def patient_print_pdf(request, pk):
     """Generate print-ready PDF for patient — emerald style, includes blank vital signs and vaccine schedule."""
     patient = get_object_or_404(Patient.objects.select_related('barangay', 'account'), pk=pk)
+    # Access control (RBAC): doctors may only export their own patients or unassigned cases.
+    if getattr(request.user, 'role', '') == 'doctor' and not _doctor_can_access_patient(request.user, patient):
+        messages.error(request, 'You do not have access to this patient record.')
+        return redirect('patients:patient_list')
     try:
         bite_cases_qs = patient.bite_cases.select_related().prefetch_related('vaccination_schedule__doses').order_by('-created_at')
         bite_cases = list(bite_cases_qs[:5])
@@ -519,7 +579,6 @@ def patient_print_pdf(request, pk):
         assessment_data = [
             [cell(f"<b>Chief Complaint / HPI:</b><br/><b>CC:</b> {esc(latest_assessment.chief_complaint)}<br/><b>HPI:</b> {esc(latest_assessment.history_present_illness)}<br/>{'<b>Exposure Narrative:</b> ' + esc(latest_assessment.exposure_narrative) if latest_assessment.exposure_narrative else ''}", ParagraphStyle('ass', parent=s_td, leading=9))],
             [cell(f"<b>Exposure (verified):</b> Animal: <b>{esc(latest_assessment.animal_type_verified or '—')}</b> &nbsp; Owned/Stray: <b>{esc(latest_assessment.animal_owned_verified or '—')}</b> &nbsp; Vax: <b>{esc(latest_assessment.animal_vax_verified or '—')}</b> &nbsp; Wound wash: <b>{wash}</b><br/>Body part: <b>{esc(latest_assessment.body_part_verified)}</b> &nbsp; No. of wounds: <b>{esc(str(latest_assessment.number_of_wounds_verified) if latest_assessment.number_of_wounds_verified else '—')}</b> &nbsp; Date/time bite: <b>{esc(latest_assessment.date_time_bite_verified.strftime('%b %d, %Y %H:%M') if latest_assessment.date_time_bite_verified else '—')}</b>", ParagraphStyle('ass2', parent=s_td, leading=9))],
-            [cell(f"<b>Physical Exam / System Review:</b><br/>HEENT: {esc(latest_assessment.exam_heent)} &nbsp; Chest/Lungs: {esc(latest_assessment.exam_chest_lungs)}<br/>Cardiac: {esc(latest_assessment.exam_cardiac)} &nbsp; Abdomen: {esc(latest_assessment.exam_abdomen)}<br/><b>Skin/Wound:</b> {esc(latest_assessment.skin_wound_description)}<br/>{'<b>Systemic review:</b> ' + esc(latest_assessment.systemic_review) if latest_assessment.systemic_review else ''}", ParagraphStyle('ass3', parent=s_td, leading=9))],
             [cell(f"<b>Assessment & Plan:</b> {cat_marks} &nbsp;|&nbsp; PEP: {pep} &nbsp; RIG: {rig} &nbsp; TT: {tt}<br/><b>Plan / Vaccine brand / Dose schedule:</b> {esc(latest_assessment.vaccine_brand_plan)} {esc('· ' + latest_assessment.dose_schedule_plan) if latest_assessment.dose_schedule_plan else ''}<br/><b>Treatment plan:</b> {esc(latest_assessment.treatment_plan)}<br/>{'<b>Prescription:</b> ' + esc(latest_assessment.prescription) + '<br/>' if latest_assessment.prescription else ''}{'<b>Follow-up:</b> ' + esc(latest_assessment.follow_up_instructions) + '<br/>' if latest_assessment.follow_up_instructions else ''}{'<b>Notes:</b> ' + esc(latest_assessment.additional_notes) if latest_assessment.additional_notes else ''}<br/><font color=\"#5a6b63\" size=\"5\">Assessed by {esc(latest_assessment.assessed_by.get_full_name() if latest_assessment.assessed_by else '—')} {esc('· PRC ' + latest_assessment.prc_number) if latest_assessment.prc_number else ''} · {latest_assessment.encounter_date.strftime('%b %d, %Y %H:%M') if latest_assessment.encounter_date else ''} · {latest_assessment.get_status_display()}</font>", ParagraphStyle('ass4', parent=s_td, leading=9))],
         ]
     else:
@@ -528,7 +587,6 @@ def patient_print_pdf(request, pk):
         assessment_data = [
             [cell("<b>Chief Complaint / History of Present Illness:</b><br/><br/>___________________________________________________________________________________________<br/>___________________________________________________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass', parent=s_td, leading=9))],
             [cell("<b>Exposure Narrative (if animal bite):</b> Animal: ________ &nbsp; Owned / Stray &nbsp; Vax: ________ &nbsp; Wound wash: ○ Yes ○ No<br/>Body part: _________________ &nbsp; No. of wounds: ______ &nbsp; Date/time of bite: ______________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass2', parent=s_td, leading=9))],
-            [cell("<b>Physical Exam / System Review:</b><br/><br/>HEENT: ________________________________ &nbsp; Chest/Lungs: ________________________________<br/>Cardiac: ________________________________ &nbsp; Abdomen: ________________________________<br/>Skin/Wound description: __________________________________________________________________<br/>___________________________________________________________________________________________", ParagraphStyle('ass3', parent=s_td, leading=9))],
             [cell("<b>Assessment & Plan:</b><br/><br/>○ Category I &nbsp; ○ Category II &nbsp; ○ Category III &nbsp;&nbsp; | &nbsp; PEP: ○ Yes ○ No &nbsp; RIG: ○ Yes ○ No &nbsp; TT: ○ Yes ○ No<br/>Plan / Vaccine brand / Dose schedule: _____________________________________________________<br/>___________________________________________________________________________________________<br/><font color=\"#5a6b63\" size=\"6\"><i>No doctor assessment yet — use Doctor Portal → Clinical Queue → Assess to fill digitally.</i></font>", ParagraphStyle('ass4', parent=s_td, leading=9))],
         ]
     ass_tbl = Table(assessment_data, colWidths=[170*mm])
