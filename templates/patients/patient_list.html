@@ -59,7 +59,10 @@
                     <td class="table-cell text-muted">{{ p.created_at|date:'M d, Y' }}</td>
                     <td class="table-cell text-right">
                         <div class="flex items-center justify-end gap-1">
+                            {% if request.user.role != 'doctor' or p.has_active_case %}
                             <a href="{% url 'patients:patient_detail' p.pk %}" class="btn-secondary btn-xs">View</a>
+                            {% endif %}
+                            {% if request.user.role != 'doctor' %}
                             {% if p.live_case_pk %}
                             <a href="{% url 'doctor:assess_case' p.live_case_pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm whitespace-nowrap" title="Open the live clinical encounter for this patient's active case">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
@@ -81,6 +84,7 @@
                             </a>
                             {% endif %}
                             <a href="{% url 'patients:patient_edit' p.pk %}" class="btn-secondary btn-xs">Edit</a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

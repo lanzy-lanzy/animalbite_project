@@ -76,6 +76,14 @@ def patient_list(request):
     if is_doctor:
         from bite_cases.models import AnimalBiteCase
         page_ids = [p.pk for p in page]
+        # Patients whose current status is active / under treatment (any active case).
+        active_patient_ids = set(
+            AnimalBiteCase.objects.filter(
+                patient_id__in=page_ids,
+                case_status__in=DOCTOR_ACTIVE_CASE_STATUSES,
+            ).values_list('patient_id', flat=True)
+        )
+        # Latest active, claimable case per patient (unassigned or already this doctor's).
         live_cases = AnimalBiteCase.objects.filter(
             patient_id__in=page_ids,
             case_status__in=DOCTOR_ACTIVE_CASE_STATUSES,
@@ -86,6 +94,7 @@ def patient_list(request):
         for c in live_cases:
             live_map.setdefault(c.patient_id, c.pk)
         for p in page:
+            p.has_active_case = p.pk in active_patient_ids
             p.live_case_pk = live_map.get(p.pk)
 
     return render(request, 'patients/patient_list.html', {

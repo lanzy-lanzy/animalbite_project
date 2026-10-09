@@ -196,11 +196,12 @@ def assess_case(request, pk):
         # Validate both
         patient_valid = patient_form.is_valid()
         assess_valid = form.is_valid()
-        if patient_valid and assess_valid:
+        if assess_valid:
             with transaction.atomic():
-                patient_saved = patient_form.save()
+                if patient_valid:
+                    patient_form.save()
                 obj = form.save(commit=False)
-                obj.patient = patient_saved
+                obj.patient = patient
                 obj.bite_case = bite_case
                 obj.assessed_by = request.user
                 # handle finalized status — support edit/update both ways (finalize or revert to draft)
@@ -221,17 +222,21 @@ def assess_case(request, pk):
                         exp.save()
                 # Audit
                 AuditLog.objects.create(user=request.user, action='DOCTOR_ASSESSMENT', description=f'Doctor assessment for {patient.patient_number} case {bite_case.case_number} - {obj.get_category_confirmed_display() if obj.category_confirmed else "draft"}')
-                messages.success(request, f'Clinical assessment saved for {patient.full_name()} ({bite_case.case_number}). {"Finalized & signed." if obj.is_finalized else "Draft saved."}')
                 # Update case status if finalized
                 if obj.is_finalized and bite_case.case_status == 'new':
                     bite_case.case_status = 'under_treatment'
                     bite_case.save(update_fields=['case_status'])
+            # The clinical assessment (and its signature) is saved independently of patient demographics,
+            # so a patient-form validation error can never silently discard a Finalize.
+            messages.success(request, f'Clinical assessment saved for {patient.full_name()} ({bite_case.case_number}). {"Finalized & signed." if obj.is_finalized else "Draft saved."}')
+            if patient_valid:
                 return redirect('doctor:assess_case', pk=bite_case.pk)
+            # Patient part had errors: keep the form open so they can be corrected, but the assessment is already persisted.
+            messages.error(request, 'Patient information has errors — the assessment was saved, but please correct the highlighted patient fields.')
+            assessment = obj
+            form = ClinicalAssessmentForm(instance=assessment, prefix='assess')
         else:
-            if not patient_valid:
-                messages.error(request, 'Patient information has errors - please correct.')
-            if not assess_valid:
-                messages.error(request, 'Assessment form has errors - check required fields.')
+            messages.error(request, 'Assessment form has errors - check required fields.')
     else:
         patient_form = PatientForm(instance=patient, prefix='patient')
         # Prefill assessment from bite_case if new
@@ -296,18 +301,28 @@ def assess_patient(request, pk):
     if request.method == 'POST':
         patient_form = PatientForm(request.POST, instance=patient, prefix='patient')
         form = ClinicalAssessmentForm(request.POST, instance=assessment, prefix='assess')
-        if patient_form.is_valid() and form.is_valid():
+        patient_valid = patient_form.is_valid()
+        assess_valid = form.is_valid()
+        if assess_valid:
             with transaction.atomic():
-                p = patient_form.save()
+                if patient_valid:
+                    patient_form.save()
                 obj = form.save(commit=False)
-                obj.patient = p
+                obj.patient = patient
                 obj.bite_case = None
                 obj.assessed_by = request.user
                 obj.is_finalized = (obj.status == 'final')
                 obj.save()
-                AuditLog.objects.create(user=request.user, action='DOCTOR_ASSESSMENT', description=f'Doctor general assessment for {p.patient_number}')
-                messages.success(request, f'Clinical assessment saved for {p.full_name()}.')
-                return redirect('doctor:assess_patient', pk=p.pk)
+                AuditLog.objects.create(user=request.user, action='DOCTOR_ASSESSMENT', description=f'Doctor general assessment for {patient.patient_number}')
+            # Save the clinical assessment independently of patient demographics so Finalize always persists.
+            messages.success(request, f'Clinical assessment saved for {patient.full_name()}. {"Finalized & signed." if obj.is_finalized else "Draft saved."}')
+            if patient_valid:
+                return redirect('doctor:assess_patient', pk=patient.pk)
+            messages.error(request, 'Patient information has errors — the assessment was saved, but please correct the highlighted patient fields.')
+            assessment = obj
+            form = ClinicalAssessmentForm(instance=assessment, prefix='assess')
+        else:
+            messages.error(request, 'Assessment form has errors - check required fields.')
     else:
         patient_form = PatientForm(instance=patient, prefix='patient')
         form = ClinicalAssessmentForm(instance=assessment, prefix='assess')
