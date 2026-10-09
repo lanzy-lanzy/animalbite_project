@@ -334,6 +334,7 @@
         {% endif %}
     </div>
 
+    {% if request.user.role != 'doctor' %}
     <!-- Patient Portal Login -->
     <div class="card mb-6">
         <div class="flex items-center justify-between mb-4">
@@ -449,5 +450,6 @@
         </div>
         {% endif %}
     </div>
+    {% endif %}
 </div>
 {% endblock %}
