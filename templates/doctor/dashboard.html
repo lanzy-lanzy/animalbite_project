@@ -13,7 +13,7 @@
       <p class="text-sm font-medium text-muted mt-1">Hi Dr. {{ request.user.get_full_name|default:request.user.username }} — your assessments, drafts and queue. Other doctors' work is hidden.</p>
     </div>
     <div class="flex items-center gap-2">
-      <a href="{% url 'doctor:queue' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">My Queue →</a>
+      <a href="{% url 'doctor:queue' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Clinical Assessment →</a>
       <a href="{% url 'doctor:assessment_list' %}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">My Assessments</a>
     </div>
   </div>
@@ -75,7 +75,7 @@
     <!-- Queue -->
     <div class="lg:col-span-3 card">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">My Queue — Pending + My Work</h3>
+        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">Clinical Assessment — Pending + My Work</h3>
         <a href="{% url 'doctor:queue' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
       </div>
       <div class="space-y-2">
@@ -151,7 +151,7 @@
       <div class="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
         <p class="text-xs font-bold text-emerald-800">My Workflow</p>
         <p class="text-xs font-medium text-muted mt-1">Pick a pending case → Assess → Save draft or Finalize. You only see your own work.</p>
-        <a href="{% url 'doctor:queue' %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Go to My Queue →</a>
+        <a href="{% url 'doctor:queue' %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Go to Clinical Assessment →</a>
       </div>
     </div>
   </div>

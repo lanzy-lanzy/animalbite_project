@@ -5,6 +5,9 @@ from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db import transaction
+from django.urls import reverse
+from functools import wraps
+from urllib.parse import quote
 
 from patients.models import Patient
 from patients.forms import PatientForm
@@ -16,21 +19,35 @@ from vaccination.models import VaccineDose
 from django.db.models import Sum
 
 def is_doctor_user(user):
-    """RBAC: only users with role == 'doctor' may input/edit Clinical Assessments (Section 3)."""
-    return user.is_authenticated and getattr(user, 'role', '') == 'doctor'
+    """RBAC: only users with role == 'doctor' may input/edit Clinical Assessments (Section 3).
+
+    This is the single source of truth for Doctor access. Any other role —
+    including 'admin', 'nurse', 'encoder', 'health_worker', 'patient' — is
+    considered unauthorized here, even if the account is flagged as
+    is_staff/is_superuser. Superuser status intentionally does NOT bypass.
+    """
+    return bool(
+        user
+        and user.is_authenticated
+        and getattr(user, 'is_active', True)
+        and getattr(user, 'role', '') == 'doctor'
+    )
 
 
 def doctor_required(view_func):
-    from functools import wraps
+    """Restrict a view exclusively to authenticated users with the Doctor role.
+
+    - Unauthenticated requests are sent to the login page (preserving next).
+    - Any authenticated user whose role is NOT 'doctor' (e.g. Admin, Nurse) is
+      explicitly denied and redirected to the dashboard with an error message.
+    """
 
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            from django.urls import reverse
-            from urllib.parse import quote
             login_url = reverse('accounts:login')
             return redirect(f"{login_url}?next={quote(request.get_full_path())}")
-        if getattr(request.user, 'role', '') != 'doctor':
+        if not is_doctor_user(request.user):
             messages.error(request, 'Not authorized — Clinical Assessment (Section 3) is restricted to Doctor role.')
             return redirect('dashboard:index')
         return view_func(request, *args, **kwargs)
