@@ -175,6 +175,21 @@ def patient_detail(request, pk):
         temp_creds = request.session.pop('temp_creds_last', None)
         if temp_creds and str(temp_creds.get('patient_pk')) != str(patient.pk):
             temp_creds = None
+    # One-time login QR code — only possible while the plaintext temp password is still in hand
+    # (right after registration or password reset).
+    creds_qr_data_uri = None
+    creds_qr_payload = None
+    if temp_creds and temp_creds.get('username') and temp_creds.get('password'):
+        try:
+            from utils.qr import qr_data_uri, build_credentials_payload
+            login_url = request.build_absolute_uri(reverse('accounts:login'))
+            creds_qr_payload = build_credentials_payload(
+                login_url, temp_creds['username'], temp_creds['password'], patient.full_name()
+            )
+            creds_qr_data_uri = qr_data_uri(creds_qr_payload)
+        except Exception:
+            creds_qr_data_uri = None
+            creds_qr_payload = None
     # Vital signs — latest and recent for admin dynamic editing
     latest_vitals = patient.get_latest_vitals() if hasattr(patient, 'get_latest_vitals') else None
     recent_vitals = list(patient.vital_signs.select_related('taken_by').order_by('-taken_at')[:5]) if hasattr(patient, 'vital_signs') else []
@@ -202,7 +217,7 @@ def patient_detail(request, pk):
             pass
     except Exception:
         pass
-    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'clinical_by_case': clinical_by_case, 'assessments': assessments})
+    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'clinical_by_case': clinical_by_case, 'assessments': assessments})
 
 
 @login_required
