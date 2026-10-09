@@ -74,6 +74,50 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+def _mysql_database_from_env():
+    """Local MySQL config (defaults match XAMPP's MariaDB: root, no password, 127.0.0.1:3306)."""
+    return {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": config('DB_NAME', default='animalbite'),
+        "USER": config('DB_USER', default='root'),
+        "PASSWORD": config('DB_PASSWORD', default=''),
+        "HOST": config('DB_HOST', default='127.0.0.1'),
+        "PORT": config('DB_PORT', default='3306'),
+        "CONN_MAX_AGE": 600,
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
+
+
+def _ensure_mysql_database_exists(database):
+    """Create the target MySQL database if it does not already exist (local/XAMPP dev)."""
+    import MySQLdb
+
+    conn = None
+    try:
+        conn = MySQLdb.connect(
+            host=database["HOST"],
+            port=int(database["PORT"]),
+            user=database["USER"],
+            password=database["PASSWORD"],
+            charset="utf8mb4",
+        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{database['NAME']}` "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+            )
+        conn.commit()
+    except MySQLdb.Error:
+        # Server unreachable or credentials pending: let Django raise on first real connect.
+        pass
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 DATABASE_URL = config('DATABASE_URL', default='')
 if DATABASE_URL:
     DATABASES = {
@@ -84,12 +128,10 @@ if DATABASE_URL:
         )
     }
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+    DATABASES = {"default": _mysql_database_from_env()}
+    # Local development against XAMPP's MySQL/MariaDB: make sure the schema exists.
+    if not os.environ.get('RENDER'):
+        _ensure_mysql_database_exists(DATABASES["default"])
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
