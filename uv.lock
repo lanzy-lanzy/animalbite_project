@@ -10,6 +10,7 @@ dependencies = [
     { name = "dj-database-url" },
     { name = "django" },
     { name = "django-htmx" },
+    { name = "django-shortcuts" },
     { name = "gunicorn" },
     { name = "mysqlclient" },
     { name = "openpyxl" },
@@ -30,6 +31,7 @@ requires-dist = [
     { name = "dj-database-url", specifier = ">=3.0.1" },
     { name = "django", specifier = ">=6.0.6" },
     { name = "django-htmx", specifier = ">=1.27.0" },
+    { name = "django-shortcuts", specifier = ">=1.6" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "mysqlclient", specifier = ">=2.2.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
@@ -193,6 +195,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/34/f2/8c3e28a5eed8e5226
 wheels = [
     { url = "https://files.pythonhosted.org/packages/23/ac/25d28489dc43224e260f4ebee7565f7ef1efe12af0f284a89500c19f75e2/django_htmx-1.27.0-py3-none-any.whl", hash = "sha256:13e1e13b87d39b57f95aae6e4987cb3df056d0b1373a41f4a94504a00298ffd8", size = 62126, upload-time = "2025-11-28T23:18:53.57Z" },
 ]
+
+[[package]]
+name = "django-shortcuts"
+version = "1.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/26/91/b4b7785279269559028e62831ca98bc45a5086236194314b43e39c227917/django-shortcuts-1.6.tar.gz", hash = "sha256:eac6f9e2f4acdba3856046405c21382d36b66414bcd14c390f6027ac15f28ca8", size = 3105, upload-time = "2018-07-11T07:39:10.339Z" }
 
 [[package]]
 name = "et-xmlfile"
