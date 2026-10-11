@@ -2,9 +2,9 @@
 {% block title %}My Profile - ABTC System{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 class="text-xl font-bold text-ink">My Profile</h1>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
             <a href="{% url 'accounts:profile_edit' %}" class="btn-primary btn-sm">Edit Profile</a>
             <a href="{% url 'accounts:change_password' %}" class="btn-secondary btn-sm">Change Password</a>
         </div>

@@ -4,8 +4,8 @@
 <div class="max-w-5xl mx-auto">
     <h1 class="text-xl font-bold text-ink mb-6">Audit Trail</h1>
     <div class="card mb-6">
-        <form method="GET" class="flex gap-3">
-            <input type="text" name="q" value="{{ query }}" placeholder="Search user, action, description..." class="form-input max-w-md">
+        <form method="GET" class="flex flex-wrap gap-3">
+            <input type="text" name="q" value="{{ query }}" placeholder="Search user, action, description..." class="form-input max-w-md flex-1 min-w-[180px]">
             <button type="submit" class="btn-primary btn-sm">Search</button>
             <a href="{% url 'audit:audit_list' %}" class="btn-secondary btn-sm">Reset</a>
         </form>

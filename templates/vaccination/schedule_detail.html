@@ -108,7 +108,7 @@
                 <p class="text-xs font-medium text-muted">{{ schedule.bite_case.incident_barangay }}</p>
             </div>
         </div>
-        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-line">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-line">
             <div class="text-center rounded-xl p-3 {% if schedule.rig_given %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-line{% endif %}">
                 <p class="text-[11px] font-bold tracking-widest uppercase {% if schedule.rig_given %}text-emerald-700{% else %}text-muted{% endif %}">RIG</p>
                 <p class="text-sm font-bold {% if schedule.rig_given %}text-emerald-800{% else %}text-ink{% endif %} mt-1">{{ schedule.rig_given|yesno:'Yes,No' }}</p>

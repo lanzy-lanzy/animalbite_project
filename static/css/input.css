@@ -36,8 +36,11 @@
     background: white;
     border-radius: 1rem;
     border: 1.5px solid var(--color-line);
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 4px 20px -12px rgba(10,31,26,0.12), 0 1px 3px rgba(10,31,26,0.06);
+  }
+  @media (min-width: 640px) {
+    .card { padding: 1.5rem; }
   }
 
   /* Stat Card — emerald border, stronger shadow */

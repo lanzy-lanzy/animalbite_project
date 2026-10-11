@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Bite Cases - ABTC System{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-xl font-bold text-ink">Animal Bite Cases</h1>
     <a href="{% url 'bite_cases:case_create' %}" class="btn-primary btn-sm">+ New Case</a>
 </div>
@@ -29,7 +29,7 @@
     </form>
 </div>
 <div class="card">
-    <div class="overflow-x-auto">
+    <div class="hidden lg:block overflow-x-auto">
         <table class="w-full">
             <thead>
                 <tr class="border-b border-line">
@@ -62,6 +62,36 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Mobile cards -->
+    <div class="lg:hidden divide-y divide-sage-100">
+        {% for case in cases %}
+        <div class="p-4 space-y-3 hover:bg-sage-50/50">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-ink">{{ case.case_number }}</p>
+                    <p class="text-sm text-muted truncate">{{ case.patient.full_name }}</p>
+                </div>
+                <span class="status-badge status-{{ case.case_status }} shrink-0">{{ case.get_case_status_display }}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-muted">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sage-50 border border-line capitalize">{{ case.get_animal_type_display }}</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sage-50 border border-line capitalize">{{ case.get_exposure_type_display }}</span>
+                <span>{{ case.date_time_bite|date:'M d, Y' }}</span>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">View</a>
+                {% if not case.is_locked %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>{% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-14 px-4">
+            <p class="text-sm font-bold text-ink">No cases found.</p>
+            <p class="text-xs font-medium text-muted mt-1">Try clearing filters or create a new case.</p>
+        </div>
+        {% endfor %}
+    </div>
+
     {% if cases.has_other_pages %}
     <div class="flex items-center justify-between pt-4 border-t border-line mt-4">
         <p class="text-sm text-muted">Page {{ cases.number }} of {{ cases.paginator.num_pages }}</p>

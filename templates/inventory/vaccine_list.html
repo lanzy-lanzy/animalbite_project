@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}Vaccine Inventory - ABTC System{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-xl font-bold text-ink">Vaccine Inventory</h1>
     <a href="{% url 'inventory:vaccine_create' %}" class="btn-primary btn-sm">+ Stock In</a>
 </div>
 <div class="card mb-6">
-    <form method="GET" class="flex gap-3">
-        <input type="text" name="q" value="{{ query }}" placeholder="Search vaccine, brand, batch..." class="form-input max-w-md">
+    <form method="GET" class="flex flex-wrap gap-3">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search vaccine, brand, batch..." class="form-input max-w-md flex-1 min-w-[180px]">
         <button type="submit" class="btn-primary btn-sm">Search</button>
         <a href="{% url 'inventory:vaccine_list' %}" class="btn-secondary btn-sm">Reset</a>
     </form>

@@ -107,6 +107,25 @@
   .sign-sub{font-size:10px; color:var(--muted2); font-weight:500; margin-top:2px}
   .footer{margin-top:14px; padding:10px; border-top:1px solid var(--line); text-align:center; font-size:10px; color:#8aa589; line-height:1.5}
   .footer b{color:var(--muted2)}
+  @media (max-width:640px){
+    /* Collapse print grids so the sheet never overflows a 375px phone screen */
+    .grid-4{ grid-template-columns:1fr 1fr; }
+    .grid-2{ grid-template-columns:1fr; }
+    .grid-4 > .field, .grid-2 > .field{ grid-column:auto !important; }
+    .grid-4 > .field{ border-right:1px solid var(--line) !important; }
+    .vitals-grid{ grid-template-columns:1fr 1fr; }
+    .vital{ border-right:1px solid var(--line) !important; border-bottom:1px solid var(--line) !important; }
+    .vital-blank{ min-width:56px; }
+    .sign-grid{ grid-template-columns:1fr; gap:14px; }
+    .blank{ min-width:72px; }
+    .blank.wide{ min-width:120px; }
+    .inline-blank{ min-width:56px; }
+    .mini-table, .vac-table{ font-size:10.5px; }
+    .mini-table th, .vac-table th{ padding:6px 5px; letter-spacing:.02em; }
+    .mini-table td, .vac-table td{ padding:6px 5px; }
+    .brand{ flex-direction:column; align-items:flex-start; }
+    .meta{ text-align:left; }
+  }
   @media print{
     html,body{background:white !important}
     .page{margin:0; max-width:none; border:none; border-radius:0; box-shadow:none}

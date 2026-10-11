@@ -10,7 +10,7 @@
         <div class="lg:col-span-2 space-y-6">
             <div class="card">
                 <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Vaccine Information</h3>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div><label class="text-xs text-muted uppercase">Brand</label><p class="text-sm font-medium">{{ item.brand }}</p></div>
                     <div><label class="text-xs text-muted uppercase">Batch Number</label><p class="text-sm font-mono">{{ item.batch_number }}</p></div>
                     <div><label class="text-xs text-muted uppercase">Expiration Date</label><p class="text-sm font-medium">{{ item.expiration_date|date:'M d, Y' }}</p></div>

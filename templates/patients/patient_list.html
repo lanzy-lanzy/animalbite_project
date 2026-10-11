@@ -6,7 +6,7 @@
 </style>
 {% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-xl font-bold text-ink">Patient Records</h1>
     <div class="flex items-center gap-2">
         <a href="{% url 'vaccination:patient_schedule_list' %}" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">
@@ -35,7 +35,7 @@
     </form>
 </div>
 <div class="card">
-    <div class="overflow-x-auto">
+    <div class="hidden lg:block overflow-x-auto">
         <table class="w-full">
             <thead>
                 <tr class="border-b border-line">
@@ -58,7 +58,7 @@
                     <td class="table-cell">{{ p.contact_number }}</td>
                     <td class="table-cell text-muted">{{ p.created_at|date:'M d, Y' }}</td>
                     <td class="table-cell text-right">
-                        <div class="flex items-center justify-end gap-1">
+                        <div class="flex flex-wrap items-center justify-end gap-1">
                             {% if request.user.role != 'doctor' or p.has_active_case %}
                             <a href="{% url 'patients:patient_detail' p.pk %}" class="btn-secondary btn-xs">View</a>
                             {% endif %}
@@ -94,6 +94,47 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Mobile cards -->
+    <div class="lg:hidden divide-y divide-sage-100">
+        {% for p in patients %}
+        <div class="p-4 space-y-3 hover:bg-sage-50/50">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-ink truncate">{{ p.full_name }}</p>
+                    <p class="text-xs font-mono text-muted">{{ p.patient_number }}</p>
+                </div>
+                <span class="text-xs font-semibold text-muted shrink-0">{{ p.age }} · {{ p.get_sex_display }}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-sage-50 border border-line p-3">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Barangay</p>
+                    <p class="text-sm font-bold text-ink truncate">{{ p.barangay|default:'-' }}</p>
+                </div>
+                <div class="rounded-xl bg-white border border-line p-3">
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Contact</p>
+                    <p class="text-sm font-bold text-ink">{{ p.contact_number }}</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+                {% if request.user.role != 'doctor' or p.has_active_case %}
+                <a href="{% url 'patients:patient_detail' p.pk %}" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">View</a>
+                {% endif %}
+                {% if request.user.role != 'doctor' %}
+                <a href="{% url 'vaccination:patient_schedule_list' %}?q={{ p.patient_number }}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Schedules</a>
+                <button type="button" onclick="openPatientPreview('{% url 'patients:patient_print' p.pk %}', '{% url 'patients:patient_print_pdf' p.pk %}', '{{ p.full_name|escapejs }} — {{ p.patient_number }}')" class="px-3 py-1.5 rounded-full bg-white border border-emerald-800 text-emerald-900 text-xs font-bold">Print</button>
+                <a href="{% url 'patients:patient_edit' p.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-14 px-4">
+            <p class="text-sm font-bold text-ink">No patients found.</p>
+            <p class="text-xs font-medium text-muted mt-1">Try clearing filters or register a new patient.</p>
+        </div>
+        {% endfor %}
+    </div>
+
     {% if patients.has_other_pages %}
     <div class="flex items-center justify-between pt-4 border-t border-line mt-4">
         <p class="text-sm text-muted">Page {{ patients.number }} of {{ patients.paginator.num_pages }}</p>
