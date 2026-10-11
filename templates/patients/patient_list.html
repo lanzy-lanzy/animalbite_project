@@ -63,9 +63,7 @@
                     <td class="table-cell text-muted">{{ p.created_at|date:'M d, Y' }}</td>
                     <td class="table-cell text-right">
                         <div class="flex flex-wrap items-center justify-end gap-1">
-                            {% if request.user.role != 'doctor' or p.has_active_case %}
                             <a href="{% url 'patients:patient_detail' p.pk %}" class="btn-secondary btn-xs">View</a>
-                            {% endif %}
                             {% if request.user.role != 'doctor' %}
                             {% if p.live_case_pk %}
                             <a href="{% url 'doctor:assess_case' p.live_case_pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm whitespace-nowrap" title="Open the live clinical encounter for this patient's active case">
@@ -121,9 +119,7 @@
                 </div>
             </div>
             <div class="flex flex-wrap gap-1.5">
-                {% if request.user.role != 'doctor' or p.has_active_case %}
                 <a href="{% url 'patients:patient_detail' p.pk %}" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">View</a>
-                {% endif %}
                 {% if request.user.role != 'doctor' %}
                 <a href="{% url 'vaccination:patient_schedule_list' %}?q={{ p.patient_number }}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Schedules</a>
                 <button type="button" onclick="openPatientPreview('{% url 'patients:patient_print' p.pk %}', '{% url 'patients:patient_print_pdf' p.pk %}', '{{ p.full_name|escapejs }} — {{ p.patient_number }}')" class="px-3 py-1.5 rounded-full bg-white border border-emerald-800 text-emerald-900 text-xs font-bold">Print</button>

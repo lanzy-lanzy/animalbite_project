@@ -19,25 +19,40 @@ DOCTOR_ACTIVE_CASE_STATUSES = ('new', 'under_treatment')
 
 def _doctor_owned_or_unclaimed_q(user):
     """Q limiting a Patient queryset to a doctor's own patients plus patients
-    that still have an unclaimed (assessment-less) bite case any doctor can pick up."""
+    that no doctor has claimed yet.
+
+    A patient becomes 'claimed' the moment any doctor creates a ClinicalAssessment
+    for them. Until then they are open for every doctor to pick up — this includes
+    walk-in patients registered directly by an admin/staff, who usually have no
+    bite case yet and were previously invisible to every doctor."""
     from doctor.models import ClinicalAssessment
-    from bite_cases.models import AnimalBiteCase
     own_ids = ClinicalAssessment.objects.filter(assessed_by=user).values_list('patient_id', flat=True)
-    unclaimed_ids = AnimalBiteCase.objects.filter(clinical_assessment__isnull=True).values_list('patient_id', flat=True)
-    return Q(pk__in=own_ids) | Q(pk__in=unclaimed_ids)
+    claimed_by_others = (
+        ClinicalAssessment.objects
+        .exclude(assessed_by=user)
+        .filter(assessed_by__isnull=False)
+        .values_list('patient_id', flat=True)
+    )
+    return Q(pk__in=own_ids) | ~Q(pk__in=claimed_by_others)
 
 
 def _doctor_can_access_patient(user, patient):
-    """Ownership check: a doctor may open a patient only if it is their own
-    (they assessed it) or the patient still has an unassigned case. Handover is
-    performed by an admin reassigning ClinicalAssessment.assessed_by."""
+    """Ownership check: a doctor may open a patient unless another doctor has
+    already claimed them. Unclaimed patients — including walk-in records created
+    directly by an admin that have no bite case or assessment yet — are open to
+    every doctor. Handover is performed by an admin reassigning
+    ClinicalAssessment.assessed_by."""
     from doctor.models import ClinicalAssessment
-    from bite_cases.models import AnimalBiteCase
     if ClinicalAssessment.objects.filter(patient=patient, assessed_by=user).exists():
         return True
-    if AnimalBiteCase.objects.filter(patient=patient, clinical_assessment__isnull=True).exists():
-        return True
-    return False
+    claimed_by_others = (
+        ClinicalAssessment.objects
+        .filter(patient=patient)
+        .exclude(assessed_by=user)
+        .filter(assessed_by__isnull=False)
+        .exists()
+    )
+    return not claimed_by_others
 
 
 def generate_patient_number():
