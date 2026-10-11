@@ -1,5 +1,4 @@
-from io import BytesIO
-
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -11,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from audit.models import AuditLog
+from utils.qr import qr_png_bytes, build_pre_registration_payload
 
 from .forms import PatientSignupPreRegistrationForm, StaffPreRegistrationForm, StatusLookupForm
 from .models import PreRegistration
@@ -117,26 +117,27 @@ def public_status(request):
     )
 
 
-def qr_code_svg(request, number):
-    record = get_object_or_404(PreRegistration, pre_registration_number=number)
-    payload = request.build_absolute_uri(record.qr_code or reverse("pre_registrations:public_success", args=[number]))
-    try:
-        import qrcode
-        import qrcode.image.svg
+def qr_code(request, number):
+    """Serve the pre-registration slip QR as a spec-compliant PNG.
 
-        image = qrcode.make(payload, image_factory=qrcode.image.svg.SvgPathImage)
-        stream = BytesIO()
-        image.save(stream)
-        return HttpResponse(stream.getvalue(), content_type="image/svg+xml")
-    except Exception:
-        svg = (
-            '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220">'
-            '<rect width="220" height="220" fill="white"/>'
-            '<rect x="20" y="20" width="180" height="180" fill="none" stroke="black" stroke-width="8"/>'
-            f'<text x="110" y="112" font-size="12" text-anchor="middle" fill="black">{record.pre_registration_number}</text>'
-            "</svg>"
-        )
-        return HttpResponse(svg, content_type="image/svg+xml")
+    Payload policy (fixes codes that scanned but opened the wrong machine):
+    - With a canonical public SITE_URL configured, encode the absolute status
+      page URL so any external phone camera opens the live registration
+      status directly.
+    - Otherwise encode the portable `ABTC-PRE-REG:<number>` token, which the
+      in-app scanner resolves against the live database on every scan.
+    The current request host is never baked in — slips generated on localhost
+    used to embed http://localhost:8000/... and were useless off the machine.
+    """
+    record = get_object_or_404(PreRegistration, pre_registration_number=number)
+    site_url = getattr(settings, "SITE_URL", "")
+    if site_url:
+        payload = f"{site_url.rstrip('/')}/{reverse('pre_registrations:public_success', args=[record.pre_registration_number]).lstrip('/')}"
+    else:
+        payload = build_pre_registration_payload(record.pre_registration_number)
+    import qrcode.constants
+    png = qr_png_bytes(payload, error_correction=qrcode.constants.ERROR_CORRECT_Q)
+    return HttpResponse(png, content_type="image/png")
 
 
 @login_required
@@ -236,6 +237,83 @@ def mark_no_show(request, pk):
     )
     messages.warning(request, "Pre-registration marked as no show.")
     return redirect("pre_registrations:staff_detail", pk=record.pk)
+
+
+@login_required
+@user_passes_test(is_authorized_staff)
+def verify_console(request, pk):
+    """Scan-verification console — the landing page when a pre-registration QR
+    is scanned (see patients.scan_resolve). Re-reads the freshest row from the
+    database on every visit and puts Approve / Reject / Convert in one view.
+    Already-converted records surface the live patient record instead, so the
+    staff always act on current data."""
+    record = get_object_or_404(
+        PreRegistration.objects.select_related("converted_patient", "converted_case", "verified_by"),
+        pk=pk,
+    )
+    duplicates = record.possible_duplicates()[:5]
+    is_converted = bool(record.converted_case_id or record.converted_patient_id)
+    can_act = not is_converted and record.status != PreRegistration.Status.CANCELLED
+    return render(
+        request,
+        "pre_registrations/staff_verify.html",
+        {
+            "record": record,
+            "duplicates": duplicates,
+            "can_act": can_act,
+            "is_converted": is_converted,
+            "already_verified": record.status == PreRegistration.Status.VERIFIED,
+        },
+    )
+
+
+@login_required
+@user_passes_test(is_authorized_staff)
+def verify_approve(request, pk):
+    """POST-only: approve (verify) a pre-registration from the console."""
+    record = get_object_or_404(PreRegistration, pk=pk)
+    if request.method != "POST":
+        return redirect("pre_registrations:verify", pk=record.pk)
+    if record.converted_case_id or record.converted_patient_id:
+        messages.info(request, "Already converted to an official case — open the patient record for current data.")
+        return redirect("pre_registrations:verify", pk=record.pk)
+    record.status = PreRegistration.Status.VERIFIED
+    record.verified_by = request.user
+    record.verified_at = timezone.now()
+    record.save(update_fields=["status", "verified_by", "verified_at", "updated_at"])
+    AuditLog.objects.create(
+        user=request.user,
+        action="VERIFY_PRE_REGISTRATION",
+        description=f"Verified pre-registration {record.pre_registration_number} via scan console",
+    )
+    messages.success(request, "Pre-registration approved (verified). You can now convert it to an official case.")
+    return redirect("pre_registrations:verify", pk=record.pk)
+
+
+@login_required
+@user_passes_test(is_authorized_staff)
+def verify_reject(request, pk):
+    """POST-only: reject a pre-registration (with an optional reason that is
+    appended to remarks and mirrored in the audit trail)."""
+    record = get_object_or_404(PreRegistration, pk=pk)
+    if request.method != "POST":
+        return redirect("pre_registrations:verify", pk=record.pk)
+    if record.converted_case_id or record.converted_patient_id:
+        messages.error(request, "Converted pre-registrations cannot be rejected — amend the official record instead.")
+        return redirect("pre_registrations:verify", pk=record.pk)
+    reason = (request.POST.get("reason") or "").strip()[:300]
+    record.status = PreRegistration.Status.CANCELLED
+    if reason:
+        stamp = timezone.localdate()
+        record.remarks = f"{record.remarks}\n[Rejected {stamp}] {reason}".strip()
+    record.save(update_fields=["status", "remarks", "updated_at"])
+    AuditLog.objects.create(
+        user=request.user,
+        action="REJECT_PRE_REGISTRATION",
+        description=f"Rejected pre-registration {record.pre_registration_number}" + (f" — {reason}" if reason else ""),
+    )
+    messages.warning(request, "Pre-registration rejected." + (f" Reason recorded: {reason}" if reason else ""))
+    return redirect("pre_registrations:staff_list")
 
 
 @login_required

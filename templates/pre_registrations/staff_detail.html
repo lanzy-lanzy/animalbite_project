@@ -5,6 +5,7 @@
 <div class="max-w-5xl mx-auto space-y-5">
     <div class="flex flex-wrap gap-3">
         <a href="{% url 'pre_registrations:staff_list' %}" class="btn-secondary">&larr; Back</a>
+        <a href="{% url 'pre_registrations:verify' record.pk %}" class="btn-success">Verify Console</a>
         <a href="{% url 'pre_registrations:staff_edit' record.pk %}" class="btn-secondary">Edit</a>
         <a href="{% url 'pre_registrations:staff_slip' record.pk %}" class="btn-secondary">Print Slip</a>
         <form method="POST" action="{% url 'pre_registrations:mark_duplicate' record.pk %}">{% csrf_token %}<button class="btn-secondary" type="submit">Mark Duplicate</button></form>

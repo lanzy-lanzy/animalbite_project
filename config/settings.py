@@ -19,6 +19,13 @@ if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
     CSRF_TRUSTED_ORIGINS = [f"https://{RENDER_EXTERNAL_HOSTNAME}"]
 
+# Canonical public origin baked into printed QR codes (e.g. https://app.onrender.com).
+# Leave blank for local/dev: QRs then carry host-independent tokens that the
+# in-app scanner resolves against the database, instead of a machine-specific URL.
+SITE_URL = config('SITE_URL', default='')
+if not SITE_URL and RENDER_EXTERNAL_HOSTNAME:
+    SITE_URL = f"https://{RENDER_EXTERNAL_HOSTNAME}"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

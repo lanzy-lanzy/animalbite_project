@@ -3,7 +3,6 @@ from datetime import date
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.urls import reverse
 from django.utils import timezone
 
 
@@ -178,7 +177,11 @@ class PreRegistration(models.Model):
         ).exclude(pk=self.pk)
 
     def _qr_payload(self):
-        return reverse("pre_registrations:public_success", args=[self.pre_registration_number])
+        # Host-independent token. The QR image view (pre_registrations:qr_code)
+        # builds the scannable payload at render time: an absolute status URL
+        # when settings.SITE_URL is configured, this token otherwise — so a
+        # stored payload never goes stale when the app moves between hosts.
+        return f"ABTC-PRE-REG:{self.pre_registration_number}"
 
     @staticmethod
     def _calculate_age(birthdate, today):

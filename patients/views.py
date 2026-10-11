@@ -921,8 +921,10 @@ def patient_vital_delete(request, vital_id):
 def _patient_qr_payload(patient):
     """Portable identifier embedded in the patient's QR code. Encoding only the
     patient number (not a host URL) keeps the QR valid across localhost, LAN,
-    and production — the backend resolves it to the live record."""
-    return f"ABTC-PATIENT:{patient.patient_number}"
+    and production — the backend resolves it to the live record on every scan,
+    so scanned details are always fresh."""
+    from utils.qr import build_patient_payload
+    return build_patient_payload(patient)
 
 
 def _patient_qr_data_uri(patient):
@@ -938,49 +940,81 @@ def _patient_qr_data_uri(patient):
 # Recognised identifier patterns inside a scanned string.
 _PATIENT_NUM_RE = re.compile(r'PAT-[0-9A-Za-z-]+', re.IGNORECASE)
 _PREREG_NUM_RE = re.compile(r'AB-\d{8}-\d{3,}', re.IGNORECASE)
+_PATIENT_TOKEN_RE = re.compile(r'ABTC-PATIENT:\s*([0-9A-Za-z-]+)', re.IGNORECASE)
+_PRE_REG_TOKEN_RE = re.compile(r'ABTC-PRE-REG:\s*([0-9A-Za-z-]+)', re.IGNORECASE)
 # Internal app area roots a scanned QR is allowed to redirect to (same-origin only).
 _SAFE_INTERNAL_ROOTS = ('/patients', '/vaccination', '/bite_cases', '/doctor', '/reports', '/pre-register')
 
 
-def _resolve_scan_target(request, code):
+def _resolve_pre_registration(number):
+    """Map a pre-registration number to the freshest record: once converted,
+    scanning leads to the official patient record (which always carries the
+    current data); before conversion it lands on the scan-verification
+    console, where staff can approve / reject / convert in one step."""
+    try:
+        from pre_registrations.models import PreRegistration
+        pr = (PreRegistration.objects
+              .filter(pre_registration_number__iexact=number)
+              .select_related('converted_patient').first())
+        if not pr:
+            return None
+        if pr.converted_patient_id:
+            return reverse('patients:patient_detail', args=[pr.converted_patient_id])
+        return reverse('pre_registrations:verify', args=[pr.pk])
+    except Exception:
+        return None
+
+
+def _resolve_scan_target(request, code, _depth=0):
     """Map a scanned string to an internal redirect path, or None if unresolved."""
     if not code:
         return None
     code = code.strip()
     host = request.get_host().split(':')[0]
-    # 1) A full URL was scanned — only follow it when it points at this same host.
-    if '://' in code:
-        parsed = urlparse(code)
-        if parsed.netloc and parsed.netloc.split(':')[0] == host:
-            path = parsed.path or '/'
-            if path == '/':
-                return '/'
-            for root in _SAFE_INTERNAL_ROOTS:
-                if path == root or path.startswith(root + '/'):
-                    return path + (('?' + parsed.query) if parsed.query else '')
-            return None  # same-origin but unrecognised area (e.g. /accounts, /admin)
-    # 2) Our own patient identifier (ABTC-PATIENT:<patient_number>) — exact match.
-    m = re.search(r'ABTC-PATIENT:\s*([0-9A-Za-z-]+)', code, re.IGNORECASE)
+    parsed = urlparse(code) if '://' in code else None
+    same_origin = bool(parsed and parsed.netloc and parsed.netloc.split(':')[0] == host)
+    # 0) One of our own scan-resolver URLs — resolve the embedded ?code= once
+    #    instead of redirecting to ourselves in a loop.
+    if same_origin and parsed.path == reverse('patients:scan_resolve'):
+        from urllib.parse import parse_qs
+        embedded = (parse_qs(parsed.query).get('code') or [''])[0].strip()
+        if embedded and _depth < 3:
+            return _resolve_scan_target(request, embedded, _depth + 1)
+        return None
+    # 1) Explicit app tokens (host-independent, survive printing).
+    m = _PATIENT_TOKEN_RE.search(code)
     if m:
         patient = Patient.objects.filter(patient_number__iexact=m.group(1)).first()
         if patient:
             return reverse('patients:patient_detail', args=[patient.pk])
-    # 2b) A bare patient number (PAT-#####) anywhere in the string.
+    m = _PRE_REG_TOKEN_RE.search(code)
+    if m:
+        target = _resolve_pre_registration(m.group(1))
+        if target:
+            return target
+    # 2) A bare patient number (PAT-#####) anywhere in the string.
     m = _PATIENT_NUM_RE.search(code)
     if m:
         patient = Patient.objects.filter(patient_number__iexact=m.group(0)).first()
         if patient:
             return reverse('patients:patient_detail', args=[patient.pk])
-    # 3) Pre-registration number (AB-YYYYMMDD-NNNN) -> staff detail.
+    # 3) A pre-registration number (AB-YYYYMMDD-NNNN) anywhere — including inside
+    #    an absolute status URL printed before the record was converted.
     m = _PREREG_NUM_RE.search(code)
     if m:
-        try:
-            from pre_registrations.models import PreRegistration
-            pr = PreRegistration.objects.filter(pre_registration_number__iexact=m.group(0)).first()
-            if pr:
-                return reverse('pre_registrations:staff_detail', args=[pr.pk])
-        except Exception:
-            pass
+        target = _resolve_pre_registration(m.group(0))
+        if target:
+            return target
+    # 4) Any other full URL pointing at this same host — only follow it when it
+    #    lands in a recognised app area.
+    if same_origin:
+        path = parsed.path or '/'
+        if path == '/':
+            return '/'
+        for root in _SAFE_INTERNAL_ROOTS:
+            if path == root or path.startswith(root + '/'):
+                return path + (('?' + parsed.query) if parsed.query else '')
+        return None  # same-origin but unrecognised area (e.g. /accounts, /admin)
     return None
 
 
@@ -989,11 +1023,20 @@ def scan_resolve(request):
     """Resolve a scanned QR value (via ?code=...) to the matching record.
 
     The camera scanner simply GETs `/patients/scan/?code=<raw>`; this view figures
-    out what the code means and redirects to the verified record, or shows a
-    friendly result page when it can't be matched."""
+    out what the code means and redirects to the verified, live record (patient
+    detail or pre-registration), or shows a friendly result page when it can't
+    be matched."""
     code = (request.GET.get('code') or '').strip()
     target = _resolve_scan_target(request, code)
     if target:
+        try:
+            AuditLog.objects.create(
+                user=request.user,
+                action='QR_SCAN_RESOLVED',
+                description=f'QR scan "{code[:80]}" resolved to {target}',
+            )
+        except Exception:
+            pass
         return redirect(target)
     return render(request, 'patients/scan_result.html', {'code': code, 'found': False})
 

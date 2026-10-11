@@ -495,7 +495,7 @@
                         <span class="w-7 h-7 rounded-lg bg-emerald-950 text-white flex items-center justify-center">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
                         </span>
-                        Scan Patient QR
+                        Scan QR — Patient / Pre-Registration
                     </h3>
                     <button type="button" id="abtcScanClose" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-100" title="Close">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -517,7 +517,7 @@
                 <div class="px-4 py-4 space-y-3">
                     <p id="abtcScanStatus" class="text-sm font-medium text-muted"></p>
                     <form id="abtcScanManualForm" class="flex gap-2" onsubmit="return false;">
-                        <input id="abtcScanManual" type="text" placeholder="Or enter patient # (PAT-...)" class="form-input flex-1" autocomplete="off">
+                        <input id="abtcScanManual" type="text" placeholder="Or type PAT-… or AB-… number" class="form-input flex-1" autocomplete="off">
                         <button type="submit" id="abtcScanSubmit" class="btn-primary btn-sm shrink-0">Look up</button>
                     </form>
                 </div>
@@ -562,7 +562,7 @@
                     video.srcObject = s;
                     video.setAttribute('playsinline', 'true');
                     video.play();
-                    setStatus('Point the camera at a patient QR code…');
+                    setStatus('Point the camera at a patient or slip QR code…');
                     if (canvas) { canvas.width = 0; canvas.height = 0; }
                     loop();
                 })
@@ -572,25 +572,43 @@
                 });
         }
 
+        var scanning = false;   // in-flight guard so async detector calls don't stack up
+        var lastTick = 0;
+        var TICK_MS = 90;        // ~11 decode passes/sec — full 60fps gains nothing, just heats the CPU
+        var MAX_DIM = 720;       // downscale cap: faster + more reliable than native res on screen photos
+
         function loop() {
             if (!stream) return;
-            if (video.readyState === video.haveEnoughData && canvas && ctx) {
-                var w = video.videoWidth, h = video.videoHeight;
-                if (w && h) {
-                    if (canvas.width !== w) canvas.width = w;
-                    if (canvas.height !== h) canvas.height = h;
-                    ctx.drawImage(video, 0, 0, w, h);
-                    try {
-                        var data = ctx.getImageData(0, 0, w, h);
-                        if (detector) {
-                            detector.detect(data).then(function (codes) { handle(codes); }).catch(function () { jsqrPass(data, w, h); });
-                        } else {
-                            jsqrPass(data, w, h);
-                        }
-                    } catch (e) { /* CORS/taint — ignore frame */ }
-                }
-            }
             raf = requestAnimationFrame(loop);
+            if (busy || scanning) return;
+            var now = (window.performance && performance.now) ? performance.now() : Date.now();
+            if (now - lastTick < TICK_MS) return;
+            lastTick = now;
+            // Accept HAVE_CURRENT_DATA (2) and up — strict === haveEnoughData(4) starves frames.
+            if (video.readyState < 2 || !canvas || !ctx) return;
+            var vw = video.videoWidth, vh = video.videoHeight;
+            if (!vw || !vh) return;
+            var scale = Math.min(1, MAX_DIM / Math.max(vw, vh));
+            var w = Math.round(vw * scale), h = Math.round(vh * scale);
+            if (canvas.width !== w) canvas.width = w;
+            if (canvas.height !== h) canvas.height = h;
+            ctx.drawImage(video, 0, 0, w, h);
+            var data;
+            try { data = ctx.getImageData(0, 0, w, h); } catch (e) { return; /* taint — skip frame */ }
+            // Native detector first when available, but ALWAYS fall through to jsQR
+            // when it returns no code: the platform BarcodeDetector is often weaker
+            // than jsQR on angled / screen-photographed / low-contrast codes, and
+            // returning an empty list (not an error) is exactly when jsQR helps most.
+            if (detector) {
+                scanning = true;
+                detector.detect(data).then(function (codes) {
+                    scanning = false;
+                    if (codes && codes.length) { handle(codes); return; }
+                    jsqrPass(data, w, h);
+                }).catch(function () { scanning = false; jsqrPass(data, w, h); });
+            } else {
+                jsqrPass(data, w, h);
+            }
         }
 
         function jsqrPass(data, w, h) {
