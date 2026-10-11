@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.middleware.DevNoCacheMiddleware",  # dev only: no stale CSS/templates
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -153,8 +154,11 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
+        # runserver serves /static/ before the middleware chain runs, so it can
+        # never send no-store. Cache-bust the URL by mtime instead so a plain
+        # reload picks up a rebuilt Tailwind bundle. See config/storage.py.
         "BACKEND": (
-            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            "config.storage.DevCacheBustingStaticFilesStorage"
             if DEBUG
             else "whitenoise.storage.CompressedManifestStaticFilesStorage"
         ),
