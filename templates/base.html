@@ -35,7 +35,7 @@
         <!-- Sidebar — emerald-950 high-contrast, synced with landing CTA #0a1f1a -->
         <aside x-show="sidebarOpen || mobileMenuOpen" x-cloak
                class="fixed inset-y-0 left-0 z-50 w-64 bg-emerald-950 text-sage-100 flex flex-col transition-all duration-300 lg:static lg:translate-x-0 border-r border-white/5"
-               :class="{ 'translate-x-0': mobileMenuOpen, '-translate-x-full': !sidebarOpen && !mobileMenuOpen }">
+               :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
             <!-- Top accent -->
             <div class="h-1 w-full bg-gradient-to-r from-emerald-700 via-emerald-600 to-sage-300 shrink-0"></div>
             <!-- Logo -->
@@ -45,6 +45,9 @@
                     <h1 class="text-sm font-bold text-white leading-tight truncate tracking-tight">{% if request.user.role == 'doctor' %}Doctor Portal{% elif request.user.role == 'nurse' %}Nurse Portal{% else %}ABTC System{% endif %}</h1>
                     <p class="text-xs text-sage-300 font-medium">{% if request.user.role == 'doctor' %}Dashboard · ABTC{% elif request.user.role == 'nurse' %}Vaccination Care · ABTC{% else %}Municipal Health Office{% endif %}</p>
                 </div>
+                <button type="button" @click="mobileMenuOpen = false" aria-label="Close menu" class="ml-auto lg:hidden p-2 rounded-xl text-sage-300 hover:bg-white/10 hover:text-white transition-colors shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
 
             <!-- User Info — high contrast panel -->
