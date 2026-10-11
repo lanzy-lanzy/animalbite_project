@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{% static 'css/output.css' %}">
     <script src="{% static 'vendor/htmx.min.js' %}"></script>
     <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+    <script src="{% static 'vendor/jsQR.js' %}"></script>
     <style>
         [x-cloak] { display: none !important; }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
@@ -481,5 +482,165 @@
         });
     })();
     </script>
+
+    {% if request.user.is_authenticated %}
+    <!-- ================= QR Verification Scanner ================= -->
+    <div id="abtcScanModal" data-scan-url="{% url 'patients:scan_resolve' %}"
+         class="fixed inset-0 z-[60] hidden" aria-hidden="true">
+        <div id="abtcScanBackdrop" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
+        <div class="relative min-h-full flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-line overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-line bg-sage-50">
+                    <h3 class="text-sm font-bold text-ink flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-950 text-white flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
+                        </span>
+                        Scan Patient QR
+                    </h3>
+                    <button type="button" id="abtcScanClose" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-100" title="Close">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="relative bg-emerald-950 aspect-square">
+                    <video id="abtcScanVideo" class="absolute inset-0 w-full h-full object-cover" playsinline muted></video>
+                    <canvas id="abtcScanCanvas" class="hidden"></canvas>
+                    <!-- framing brackets -->
+                    <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div class="w-2/3 h-2/3 relative">
+                            <span class="absolute top-0 left-0 w-8 h-8 border-t-[3px] border-l-[3px] border-white rounded-tl-lg"></span>
+                            <span class="absolute top-0 right-0 w-8 h-8 border-t-[3px] border-r-[3px] border-white rounded-tr-lg"></span>
+                            <span class="absolute bottom-0 left-0 w-8 h-8 border-b-[3px] border-l-[3px] border-white rounded-bl-lg"></span>
+                            <span class="absolute bottom-0 right-0 w-8 h-8 border-b-[3px] border-r-[3px] border-white rounded-br-lg"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 py-4 space-y-3">
+                    <p id="abtcScanStatus" class="text-sm font-medium text-muted"></p>
+                    <form id="abtcScanManualForm" class="flex gap-2" onsubmit="return false;">
+                        <input id="abtcScanManual" type="text" placeholder="Or enter patient # (PAT-...)" class="form-input flex-1" autocomplete="off">
+                        <button type="submit" id="abtcScanSubmit" class="btn-primary btn-sm shrink-0">Look up</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var SCAN_URL = (document.getElementById('abtcScanModal') || {}).getAttribute
+            ? document.getElementById('abtcScanModal').getAttribute('data-scan-url') : '';
+        var modal, video, canvas, ctx, stream = null, raf = null, busy = false, detector = null;
+
+        function $(id) { return document.getElementById(id); }
+
+        function setStatus(msg, kind) {
+            var el = $('abtcScanStatus');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = 'text-sm font-medium ' + (
+                kind === 'error' ? 'text-red-700' : kind === 'ok' ? 'text-emerald-800' : 'text-muted');
+        }
+
+        function open() {
+            modal = $('abtcScanModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            video = $('abtcScanVideo');
+            canvas = $('abtcScanCanvas');
+            ctx = canvas ? canvas.getContext('2d') : null;
+            setStatus('Starting camera…');
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setStatus('Camera not available in this browser. Use manual entry below.', 'error');
+                return;
+            }
+            try { if ('BarcodeDetector' in window) { detector = new window.BarcodeDetector({ formats: ['qr_code'] }); } } catch (e) { detector = null; }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+                .then(function (s) {
+                    stream = s;
+                    video.srcObject = s;
+                    video.setAttribute('playsinline', 'true');
+                    video.play();
+                    setStatus('Point the camera at a patient QR code…');
+                    if (canvas) { canvas.width = 0; canvas.height = 0; }
+                    loop();
+                })
+                .catch(function (err) {
+                    var name = err && err.name ? err.name : 'error';
+                    setStatus('Camera access ' + (name === 'NotAllowedError' ? 'denied' : 'unavailable') + ' (' + name + '). Use manual entry below.', 'error');
+                });
+        }
+
+        function loop() {
+            if (!stream) return;
+            if (video.readyState === video.haveEnoughData && canvas && ctx) {
+                var w = video.videoWidth, h = video.videoHeight;
+                if (w && h) {
+                    if (canvas.width !== w) canvas.width = w;
+                    if (canvas.height !== h) canvas.height = h;
+                    ctx.drawImage(video, 0, 0, w, h);
+                    try {
+                        var data = ctx.getImageData(0, 0, w, h);
+                        if (detector) {
+                            detector.detect(data).then(function (codes) { handle(codes); }).catch(function () { jsqrPass(data, w, h); });
+                        } else {
+                            jsqrPass(data, w, h);
+                        }
+                    } catch (e) { /* CORS/taint — ignore frame */ }
+                }
+            }
+            raf = requestAnimationFrame(loop);
+        }
+
+        function jsqrPass(data, w, h) {
+            if (typeof window.jsQR !== 'function') return;
+            var loc = window.jsQR(data.data, w, h);
+            if (loc && loc.data) handle([{ rawValue: loc.data }]);
+        }
+
+        function handle(codes) {
+            if (busy || !codes || !codes.length) return;
+            var raw = (codes[0].rawValue || codes[0].data || '').trim();
+            if (!raw) return;
+            busy = true;
+            setStatus('QR detected — verifying…', 'ok');
+            finish(raw);
+        }
+
+        function finish(raw) {
+            stop();
+            var url = SCAN_URL + (SCAN_URL.indexOf('?') >= 0 ? '&' : '?') + 'code=' + encodeURIComponent(raw);
+            window.location.href = url;
+        }
+
+        function stop() {
+            if (raf) { cancelAnimationFrame(raf); raf = null; }
+            if (stream) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} stream = null; }
+            var m = $('abtcScanModal');
+            if (m) { m.classList.add('hidden'); m.setAttribute('aria-hidden', 'true'); }
+            document.body.style.overflow = '';
+            busy = false;
+        }
+
+        document.addEventListener('click', function (e) {
+            var t = e.target;
+            if (!t || !t.closest) return;
+            // Fix: match the button itself OR any child (the click often lands on the inner <svg>).
+            if (t.closest('#abtcScanClose') || t.id === 'abtcScanBackdrop') stop();
+        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') stop(); });
+        document.addEventListener('submit', function (e) {
+            if (e.target && e.target.id === 'abtcScanManualForm') {
+                e.preventDefault();
+                var v = ($('abtcScanManual').value || '').trim();
+                if (v) finish(v);
+            }
+        });
+
+        window.ABTCScan = { open: open, close: stop };
+    })();
+    </script>
+    {% endif %}
 </body>
 </html>

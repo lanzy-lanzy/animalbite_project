@@ -7,6 +7,8 @@ from django.http import HttpResponse
 from django.urls import reverse
 from datetime import datetime
 import io
+import re
+from urllib.parse import urlparse
 from .models import Patient, Barangay, VitalSign
 from .forms import PatientForm, VitalSignForm
 from audit.models import AuditLog
@@ -217,7 +219,8 @@ def patient_detail(request, pk):
             pass
     except Exception:
         pass
-    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'clinical_by_case': clinical_by_case, 'assessments': assessments})
+    patient_qr_data_uri, patient_qr_payload = _patient_qr_data_uri(patient)
+    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'patient_qr_payload': patient_qr_payload, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'clinical_by_case': clinical_by_case, 'assessments': assessments})
 
 
 @login_required
@@ -327,6 +330,7 @@ def patient_print(request, pk):
         'now': datetime.now(),
         'print_mode': True,
     }
+    ctx['patient_qr_data_uri'], ctx['patient_qr_payload'] = _patient_qr_data_uri(patient)
     return render(request, 'patients/patient_print.html', ctx)
 
 
@@ -907,4 +911,89 @@ def patient_vital_delete(request, vital_id):
         AuditLog.objects.create(user=request.user, action='DELETE_VITALS', description=f'Deleted vitals for {patient.patient_number}')
         messages.success(request, 'Vital signs deleted.')
         return redirect('patients:patient_detail', pk=patient_pk)
-    return render(request, 'patients/vital_confirm_delete.html', {'vital': vital, 'patient': patient})
+        return render(request, 'patients/vital_confirm_delete.html', {'vital': vital, 'patient': patient})
+
+
+# ---------------------------------------------------------------------------
+# QR verification / fast-lookup
+# ---------------------------------------------------------------------------
+
+def _patient_qr_payload(patient):
+    """Portable identifier embedded in the patient's QR code. Encoding only the
+    patient number (not a host URL) keeps the QR valid across localhost, LAN,
+    and production — the backend resolves it to the live record."""
+    return f"ABTC-PATIENT:{patient.patient_number}"
+
+
+def _patient_qr_data_uri(patient):
+    """Return (data_uri, payload) for a patient's verification QR, or (None, payload)."""
+    payload = _patient_qr_payload(patient)
+    try:
+        from utils.qr import qr_data_uri
+        return qr_data_uri(payload), payload
+    except Exception:
+        return None, payload
+
+
+# Recognised identifier patterns inside a scanned string.
+_PATIENT_NUM_RE = re.compile(r'PAT-[0-9A-Za-z-]+', re.IGNORECASE)
+_PREREG_NUM_RE = re.compile(r'AB-\d{8}-\d{3,}', re.IGNORECASE)
+# Internal app area roots a scanned QR is allowed to redirect to (same-origin only).
+_SAFE_INTERNAL_ROOTS = ('/patients', '/vaccination', '/bite_cases', '/doctor', '/reports', '/pre-register')
+
+
+def _resolve_scan_target(request, code):
+    """Map a scanned string to an internal redirect path, or None if unresolved."""
+    if not code:
+        return None
+    code = code.strip()
+    host = request.get_host().split(':')[0]
+    # 1) A full URL was scanned — only follow it when it points at this same host.
+    if '://' in code:
+        parsed = urlparse(code)
+        if parsed.netloc and parsed.netloc.split(':')[0] == host:
+            path = parsed.path or '/'
+            if path == '/':
+                return '/'
+            for root in _SAFE_INTERNAL_ROOTS:
+                if path == root or path.startswith(root + '/'):
+                    return path + (('?' + parsed.query) if parsed.query else '')
+            return None  # same-origin but unrecognised area (e.g. /accounts, /admin)
+    # 2) Our own patient identifier (ABTC-PATIENT:<patient_number>) — exact match.
+    m = re.search(r'ABTC-PATIENT:\s*([0-9A-Za-z-]+)', code, re.IGNORECASE)
+    if m:
+        patient = Patient.objects.filter(patient_number__iexact=m.group(1)).first()
+        if patient:
+            return reverse('patients:patient_detail', args=[patient.pk])
+    # 2b) A bare patient number (PAT-#####) anywhere in the string.
+    m = _PATIENT_NUM_RE.search(code)
+    if m:
+        patient = Patient.objects.filter(patient_number__iexact=m.group(0)).first()
+        if patient:
+            return reverse('patients:patient_detail', args=[patient.pk])
+    # 3) Pre-registration number (AB-YYYYMMDD-NNNN) -> staff detail.
+    m = _PREREG_NUM_RE.search(code)
+    if m:
+        try:
+            from pre_registrations.models import PreRegistration
+            pr = PreRegistration.objects.filter(pre_registration_number__iexact=m.group(0)).first()
+            if pr:
+                return reverse('pre_registrations:staff_detail', args=[pr.pk])
+        except Exception:
+            pass
+    return None
+
+
+@login_required
+def scan_resolve(request):
+    """Resolve a scanned QR value (via ?code=...) to the matching record.
+
+    The camera scanner simply GETs `/patients/scan/?code=<raw>`; this view figures
+    out what the code means and redirects to the verified record, or shows a
+    friendly result page when it can't be matched."""
+    code = (request.GET.get('code') or '').strip()
+    target = _resolve_scan_target(request, code)
+    if target:
+        return redirect(target)
+    return render(request, 'patients/scan_result.html', {'code': code, 'found': False})
+

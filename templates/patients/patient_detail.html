@@ -23,6 +23,29 @@
         </div>
     </div>
 
+    {% if patient_qr_data_uri %}
+    <div class="card mb-6 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white shadow-sm">
+        <div class="flex items-center gap-4">
+            <img src="{{ patient_qr_data_uri }}" alt="Patient verification QR for {{ patient.patient_number }}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-line bg-white p-1.5 shrink-0">
+            <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
+                    Verify via QR
+                </h3>
+                <p class="text-xs font-medium text-emerald-800 mt-1">Scan this patient's QR (from their printed sheet) with the camera to open their record instantly for fast verification.</p>
+                <p class="text-[11px] font-mono text-muted mt-1 break-all">{{ patient_qr_payload }}</p>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="window.ABTCScan && window.ABTCScan.open()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/></svg>
+                        Scan a QR
+                    </button>
+                    <a href="{{ patient_qr_data_uri }}" download="ABTC_patient_{{ patient.patient_number }}.png" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">Download QR</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if temp_creds %}
     <div class="card mb-6 border-emerald-300 bg-emerald-50 shadow-sm">
         <div class="flex items-start gap-3">

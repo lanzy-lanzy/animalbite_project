@@ -203,6 +203,7 @@
         </div>
       </div>
       <div class="p-id">
+        {% if patient_qr_data_uri %}<img src="{{ patient_qr_data_uri }}" alt="Verification QR {{ patient.patient_number }}" style="width:60px;height:60px;display:block;margin:0 0 6px auto;border:1px solid var(--line);border-radius:8px;background:#fff;padding:3px">{% endif %}
         <div class="num">{{ patient.patient_number }}</div>
         <div class="age">{{ patient.age }}y &nbsp;·&nbsp; {{ patient.get_sex_display }}</div>
         <div style="margin-top:6px; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; background:white; color:var(--emerald-950); padding:4px 8px; border-radius:999px; display:inline-block;">ID: {{ patient.pk|stringformat:"05d" }}</div>
