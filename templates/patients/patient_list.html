@@ -59,7 +59,7 @@
                     <td class="table-cell">{{ p.full_name }}</td>
                     <td class="table-cell">{{ p.age }} / {{ p.get_sex_display }}</td>
                     <td class="table-cell">{{ p.barangay|default:'-' }}</td>
-                    <td class="table-cell">{{ p.contact_number }}</td>
+                    <td class="table-cell">{{ p.contact_display }}</td>
                     <td class="table-cell text-muted">{{ p.created_at|date:'M d, Y' }}</td>
                     <td class="table-cell text-right">
                         <div class="flex flex-wrap items-center justify-end gap-1">
@@ -115,7 +115,7 @@
                 </div>
                 <div class="rounded-xl bg-white border border-line p-3">
                     <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Contact</p>
-                    <p class="text-sm font-bold text-ink">{{ p.contact_number }}</p>
+                    <p class="text-sm font-bold text-ink">{{ p.contact_display }}</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-1.5">

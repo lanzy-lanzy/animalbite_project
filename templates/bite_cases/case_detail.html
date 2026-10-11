@@ -36,7 +36,7 @@
                         <p class="text-xs font-mono text-ink mt-1 break-all">{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:login' %}</p>
                     </div>
                 </div>
-                <p class="text-xs font-medium text-emerald-700 mt-3">SMS also sent to {{ case.patient.contact_number }} via RHUDumingag if enabled.</p>
+                <p class="text-xs font-medium text-emerald-700 mt-3">SMS also sent to {{ case.patient.contact_display }} via RHUDumingag if enabled.</p>
             </div>
         </div>
     </div>

@@ -71,9 +71,13 @@ def patient_list(request):
     patients_qs = Patient.objects.filter(is_archived=False)
 
     if query:
+        from utils.phone import normalize_to_63
+        # Match both the raw query and the 63... Semaphore equivalent for stored numbers
+        query_63 = normalize_to_63(query) or query
         patients_qs = patients_qs.filter(
             Q(first_name__icontains=query) | Q(last_name__icontains=query) |
-            Q(patient_number__icontains=query) | Q(contact_number__icontains=query)
+            Q(patient_number__icontains=query) | Q(contact_number__icontains=query) |
+            Q(contact_number__icontains=query_63)
         )
     if barangay:
         patients_qs = patients_qs.filter(barangay_id=barangay)
@@ -156,10 +160,10 @@ def patient_create(request):
                             f"Username: {username} Temp Password: {temp_password}. "
                             f"Login at {login_url} and change password via Profile > Change Password. -RHUDumingag"
                         )
-                        # Ensure not starting with TEST
+                        # patient.contact_number is stored in Semaphore 639... format
                         sms_res = send_semaphore_sms(patient.contact_number, sms_msg)
                         if sms_res.get('success'):
-                            messages.info(request, f'SMS with login sent to {patient.contact_number} via RHUDumingag.')
+                            messages.info(request, f'SMS with login sent to {patient.contact_display} via RHUDumingag.')
                         else:
                             # Fallback still show credentials; SMS failure is not critical
                             if not settings.SEMAPHORE_ENABLED:
@@ -270,7 +274,7 @@ def patient_reset_password(request, pk):
             )
             res = send_semaphore_sms(patient.contact_number, sms_msg)
             if res.get('success'):
-                messages.info(request, f'Password reset SMS sent to {patient.contact_number}.')
+                messages.info(request, f'Password reset SMS sent to {patient.contact_display}.')
         except Exception:
             pass
         messages.success(request, f'Password reset for {patient.patient_number}. New temp: {temp} (user: {user.username}) — share securely and ask patient to change via Profile > Change Password.')

@@ -63,7 +63,7 @@
                     {% endif %}
                     <span class="text-xs font-mono font-bold text-emerald-700 bg-white border border-emerald-200 px-1.5 py-0.5 rounded">{{ semaphore_sender|default:"RHUDumingag" }}</span>
                 </p>
-                <p class="text-xs font-medium text-muted mt-1">Auto: <span class="font-bold text-amber-700">3 days before</span> + <span class="font-bold text-emerald-700">on-day</span> to <span class="font-mono font-bold text-ink">{{ schedule.bite_case.patient.contact_number }}</span>. Manual send below per dose. <a href="{% url 'vaccination:sms_log_list' %}" class="font-bold text-emerald-700 hover:underline">View SMS Logs →</a></p>
+                <p class="text-xs font-medium text-muted mt-1">Auto: <span class="font-bold text-amber-700">3 days before</span> + <span class="font-bold text-emerald-700">on-day</span> to <span class="font-mono font-bold text-ink">{{ schedule.bite_case.patient.contact_display }}</span>. Manual send below per dose. <a href="{% url 'vaccination:sms_log_list' %}" class="font-bold text-emerald-700 hover:underline">View SMS Logs →</a></p>
                 {% if not semaphore_enabled %}
                 <p class="text-xs font-medium text-amber-700 mt-1">⚠️ SEMAPHORE_ENABLED=False — messages are simulated & logged as queued. Set <code class="bg-white px-1 rounded border">SEMAPHORE_API_KEY</code> + <code class="bg-white px-1 rounded border">SEMAPHORE_ENABLED=True</code> to actually send.</p>
                 {% endif %}
@@ -95,7 +95,7 @@
             <div class="rounded-xl bg-sage-50 border border-line p-3.5">
                 <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Patient</p>
                 <p class="text-sm font-bold text-ink mt-1">{{ schedule.bite_case.patient.full_name }}</p>
-                <p class="text-xs font-medium text-muted">{{ schedule.bite_case.patient.contact_number }}</p>
+                <p class="text-xs font-medium text-muted">{{ schedule.bite_case.patient.contact_display }}</p>
             </div>
             <div class="rounded-xl bg-white border border-line p-3.5">
                 <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Case # · Exposure</p>

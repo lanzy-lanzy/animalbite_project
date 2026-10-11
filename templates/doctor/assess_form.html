@@ -35,7 +35,7 @@
     <div class="w-14 h-14 rounded-xl bg-white text-emerald-950 flex items-center justify-center font-bold text-lg shrink-0">{{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}</div>
     <div class="min-w-0 flex-1">
       <p class="font-bold text-white leading-tight">{{ patient.full_name }} <span class="font-mono text-sm bg-white/15 px-2 py-0.5 rounded-full ml-2">{{ patient.patient_number }}</span></p>
-      <p class="text-sm text-emerald-100 mt-1">{{ patient.get_sex_display }} · {{ patient.age }}y · {{ patient.get_civil_status_display }} · {{ patient.barangay|default:"—" }} · {{ patient.contact_number }}</p>
+      <p class="text-sm text-emerald-100 mt-1">{{ patient.get_sex_display }} · {{ patient.age }}y · {{ patient.get_civil_status_display }} · {{ patient.barangay|default:"—" }} · {{ patient.contact_display }}</p>
       <p class="text-xs text-emerald-200 mt-0.5">Registered {{ patient.created_at|date:"M d, Y" }} · ID {{ patient.pk|stringformat:"05d" }}</p>
     </div>
     {% if bite_case %}

@@ -64,16 +64,16 @@ class Patient(models.Model):
 
     def save(self, *args, **kwargs):
         from datetime import date
-        from utils.phone import normalize_to_09
-        # Auto-normalize to 09... local format for consistency (Semaphore will convert to 639...)
+        from utils.phone import normalize_to_63
+        # Store in Semaphore format (639XXXXXXXXX) so SMS can use directly
         if self.contact_number:
-            n09 = normalize_to_09(self.contact_number)
-            if n09:
-                self.contact_number = n09
+            n63 = normalize_to_63(self.contact_number)
+            if n63:
+                self.contact_number = n63
         if self.emergency_contact_number:
-            n09 = normalize_to_09(self.emergency_contact_number)
-            if n09:
-                self.emergency_contact_number = n09
+            n63 = normalize_to_63(self.emergency_contact_number)
+            if n63:
+                self.emergency_contact_number = n63
         if self.birthdate:
             today = date.today()
             self.age = today.year - self.birthdate.year - ((today.month, today.day) < (self.birthdate.month, self.birthdate.day))
@@ -96,6 +96,17 @@ class Patient(models.Model):
         if self.suffix:
             parts.append(self.suffix)
         return " ".join(parts)
+
+    @property
+    def contact_display(self):
+        """Human-friendly local format (09XX XXX XXXX) for templates."""
+        from utils.phone import format_display_09
+        return format_display_09(self.contact_number)
+
+    @property
+    def emergency_contact_display(self):
+        from utils.phone import format_display_09
+        return format_display_09(self.emergency_contact_number) if self.emergency_contact_number else ''
 
     def get_latest_vitals(self):
         return self.vital_signs.order_by('-taken_at', '-created_at').first()
