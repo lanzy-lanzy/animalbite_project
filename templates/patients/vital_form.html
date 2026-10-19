@@ -2,14 +2,14 @@
 {% block title %}{{ title }} - ABTC System{% endblock %}
 {% block extra_head %}
 <style>
-  .section{border:1.5px solid #c8d8c6; border-radius:12px; overflow:hidden; background:white; margin-top:16px}
-  .section-head{background:#143d33; color:white; padding:7px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .section{border:1px solid rgba(255,255,255,.62); border-radius:16px; overflow:hidden; background:linear-gradient(152deg, rgba(255,255,255,.70) 0%, rgba(253,250,244,.48) 45%, rgba(228,243,236,.50) 100%); backdrop-filter:blur(18px) saturate(175%); -webkit-backdrop-filter:blur(18px) saturate(175%); box-shadow:18px 18px 40px -22px rgba(146,124,84,.46), -14px -14px 34px -22px rgba(255,255,255,.95); margin-top:16px}
+  .section-head{background:linear-gradient(150deg,#17614b,#08201a);box-shadow:inset 0 -1px 0 rgba(201,162,39,.55), inset 0 1px 0 rgba(255,255,255,.18);color:white;
   .section-head h3{margin:0; font-size:11px; font-weight:800; letter-spacing:.10em; text-transform:uppercase; display:flex; align-items:center; gap:8px}
-  .section-head .hint{font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#c8d8c6; opacity:.95}
+  .section-head .hint{font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:rgba(235,215,155,.85); opacity:.95}
   .vitals-grid-form{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
   @media(min-width:768px){ .vitals-grid-form{grid-template-columns:repeat(4,1fr)} }
-  .vital-input-card{border:1px solid #c8d8c6; border-radius:10px; padding:10px; background:white; display:flex; flex-direction:column; gap:6px}
-  .vital-input-card label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#5a6b63}
+  .vital-input-card{border:1px solid rgba(255,255,255,.8); border-radius:14px; padding:10px; background:linear-gradient(145deg,#f4edde,#fefcf6); display:flex; flex-direction:column; gap:6px; box-shadow:inset 5px 5px 12px -9px rgba(146,124,84,.55), inset -5px -5px 12px -9px rgba(255,255,255,.95), 0 0 0 1px rgba(255,255,255,.5)}
+  .vital-input-card label{font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--emerald-700)}
 </style>
 {% endblock %}
 {% block content %}

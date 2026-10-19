@@ -82,12 +82,8 @@ def convert_to_official_case(pre_registration, user):
         initial_consultation_notes=pre_registration.remarks,
         created_by=user,
     )
-    # Auto-create vaccination schedule for SMS pipeline
-    try:
-        from vaccination.schedule_utils import ensure_vaccination_schedule
-        ensure_vaccination_schedule(case, created_by=user)
-    except Exception:
-        pass
+    # NOTE: the vaccination schedule is intentionally NOT created here.
+    # A nurse triggers it once the case has been assessed.
     # Link account if we just auto-created one for patient
     if pre_registration.account_id is None and patient.account_id:
         pre_registration.account = patient.account

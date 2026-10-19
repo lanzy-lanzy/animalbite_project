@@ -2,10 +2,10 @@
 {% block title %}Clinical Assessment — {{ patient.full_name }} {% if bite_case %}· {{ bite_case.case_number }}{% endif %}{% endblock %}
 {% block extra_head %}
 <style>
-  .section-head { background: #143d33; color: white; padding: 7px 12px; display:flex; align-items:center; justify-content:space-between; border-radius: 10px 10px 0 0; }
-  .section-body { border: 1.5px solid #c8d8c6; border-top:0; border-radius: 0 0 10px 10px; padding: 16px; background: white; }
-  .form-input { width: 100%; border: 1.5px solid #c8d8c6; border-radius: 10px; padding: 8px 10px; font-size: 13px; background: white; }
-  .form-input:focus { outline: none; border-color: #0a1f1a; box-shadow: 0 0 0 3px rgba(10,31,26,.08); }
+  .section-head{background:linear-gradient(150deg,#17614b,#08201a);box-shadow:inset 0 -1px 0 rgba(201,162,39,.55), inset 0 1px 0 rgba(255,255,255,.18);color:white;
+  .section-body { border: 1px solid rgba(255,255,255,.62); border-top:0; border-radius: 0 0 15px 15px; padding: 16px; background: linear-gradient(152deg, rgba(255,255,255,.70) 0%, rgba(253,250,244,.48) 45%, rgba(228,243,236,.50) 100%); backdrop-filter: blur(18px) saturate(175%); -webkit-backdrop-filter: blur(18px) saturate(175%); box-shadow: 18px 18px 40px -22px rgba(146,124,84,.46), -14px -14px 34px -22px rgba(255,255,255,.95); }
+  .form-input { width:100%; border:1px solid rgba(255,255,255,.8); border-radius:12px; padding:9px 11px; font-size:13px; background:linear-gradient(145deg,#f4edde,#fefcf6); color:var(--ink); box-shadow:inset 5px 5px 12px -9px rgba(146,124,84,.55), inset -5px -5px 12px -9px rgba(255,255,255,.95), 0 0 0 1px rgba(255,255,255,.5); }
+    .form-input:focus { outline:none; background:#fff; box-shadow:0 0 0 3px rgba(201,162,39,.28), 0 0 0 1px rgba(201,162,39,.55); }
 </style>
 {% endblock %}
 {% block content %}

@@ -6,6 +6,7 @@ app_name = 'vaccination'
 urlpatterns = [
     path('schedules/', views.schedule_list, name='schedule_list'),
     path('schedules/patients/', views.patient_schedule_list, name='patient_schedule_list'),
+    path('schedules/trigger/<int:case_pk>/', views.schedule_trigger, name='schedule_trigger'),
     path('schedules/create/<int:case_pk>/', views.schedule_create, name='schedule_create'),
     path('schedules/<int:pk>/', views.schedule_detail, name='schedule_detail'),
     path('doses/<int:pk>/update/', views.dose_update, name='dose_update'),

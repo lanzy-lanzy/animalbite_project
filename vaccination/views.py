@@ -52,8 +52,77 @@ def schedule_list(request):
         'total': total,
     })
 
+def _may_set_schedule(user):
+    """Only nurses (and admins) may trigger/author a vaccination schedule."""
+    role = getattr(user, 'role', '')
+    return user.is_authenticated and role in ('nurse', 'admin')
+
+
+def _schedule_days():
+    """Dose day offsets from SystemSetting 'vaccination_days', else the PEP default."""
+    from .schedule_utils import get_dose_days
+    return get_dose_days()
+
+
+@login_required
+def schedule_trigger(request, case_pk):
+    """Nurse-triggered one-click schedule creation.
+
+    GET  -> confirmation page (case summary + the dose days that will be created)
+    POST -> creates the schedule + doses, then redirects to the schedule detail.
+    """
+    case = get_object_or_404(AnimalBiteCase.objects.select_related('patient'), pk=case_pk)
+
+    if not _may_set_schedule(request.user):
+        messages.error(request, 'Only a nurse or admin can set a vaccination schedule.')
+        return redirect('bite_cases:case_detail', pk=case.pk)
+
+    try:
+        schedule = case.vaccination_schedule
+        messages.info(request, 'Vaccination schedule is already set for this case.')
+        return redirect('vaccination:schedule_detail', pk=schedule.pk)
+    except VaccinationSchedule.DoesNotExist:
+        pass
+
+    # Doses are dated from the consultation date when present, else today.
+    from .schedule_utils import schedule_base_date
+    base_date = schedule_base_date(case)
+    days = _schedule_days()
+
+    if request.method == 'POST':
+        from .schedule_utils import ensure_vaccination_schedule
+        schedule, created = ensure_vaccination_schedule(case, created_by=request.user)
+        if created:
+            AuditLog.objects.create(
+                user=request.user,
+                action='CREATE_SCHEDULE',
+                description=(
+                    'Nurse %s set vaccination schedule for %s (%d doses from %s)'
+                    % (request.user.username, case.case_number, len(days), base_date)
+                ),
+            )
+            messages.success(
+                request,
+                'Vaccination schedule set for %s - %d doses starting %s.'
+                % (case.case_number, len(days), base_date),
+            )
+        return redirect('vaccination:schedule_detail', pk=schedule.pk)
+
+    return render(request, 'vaccination/schedule_trigger.html', {
+        'case': case,
+        'days': days,
+        'dose_dates': [(d, base_date + timedelta(days=int(d))) for d in days],
+        'base_date': base_date,
+    })
+
+
 @login_required
 def schedule_create(request, case_pk):
+    """Manual schedule editor (kept for custom/protocol schedules)."""
+    if not _may_set_schedule(request.user):
+        messages.error(request, 'Only a nurse or admin can set a vaccination schedule.')
+        return redirect('bite_cases:case_detail', pk=case_pk)
+
     case = get_object_or_404(AnimalBiteCase, pk=case_pk)
     try:
         schedule = case.vaccination_schedule
@@ -69,15 +138,7 @@ def schedule_create(request, case_pk):
             schedule.bite_case = case
             schedule.created_by = request.user
             schedule.save()
-            from settings_app.models import SystemSetting
-            days_str = SystemSetting.objects.filter(key='vaccination_days').first()
-            days = [0, 3, 7, 14, 28]
-            if days_str and days_str.value:
-                try:
-                    days = [int(d.strip()) for d in days_str.value.split(',')]
-                except ValueError:
-                    pass
-            for d in days:
+            for d in _schedule_days():
                 VaccineDose.objects.create(
                     schedule=schedule,
                     dose_label=f"Day {d}",

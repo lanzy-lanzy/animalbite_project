@@ -1,19 +1,52 @@
 """
-Helper to auto-create vaccination schedule for a bite case.
-Used by bite_cases case_create and pre_registrations conversion to ensure
-every case has a schedule so SMS reminders can trigger automatically.
+Vaccination schedule helpers.
+
+Schedules are deliberately NOT created automatically when a bite case is
+created or converted. A nurse (or admin) triggers them explicitly via
+vaccination.views.schedule_trigger once the case has been assessed, so dose
+dates never start from an unset consultation date.
+
+These helpers are the single source of truth for the PEP day offsets and for
+materialising a schedule + its doses.
 """
 from datetime import timedelta
+
 from django.utils import timezone
+
+# Fallback PEP offsets used when no 'vaccination_days' SystemSetting is set.
+DEFAULT_DOSE_DAYS = [0, 3, 7, 14, 28]
+
+
+def get_dose_days():
+    """Dose day offsets from SystemSetting 'vaccination_days', else the PEP default."""
+    from settings_app.models import SystemSetting
+
+    days = list(DEFAULT_DOSE_DAYS)
+    row = SystemSetting.objects.filter(key='vaccination_days').first()
+    if row and row.value:
+        try:
+            parsed = [int(d.strip()) for d in str(row.value).split(',') if d.strip() != '']
+            if parsed:
+                days = parsed
+        except (ValueError, TypeError):
+            pass
+    return days
+
+
+def schedule_base_date(case):
+    """Doses are dated from the consultation date, falling back to today."""
+    if case.date_time_consultation:
+        return case.date_time_consultation.date()
+    return timezone.localdate()
+
 
 def ensure_vaccination_schedule(case, created_by=None):
     """
-    Ensure a VaccinationSchedule exists for the given AnimalBiteCase.
-    If not, create it with default doses based on SystemSetting 'vaccination_days'.
-    Returns (schedule, created_bool)
+    Create the VaccinationSchedule + dose rows for a case if it has none yet.
+    Returns (schedule, created_bool). Safe to call more than once — it is a
+    no-op once a schedule exists.
     """
     from .models import VaccinationSchedule, VaccineDose
-    from settings_app.models import SystemSetting
 
     try:
         return case.vaccination_schedule, False
@@ -24,28 +57,15 @@ def ensure_vaccination_schedule(case, created_by=None):
         bite_case=case,
         created_by=created_by,
     )
-    # Determine days
-    days = [0, 3, 7, 14, 28]
-    try:
-        days_str_obj = SystemSetting.objects.filter(key='vaccination_days').first()
-        if days_str_obj and days_str_obj.value:
-            parsed = [int(d.strip()) for d in days_str_obj.value.split(',') if d.strip().isdigit() or (d.strip().lstrip('-').isdigit())]
-            # Allow empty? Keep default if parsing fails
-            if parsed:
-                # Ensure valid parsing for all entries
-                days = [int(d.strip()) for d in days_str_obj.value.split(',')]
-    except Exception:
-        pass
-
-    base_date = case.date_time_consultation.date() if case.date_time_consultation else timezone.localdate()
-    for d in days:
+    base_date = schedule_base_date(case)
+    for d in get_dose_days():
         try:
             di = int(d)
-        except ValueError:
+        except (TypeError, ValueError):
             continue
         VaccineDose.objects.create(
             schedule=schedule,
-            dose_label=f"Day {di}",
+            dose_label='Day %s' % di,
             scheduled_date=base_date + timedelta(days=di),
         )
     return schedule, True

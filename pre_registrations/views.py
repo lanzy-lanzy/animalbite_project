@@ -76,16 +76,11 @@ def patient_report_bite(request):
             case.created_by = request.user
             # Also set patient contact for SMS fallback? Already linked
             case.save()
-            # Auto-create schedule for SMS pipeline
-            try:
-                from vaccination.schedule_utils import ensure_vaccination_schedule
-                schedule, created = ensure_vaccination_schedule(case, created_by=request.user)
-                if created:
-                    AuditLog.objects.create(user=request.user, action='AUTO_CREATE_SCHEDULE', description=f'Auto-created schedule for patient-reported case {case.case_number}')
-            except Exception:
-                pass
+            # NOTE: the vaccination schedule is NOT auto-created. A nurse sets
+            # it after assessing the case, so doses are never dated from an
+            # unset consultation date.
             AuditLog.objects.create(user=request.user, action='PATIENT_REPORT_BITE', description=f'Patient {patient.patient_number} reported new bite as {case.case_number}')
-            messages.success(request, f'Bite reported successfully as {case.case_number}. Staff will review and your vaccine schedule is already prepared. Check My Treatment for doses.')
+            messages.success(request, f'Bite reported successfully as {case.case_number}. Staff will review it and a nurse will set your vaccine schedule. Check My Treatment for updates.')
             return redirect('accounts:patient_portal')
     else:
         form = PatientBiteReportForm()
@@ -345,6 +340,7 @@ def convert(request, pk):
         request.session['temp_creds_last'] = {'patient_pk': patient.pk, 'username': temp_user, 'password': temp_pass}
     else:
         messages.success(request, f"Pre-registration converted to official case {case.case_number}.")
+    messages.info(request, "Vaccination schedule is not set automatically — a nurse must trigger it from the case page or Nurse Portal.")
     return redirect("bite_cases:case_detail", pk=case.pk)
 
 

@@ -22,27 +22,46 @@
     </script>
 
     <style>
+        /* ================================================================
+           LIQUID GLASS · NEUMORPHIC SYSTEM
+           Pastel cream · Emerald · Gold
+           ================================================================ */
         :root {
-            --emerald-950: #0a1f1a;
-            --emerald-900: #0f2e26;
-            --emerald-800: #143d33;
-            --emerald-700: #1b4d3e;
-            --emerald-600: #2d6a4f;
-            --emerald-500: #3a7a5f;
-            --emerald-400: #5a9a7a;
-            --sage-50: #f2f5f1;
-            --sage-100: #e6ece5;
-            --sage-200: #d0ddd0;
-            --sage-300: #a9bfa8;
-            --sage-400: #8aa589;
-            --cream: #fcfcfa;
-            --mist: #e0e9df;
-            --line: #c8d8c6;
-            --ink: #0a1f1a;
-            /* high-contrast text — WCAG AA+ on sage-50 */
-            --muted: #1e332b;
-            --muted-2: #334a42;
-            --muted-3: #53665f;
+            /* pastel cream */
+            --cream-50:  #fdfaf4;
+            --cream-100: #f9f3e6;
+            --cream-200: #f2e9d6;
+            --cream-300: #e8dcc0;
+            --cream-400: #d9c8a2;
+
+            /* emerald */
+            --emerald-950: #08201a;
+            --emerald-900: #0d352b;
+            --emerald-800: #124a3a;
+            --emerald-700: #17614b;
+            --emerald-600: #1f7b5e;
+            --emerald-500: #2e9975;
+            --emerald-400: #5cb795;
+            --emerald-300: #93d2b7;
+            --emerald-200: #c6e7d8;
+            --emerald-100: #e4f3ec;
+
+            /* gold */
+            --gold-700: #8a6a1c;
+            --gold-600: #a9862c;
+            --gold-500: #c9a227;
+            --gold-400: #ddbe5c;
+            --gold-300: #ebd79b;
+            --gold-200: #f5ebc9;
+            --gold-100: #fbf6e6;
+
+            --ink:    #08201a;
+            --muted:  #25443a;
+            --muted-2:#3c5c50;
+
+            /* neumorphic shadow tuning (cream surface) */
+            --neu-dark: rgba(146, 124, 84, 0.46);
+            --neu-light: rgba(255, 255, 255, 0.98);
         }
 
         html { scroll-behavior: auto; }
@@ -53,15 +72,21 @@
 
         body {
             font-family: 'Figtree', system-ui, -apple-system, sans-serif;
-            background: var(--sage-50);
             color: var(--ink);
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
+            background-color: var(--cream-50);
+            background-image:
+                radial-gradient(1100px 720px at 10% -6%,  rgba(228,243,236,.95), transparent 60%),
+                radial-gradient(940px 620px at 94% 4%,    rgba(245,235,201,.90), transparent 62%),
+                radial-gradient(760px 520px at 78% 46%,   rgba(198,231,216,.55), transparent 64%),
+                radial-gradient(1000px 800px at 46% 104%, rgba(232,220,192,.70), transparent 60%),
+                linear-gradient(180deg, #fdfaf4 0%, #f8f2e5 52%, #fdfaf4 100%);
+            background-attachment: fixed;
         }
-        h1,h2,h3,.font-display { font-family: 'Space Grotesk', sans-serif; }
+        h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-serif { font-family: 'Instrument Serif', serif; }
 
-        /* Canvas — toned down for contrast */
         #bg-canvas {
             position: fixed;
             inset: 0;
@@ -69,219 +94,531 @@
             height: 100%;
             z-index: 0;
             pointer-events: none;
-            opacity: 0.32;
+            opacity: 0.42;
         }
-        /* High-contrast text helpers — override washed sage */
-        .text-muted { color: var(--muted) !important; }
-        .text-muted-2 { color: var(--muted-2) !important; }
-        .text-ink { color: var(--ink) !important; }
 
-        /* Reveal */
+        /* ---------- Reveal ---------- */
         .reveal { opacity: 0; transform: translateY(28px); }
-        .reveal-left { opacity: 0; transform: translateX(-30px); }
         .char { display: inline-block; opacity: 0; transform: translateY(60%) rotate(5deg); }
         .word { display: inline-block; white-space: nowrap; }
 
-        /* Gradient text — deepened for contrast on light sage */
-        /* Navbar — transparent over the hero photo, glass after scroll */
-        #navbar:not(.nav-glass) .nav-ink { color: #fff !important; }
-        #navbar:not(.nav-glass) .nav-ink-soft { color: rgba(255,255,255,0.72) !important; }
-        #navbar:not(.nav-glass) .nav-link { color: rgba(255,255,255,0.85); }
-        #navbar:not(.nav-glass) .nav-link:hover { color: #fff; }
-        #navbar:not(.nav-glass) .nav-link::after { background: #fff; }
-        #navbar:not(.nav-glass) .nav-signin { color: rgba(255,255,255,0.85); }
-        #navbar:not(.nav-glass) .nav-signin:hover { color: #fff; }
-        #navbar:not(.nav-glass) #mobile-menu-btn {
-            background: rgba(255,255,255,0.12);
-            border-color: rgba(255,255,255,0.35);
+        /* ================================================================
+           1 · LIQUID GLASS
+           ================================================================ */
+        .glass {
+            position: relative;
+            background:
+                linear-gradient(152deg,
+                    rgba(255,255,255,.66) 0%,
+                    rgba(255,253,246,.34) 42%,
+                    rgba(228,243,236,.42) 74%,
+                    rgba(255,255,255,.52) 100%);
+            backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
+            -webkit-backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
+            border: 1px solid rgba(255,255,255,.55);
+            border-radius: 30px;
+            box-shadow:
+                0 34px 70px -34px rgba(8,32,26,.45),
+                0 10px 28px -18px rgba(8,32,26,.22),
+                inset 0 1.5px 0 rgba(255,255,255,.95),
+                inset 0 -1.5px 0 rgba(255,255,255,.38),
+                inset 1.5px 0 0 rgba(255,255,255,.34),
+                inset -1.5px 0 0 rgba(255,255,255,.14);
+        }
+        /* refractive rim (liquid edge) */
+        .glass::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1.25px;
+            pointer-events: none;
+            background: conic-gradient(from 205deg at 50% 42%,
+                rgba(255,255,255,.95) 0%,
+                rgba(201,162,39,.55) 16%,
+                rgba(255,255,255,.22) 33%,
+                rgba(92,183,149,.52) 54%,
+                rgba(255,255,255,.88) 72%,
+                rgba(235,215,155,.60) 88%,
+                rgba(255,255,255,.95) 100%);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            opacity: .9;
+        }
+        /* pointer-tracked specular sheen */
+        .glass::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            background: radial-gradient(280px 210px at var(--mx, 50%) var(--my, 0%),
+                rgba(255,255,255,.92) 0%,
+                rgba(255,255,255,.26) 44%,
+                rgba(255,255,255,0) 70%);
+            opacity: 0;
+            transition: opacity .4s ease;
+        }
+        .glass:hover::after { opacity: .55; }
+
+        /* hero / feature panels get a true refracting liquid edge */
+        .glass--liquid { overflow: hidden; }
+        .glass--liquid::after { filter: url(#liquidRefract); }
+
+        /* lighter glass for smaller chips */
+        .glass-chip {
+            position: relative;
+            background: linear-gradient(150deg, rgba(255,255,255,.72), rgba(250,243,230,.42));
+            backdrop-filter: blur(16px) saturate(170%);
+            -webkit-backdrop-filter: blur(16px) saturate(170%);
+            border: 1px solid rgba(255,255,255,.6);
+            box-shadow:
+                0 10px 26px -14px rgba(8,32,26,.35),
+                inset 0 1px 0 rgba(255,255,255,.95),
+                inset 0 -1px 0 rgba(255,255,255,.35);
+        }
+
+        /* glass over dark imagery — heavier tint so text stays readable */
+        .glass-on-dark {
+            background:
+                linear-gradient(152deg,
+                    rgba(18,74,58,.34) 0%,
+                    rgba(8,32,26,.30) 45%,
+                    rgba(13,53,43,.34) 100%);
+            border-color: rgba(255,255,255,.22);
+            box-shadow:
+                0 40px 80px -34px rgba(0,0,0,.62),
+                inset 0 1.5px 0 rgba(255,255,255,.34),
+                inset 0 -1.5px 0 rgba(255,255,255,.10);
+        }
+        .glass-on-dark::before { opacity: .5; }
+
+        /* ================================================================
+           2 · NEUMORPHISM
+           ================================================================ */
+        .neu {
+            position: relative;
+            background: linear-gradient(145deg, #fefcf6 0%, #f5eede 58%, #efe6d2 100%);
+            border-radius: 26px;
+            box-shadow:
+                16px 16px 34px -16px var(--neu-dark),
+               -14px -14px 30px -16px var(--neu-light),
+                inset 0 0 0 1px rgba(255,255,255,.7),
+                inset 0 -2px 4px rgba(255,255,255,.6);
+        }
+        .neu-sm {
+            position: relative;
+            background: linear-gradient(145deg, #fefcf6 0%, #f3ecdd 100%);
+            border-radius: 18px;
+            box-shadow:
+                9px 9px 20px -10px var(--neu-dark),
+               -9px -9px 18px -10px var(--neu-light),
+                inset 0 0 0 1px rgba(255,255,255,.7);
+        }
+        .neu-inset {
+            position: relative;
+            background: linear-gradient(145deg, #f1e9d8 0%, #fdfaf3 100%);
+            border-radius: 26px;
+            box-shadow:
+                inset 8px 8px 18px -10px rgba(146,124,84,.50),
+                inset -8px -8px 18px -10px rgba(255,255,255,.95),
+                inset 0 0 0 1px rgba(255,255,255,.55);
+        }
+        .neu-btn {
+            position: relative;
+            background: linear-gradient(145deg, #fefcf6, #f2ebdc);
+            box-shadow:
+                7px 7px 16px -8px rgba(146,124,84,.55),
+               -7px -7px 16px -8px rgba(255,255,255,.98),
+                inset 0 0 0 1px rgba(255,255,255,.8);
+            transition: box-shadow .22s ease, transform .22s cubic-bezier(.16,1,.3,1);
+        }
+        .neu-btn:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                11px 13px 24px -10px rgba(146,124,84,.60),
+               -8px -8px 18px -10px rgba(255,255,255,1),
+                inset 0 0 0 1px rgba(255,255,255,.92);
+        }
+        .neu-btn:active {
+            transform: translateY(0);
+            box-shadow:
+                inset 6px 6px 14px -8px rgba(146,124,84,.60),
+                inset -6px -6px 14px -8px rgba(255,255,255,.95);
+        }
+        /* icon well — recessed circle that holds an emerald/gold glyph */
+        .well {
+            width: 3.25rem; height: 3.25rem;
+            border-radius: 1.15rem;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            background: linear-gradient(145deg, #f1e9d8, #fefcf6);
+            box-shadow:
+                inset 5px 5px 11px -7px rgba(146,124,84,.55),
+                inset -5px -5px 11px -7px rgba(255,255,255,.95),
+                0 0 0 1px rgba(255,255,255,.6);
+            color: var(--emerald-800);
+            transition: all .35s cubic-bezier(.16,1,.3,1);
+        }
+        .well-well { width: 2.5rem; height: 2.5rem; border-radius: .95rem; }
+
+        /* ================================================================
+           3 · HYBRID — glass surface + neumorphic depth
+           ================================================================ */
+        .neu-glass {
+            position: relative;
+            background: linear-gradient(150deg,
+                rgba(255,255,255,.72) 0%,
+                rgba(253,250,244,.52) 45%,
+                rgba(228,243,236,.54) 100%);
+            backdrop-filter: blur(20px) saturate(175%);
+            -webkit-backdrop-filter: blur(20px) saturate(175%);
+            border: 1px solid rgba(255,255,255,.62);
+            border-radius: 28px;
+            box-shadow:
+                20px 20px 46px -22px rgba(146,124,84,.50),
+               -16px -16px 38px -20px rgba(255,255,255,.95),
+                inset 0 1.5px 0 rgba(255,255,255,.95),
+                inset 0 0 0 1px rgba(255,255,255,.40);
+            transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease;
+        }
+        .neu-glass::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1.25px;
+            pointer-events: none;
+            background: conic-gradient(from 210deg at 40% 30%,
+                rgba(255,255,255,.9), rgba(201,162,39,.5) 22%,
+                rgba(255,255,255,.25) 40%, rgba(92,183,149,.45) 62%,
+                rgba(255,255,255,.8) 82%, rgba(201,162,39,.4) 100%);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            opacity: .8;
+        }
+
+        /* ================================================================
+           4 · GOLD ACCENTS
+           ================================================================ */
+        .gold-text {
+            background: linear-gradient(118deg,
+                #8a6a1c 0%, #c9a227 34%, #ebd79b 58%, #ddbe5c 74%, #a9862c 100%);
+            -webkit-background-clip: text;
+                    background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+        .gold-text-light {
+            background: linear-gradient(118deg, #fbf6e6 0%, #ddbe5c 40%, #c9a227 72%, #f5ebc9 100%);
+            -webkit-background-clip: text;
+                    background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+        .gold-hairline {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(201,162,39,.55), rgba(255,255,255,.95), rgba(201,162,39,.45), transparent);
+        }
+        .gold-chip {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .3rem .8rem;
+            border-radius: 999px;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: .14em; text-transform: uppercase;
+            color: var(--gold-700);
+            background: linear-gradient(145deg, #fbf6e6, #f5ebc9);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.95),
+                0 6px 14px -8px rgba(146,124,84,.55);
+        }
+        .gold-chip-dark {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .34rem .9rem;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--gold-200);
+            background: rgba(201,162,39,.12);
+            border: 1px solid rgba(201,162,39,.35);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+        }
+
+        /* ================================================================
+           5b · RADIUS MODIFIERS
+           Unlayered utilities so they win over .glass / .neu-* radii
+           ================================================================ */
+        .r18 { border-radius: 18px; }
+        .r20 { border-radius: 20px; }
+        .r24 { border-radius: 24px; }
+        .r26 { border-radius: 26px; }
+        .r28 { border-radius: 28px; }
+        .r30 { border-radius: 30px; }
+        .r32 { border-radius: 32px; }
+        .r34 { border-radius: 34px; }
+        .r40 { border-radius: 40px; }
+        .r44 { border-radius: 44px; }
+        .round { border-radius: 9999px; }
+        @media (min-width: 640px) {
+            .r28 { border-radius: 32px; }
+            .r30 { border-radius: 34px; }
+            .r34 { border-radius: 44px; }
+        }
+
+        /* ================================================================
+           5 · NAVBAR — transparent over hero, floating glass pill after scroll
+           ================================================================ */
+        #nav-pill:not(.nav-glass) .nav-ink { color: #fff !important; }
+        #nav-pill:not(.nav-glass) .nav-ink-soft { color: rgba(255,255,255,.74) !important; }
+        #nav-pill:not(.nav-glass) .nav-link { color: rgba(255,255,255,.88); }
+        #nav-pill:not(.nav-glass) .nav-link:hover { color: #fff; }
+        #nav-pill:not(.nav-glass) .nav-link::after { background: var(--gold-400); }
+        #nav-pill:not(.nav-glass) .nav-signin { color: rgba(255,255,255,.88); }
+        #nav-pill:not(.nav-glass) .nav-signin:hover { color: #fff; }
+        #nav-pill:not(.nav-glass) #mobile-menu-btn {
+            background: rgba(255,255,255,.12);
+            border-color: rgba(255,255,255,.35);
             color: #fff;
         }
+
         .nav-glass {
-            background: rgba(242,245,241,0.88);
-            backdrop-filter: blur(18px) saturate(160%);
-            -webkit-backdrop-filter: blur(18px) saturate(160%);
-            border-bottom: 1px solid rgba(10,31,26,0.10);
-            box-shadow: 0 1px 0 rgba(10,31,26,0.06), 0 8px 32px -12px rgba(10,31,26,0.16);
+            background: linear-gradient(158deg, rgba(255,255,255,.66) 0%, rgba(250,243,230,.46) 100%);
+            backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
+            -webkit-backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
+            border: 1px solid rgba(255,255,255,.6);
+            box-shadow:
+                0 22px 48px -26px rgba(8,32,26,.45),
+                0 4px 14px -8px rgba(8,32,26,.18),
+                inset 0 1.5px 0 rgba(255,255,255,.95),
+                inset 0 -1px 0 rgba(255,255,255,.35);
         }
         .nav-link {
             position: relative;
             color: var(--ink);
             font-weight: 600;
-            transition: color .2s ease;
             font-size: 0.9rem;
+            transition: color .2s ease;
         }
         .nav-link:hover { color: var(--emerald-700); }
-        .nav-link::after{
-            content:'';
-            position:absolute;
-            left:0; bottom:-6px;
-            height:2px; width:0;
-            background: var(--emerald-700);
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            left: 0; bottom: -6px;
+            height: 2px; width: 0;
+            background: linear-gradient(90deg, var(--gold-500), var(--emerald-500));
             transition: width .25s cubic-bezier(.16,1,.3,1);
             border-radius: 999px;
         }
-        .nav-link:hover::after{ width:100%; }
+        .nav-link:hover::after { width: 100%; }
 
-        /* Buttons — higher contrast */
+        /* ---------- Buttons ---------- */
         .btn-emerald {
-            background: var(--emerald-900);
+            background: linear-gradient(145deg, var(--emerald-800), var(--emerald-950));
             color: white;
-            border: 1px solid rgba(255,255,255,0.08);
-            box-shadow: 0 6px 22px -8px rgba(10,31,26,0.55), 0 1px 0 rgba(255,255,255,0.06) inset;
+            border: 1px solid rgba(255,255,255,.10);
+            box-shadow:
+                0 14px 30px -14px rgba(8,32,26,.65),
+                inset 0 1px 0 rgba(255,255,255,.18);
             transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s ease, background .2s ease;
         }
-        .btn-emerald:hover{
-            background: var(--emerald-950);
+        .btn-emerald:hover {
             transform: translateY(-2px);
-            box-shadow: 0 16px 40px -12px rgba(10,31,26,0.6), 0 1px 0 rgba(255,255,255,0.08) inset;
+            box-shadow:
+                0 22px 44px -16px rgba(8,32,26,.7),
+                inset 0 1px 0 rgba(255,255,255,.24);
         }
         .btn-emerald:active { transform: translateY(0); }
-        .btn-ghost {
-            background: white;
-            color: var(--ink);
-            border: 1.5px solid var(--line);
-            box-shadow: 0 2px 10px -6px rgba(10,31,26,0.12);
-            transition: all .2s ease;
-            font-weight: 600;
+
+        .btn-gold {
+            background: linear-gradient(145deg, #e6cf82 0%, #c9a227 52%, #a9862c 100%);
+            color: #2c2005;
+            border: 1px solid rgba(255,255,255,.45);
+            box-shadow:
+                0 14px 30px -14px rgba(138,106,28,.75),
+                inset 0 1px 0 rgba(255,255,255,.65);
+            transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s ease;
         }
-        .btn-ghost:hover{
-            background: var(--sage-100);
-            border-color: var(--sage-300);
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 22px 44px -16px rgba(138,106,28,.8),
+                inset 0 1px 0 rgba(255,255,255,.8);
+        }
+        .btn-gold:active { transform: translateY(0); }
+
+        .btn-glass {
+            background: linear-gradient(150deg, rgba(255,255,255,.7), rgba(250,243,230,.4));
+            backdrop-filter: blur(18px) saturate(180%);
+            -webkit-backdrop-filter: blur(18px) saturate(180%);
             color: var(--emerald-900);
-            transform: translateY(-1px);
-            box-shadow: 0 10px 24px -10px rgba(10,31,26,0.18);
+            border: 1px solid rgba(255,255,255,.7);
+            box-shadow:
+                0 12px 26px -14px rgba(8,32,26,.42),
+                inset 0 1px 0 rgba(255,255,255,.95);
+            transition: all .22s ease;
+            font-weight: 700;
+        }
+        .btn-glass:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(150deg, rgba(255,255,255,.9), rgba(245,235,201,.6));
+            box-shadow:
+                0 20px 40px -16px rgba(8,32,26,.5),
+                inset 0 1px 0 rgba(255,255,255,1);
         }
 
-        /* Cards — stronger border for contrast */
-        .feature-card{
-            position:relative;
-            background: white;
-            border: 1.5px solid var(--line);
-            border-radius: 1.5rem;
-            padding: 1.75rem;
-            box-shadow: 0 4px 20px -12px rgba(10,31,26,0.12);
-            transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease, border-color .3s ease;
-            overflow:hidden;
+        /* ================================================================
+           6 · COMPONENTS
+           ================================================================ */
+        .feature-card { overflow: hidden; }
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            background: radial-gradient(420px 240px at var(--mx,50%) var(--my,0%),
+                rgba(255,255,255,.9) 0%, rgba(255,255,255,.25) 45%, rgba(255,255,255,0) 72%);
+            opacity: 0;
+            transition: opacity .4s ease;
         }
-        .feature-card::before{
-            content:'';
-            position:absolute;
-            inset:0;
-            background: radial-gradient(420px 220px at var(--mx,50%) var(--my,0%), rgba(45,106,79,0.08), transparent 65%);
-            opacity:0;
-            transition: opacity .35s ease;
-            pointer-events:none;
-        }
-        .feature-card:hover{
+        .feature-card:hover {
             transform: translateY(-6px);
-            border-color: rgba(45,106,79,0.22);
-            box-shadow: 0 16px 40px -16px rgba(15,46,38,0.18), 0 4px 12px -4px rgba(15,46,38,0.08);
+            box-shadow:
+                26px 30px 60px -24px rgba(146,124,84,.55),
+                -18px -18px 40px -22px rgba(255,255,255,1),
+                inset 0 1.5px 0 rgba(255,255,255,1);
         }
-        .feature-card:hover::before{ opacity:1; }
-        .feature-icon{
-            width: 3rem; height: 3rem;
-            border-radius: 1rem;
-            display:flex; align-items:center; justify-content:center;
-            background: var(--sage-100);
-            border: 1px solid var(--line);
-            color: var(--emerald-800);
-        }
-        .feature-card:hover .feature-icon{
-            background: var(--emerald-800);
-            color: white;
-            border-color: var(--emerald-800);
+        .feature-card:hover::after { opacity: .6; }
+        .feature-card:hover .well {
+            color: #fff;
+            background: linear-gradient(145deg, var(--emerald-700), var(--emerald-950));
+            box-shadow:
+                0 10px 20px -10px rgba(8,32,26,.6),
+                inset 0 1px 0 rgba(255,255,255,.25),
+                0 0 0 1px rgba(201,162,39,.4);
         }
 
-        /* Step number */
-        .step-num{
+        /* step numeral */
+        .step-num {
             font-family: 'Instrument Serif', serif;
             font-size: 5.5rem;
             line-height: 1;
             color: transparent;
-            -webkit-text-stroke: 1.2px rgba(27,77,62,0.18);
-            position:relative;
+            -webkit-text-stroke: 1.4px rgba(201,162,39,.45);
+            position: relative;
         }
-        .step-num small{
-            position:absolute;
-            inset:0;
-            display:flex;
-            align-items:center;
-            justify-content:flex-start;
+        .step-num small {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
             font-family: 'Space Grotesk', sans-serif;
-            font-weight:700;
+            font-weight: 700;
             font-size: 2.25rem;
-            background: linear-gradient(180deg, var(--emerald-800), var(--sage-300));
+            background: linear-gradient(180deg, var(--gold-500), var(--gold-300) 65%, var(--gold-600));
             -webkit-background-clip: text;
-            background-clip:text;
+                    background-clip: text;
             -webkit-text-fill-color: transparent;
             -webkit-text-stroke: 0;
             padding-left: .15em;
         }
 
-        /* Bento — higher contrast border */
-        .bento{
-            background: white;
-            border: 1.5px solid var(--line);
-            border-radius: 2rem;
-            box-shadow: 0 14px 44px -20px rgba(10,31,26,0.16), 0 4px 14px -10px rgba(10,31,26,0.10);
-            overflow:hidden;
-        }
-
-        /* Grain */
+        /* textures */
         .grain {
             background-image:
-                radial-gradient(rgba(15,46,38,0.035) 1px, transparent 1px),
-                radial-gradient(rgba(15,46,38,0.02) 1px, transparent 1px);
+                radial-gradient(rgba(120,96,50,0.045) 1px, transparent 1px),
+                radial-gradient(rgba(23,97,75,0.028) 1px, transparent 1px);
             background-size: 22px 22px, 44px 44px;
             background-position: 0 0, 11px 11px;
         }
         .dot-grid {
-            background-image: radial-gradient(rgba(27,77,62,0.08) 1.4px, transparent 1.4px);
+            background-image: radial-gradient(rgba(23,97,75,0.10) 1.4px, transparent 1.4px);
             background-size: 18px 18px;
         }
 
-        /* Scroll hint */
-        .scroll-dot{ animation: scrollDot 1.8s ease-in-out infinite; }
-        @keyframes scrollDot{ 0%,100%{ transform: translateY(0); opacity:1 } 50%{ transform: translateY(10px); opacity:.35 } }
+        /* floating liquid motion */
+        @keyframes liquidFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50%      { transform: translateY(-10px) rotate(-0.25deg); }
+        }
+        .liquid-float { animation: liquidFloat 9s ease-in-out infinite; }
 
-        /* Magnetic btn helper */
-        .magnetic{ transition: transform .3s cubic-bezier(.16,1,.3,1); }
-
-        @media (prefers-reduced-motion: reduce){
-            .reveal, .reveal-left, .char{ opacity:1 !important; transform:none !important; }
-            .scroll-dot{ animation:none !important; }
-            .feature-card{ transition:none; }
-            html{ scroll-behavior:auto; }
+        .scroll-dot { animation: scrollDot 1.8s ease-in-out infinite; }
+        @keyframes scrollDot {
+            0%, 100% { transform: translateY(0); opacity: 1 }
+            50%      { transform: translateY(10px); opacity: .35 }
         }
 
-        /* Custom scrollbar */
-        ::-webkit-scrollbar{ width:8px; height:8px; }
-        ::-webkit-scrollbar-track{ background: var(--sage-50); }
-        ::-webkit-scrollbar-thumb{ background: var(--sage-300); border-radius:999px; border:2px solid var(--sage-50); }
-        ::-webkit-scrollbar-thumb:hover{ background: var(--sage-400); }
+        .magnetic { transition: transform .3s cubic-bezier(.16,1,.3,1); }
+
+        /* custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--cream-100); }
+        ::-webkit-scrollbar-thumb { background: var(--gold-300); border-radius: 999px; border: 2px solid var(--cream-100); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-400); }
+
+        /* ---------- Responsive + fallbacks ---------- */
+        @media (max-width: 1023px) {
+            .glass, .glass-chip, .neu-glass, .nav-glass {
+                backdrop-filter: blur(14px) saturate(160%);
+                -webkit-backdrop-filter: blur(14px) saturate(160%);
+            }
+            .glass--liquid::after { filter: none; }
+        }
+        @supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+            .glass, .glass-chip, .neu-glass, .nav-glass, .btn-glass {
+                background: linear-gradient(152deg, rgba(253,250,243,.95), rgba(243,236,222,.92));
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reveal, .char { opacity: 1 !important; transform: none !important; }
+            .scroll-dot, .liquid-float { animation: none !important; }
+            .feature-card, .neu-btn { transition: none; }
+            html { scroll-behavior: auto; }
+        }
     </style>
 </head>
 <body class="antialiased selection:bg-emerald-800 selection:text-white">
 
-    <!-- Fixed Three.js subtle background -->
+    <!-- SVG liquid-refraction filter (Chromium honours this in backdrop layers) -->
+    <svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+        <filter id="liquidRefract" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.0055 0.011" numOctaves="2" seed="4" result="noise"/>
+            <feGaussianBlur in="noise" stdDeviation="3.5" result="softNoise"/>
+            <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
+
+    <!-- Fixed Three.js background -->
     <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
-    <!-- Soft vignette — reduced wash for legibility -->
+    <!-- Aurora wash -->
     <div class="fixed inset-0 z-0 pointer-events-none" style="background:
-        radial-gradient(900px 600px at 18% 10%, rgba(20,61,51,0.05) 0%, transparent 58%),
-        radial-gradient(800px 500px at 88% 22%, rgba(45,106,79,0.08) 0%, transparent 60%),
-        radial-gradient(700px 400px at 50% 100%, rgba(230,236,229,0.45) 0%, transparent 62%);
+        radial-gradient(900px 620px at 14% 8%, rgba(18,74,58,0.07) 0%, transparent 58%),
+        radial-gradient(820px 520px at 90% 20%, rgba(201,162,39,0.10) 0%, transparent 60%),
+        radial-gradient(760px 460px at 50% 102%, rgba(228,243,236,0.75) 0%, transparent 62%);
     "></div>
-    <div class="fixed inset-0 z-0 pointer-events-none grain opacity-[0.32]"></div>
+    <div class="fixed inset-0 z-0 pointer-events-none grain opacity-[0.35]"></div>
 
     <!-- ============ NAVBAR ============ -->
-    <header id="navbar" class="fixed top-0 inset-x-0 z-50 transition-all duration-300">
-        <nav class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-6">
+    <header id="navbar" class="fixed top-0 inset-x-0 z-50 px-3 sm:px-5 pt-3 transition-all duration-500">
+        <nav id="nav-pill" class="mx-auto max-w-[1240px] h-[68px] px-4 sm:px-6 flex items-center justify-between gap-6 rounded-full transition-all duration-500">
             <a href="#top" class="flex items-center gap-3 group shrink-0">
-                <img src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Official seal of the Municipality of Dumingag" class="w-10 h-10 rounded-full object-cover bg-white ring-1 ring-black/10 shadow-md group-hover:scale-[1.04] transition-transform">
+                <span class="neu-sm round w-11 h-11 flex items-center justify-center overflow-hidden">
+                    <img src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Official seal of the Municipality of Dumingag" class="w-full h-full object-cover">
+                </span>
                 <span class="hidden sm:block leading-tight">
-                    <span class="font-display font-semibold text-[15px] tracking-tight text-emerald-950 nav-ink">ABTC <span class="font-normal text-emerald-700/70 nav-ink-soft">System</span></span>
-                    <span class="block text-[11px] tracking-widest uppercase text-muted nav-ink-soft">Municipal Health Office</span>
+                    <span class="font-display font-semibold text-[15px] tracking-tight nav-ink">ABTC <span class="font-normal nav-ink-soft">System</span></span>
+                    <span class="block text-[11px] tracking-widest uppercase nav-ink-soft">Municipal Health Office</span>
                 </span>
             </a>
 
@@ -294,73 +631,81 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="{% url 'accounts:login' %}" class="nav-signin hidden md:inline-flex items-center gap-2 text-sm font-medium text-emerald-800 hover:text-emerald-900 px-3 py-2">
+                <a href="{% url 'accounts:login' %}" class="nav-signin hidden md:inline-flex items-center gap-2 text-sm font-medium nav-ink px-3 py-2">
                     Sign in
                 </a>
                 <a href="{% url 'pre_registrations:public_create' %}" class="btn-emerald inline-flex items-center gap-2 text-sm font-semibold px-5 py-[11px] rounded-full">
                     Pre-register now
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                 </a>
-                <button id="mobile-menu-btn" class="lg:hidden w-10 h-10 rounded-full bg-white border border-line flex items-center justify-center text-emerald-800">
+                <button id="mobile-menu-btn" class="lg:hidden w-10 h-10 round neu-sm border flex items-center justify-center" style="color:var(--emerald-800)">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
             </div>
         </nav>
         <!-- Mobile sheet -->
-        <div id="mobile-sheet" class="hidden lg:hidden mx-4 mb-3 rounded-2xl bg-white border border-line shadow-xl overflow-hidden">
+        <div id="mobile-sheet" class="hidden lg:hidden mx-auto max-w-[1240px] mt-2 r24 glass overflow-hidden">
             <div class="p-2 flex flex-col">
-                <a href="#features" class="px-4 py-3 rounded-xl hover:bg-sage-50 text-sm font-medium text-emerald-900">Features</a>
-                <a href="#workflow" class="px-4 py-3 rounded-xl hover:bg-sage-50 text-sm font-medium text-emerald-900">Workflow</a>
-                <a href="#security" class="px-4 py-3 rounded-xl hover:bg-sage-50 text-sm font-medium text-emerald-900">Security</a>
-                <a href="{% url 'pre_registrations:public_status' %}" class="px-4 py-3 rounded-xl hover:bg-sage-50 text-sm font-medium text-emerald-900">Check status</a>
-                <a href="{% url 'accounts:login' %}" class="px-4 py-3 rounded-xl hover:bg-sage-50 text-sm font-medium text-emerald-900">Sign in</a>
+                <a href="#features" class="px-4 py-3 rounded-2xl hover:bg-white/55 text-sm font-medium text-emerald-900">Features</a>
+                <a href="#workflow" class="px-4 py-3 rounded-2xl hover:bg-white/55 text-sm font-medium text-emerald-900">Workflow</a>
+                <a href="#security" class="px-4 py-3 rounded-2xl hover:bg-white/55 text-sm font-medium text-emerald-900">Security</a>
+                <a href="{% url 'pre_registrations:public_status' %}" class="px-4 py-3 rounded-2xl hover:bg-white/55 text-sm font-medium text-emerald-900">Check status</a>
+                <a href="{% url 'accounts:login' %}" class="px-4 py-3 rounded-2xl hover:bg-white/55 text-sm font-medium text-emerald-900">Sign in</a>
             </div>
         </div>
     </header>
 
     <!-- ============ HERO ============ -->
     <section id="top" class="relative z-10 min-h-screen flex items-center justify-center overflow-hidden">
-        <!-- Dumingag Municipal Hall photo background -->
+        <!-- Dumingag Municipal Hall photo -->
         <div class="absolute inset-0 bg-emerald-950" aria-hidden="true">
             <img src="{% static 'images/dumingag_bg.png' %}" alt="" class="w-full h-full object-cover object-center">
-            <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(6,18,14,0.66) 0%, rgba(6,18,14,0.50) 42%, rgba(6,18,14,0.78) 100%);"></div>
+            <div class="absolute inset-0" style="background: linear-gradient(186deg, rgba(8,32,26,0.74) 0%, rgba(13,53,43,0.54) 40%, rgba(8,32,26,0.84) 100%);"></div>
+            <div class="absolute inset-0" style="background: radial-gradient(60% 46% at 76% 22%, rgba(201,162,39,0.30) 0%, transparent 68%);"></div>
+            <div class="absolute inset-0" style="background: radial-gradient(48% 40% at 16% 78%, rgba(46,153,117,0.30) 0%, transparent 70%);"></div>
         </div>
 
-        <div class="relative z-10 w-full max-w-[980px] mx-auto px-5 sm:px-6 pt-32 pb-28 text-center">
-            <img id="hero-logo" src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Official seal of the Municipality of Dumingag" class="reveal mx-auto w-[92px] h-[92px] sm:w-[108px] sm:h-[108px] rounded-full object-cover ring-2 ring-white/30 shadow-[0_18px_50px_-12px_rgba(0,0,0,0.6)]">
+        <div class="relative z-10 w-full max-w-[1040px] mx-auto px-4 sm:px-6 pt-32 pb-24">
+            <div id="hero-glass" class="glass glass-on-dark glass--liquid liquid-float r34 px-6 py-10 sm:px-12 sm:py-14 lg:px-14 text-center">
 
-            <p id="hero-badge" class="reveal mt-7 text-[11px] sm:text-xs font-bold uppercase tracking-[0.18em] sm:tracking-[0.28em] text-emerald-100/85">
-                Republic of the Philippines · Municipality of Dumingag · Zamboanga del Sur
-            </p>
+                <img id="hero-logo" src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Official seal of the Municipality of Dumingag" class="reveal mx-auto w-[86px] h-[86px] sm:w-[106px] sm:h-[106px] rounded-full object-cover ring-1 ring-white/50 shadow-[0_22px_50px_-16px_rgba(0,0,0,0.65)]">
 
-            <h1 id="hero-title" class="font-display font-bold tracking-tight text-white leading-[1.04] mt-5" style="font-size: clamp(30px, 10.5vw, 62px); text-shadow: 0 2px 32px rgba(6,18,14,0.5)">
-                <span class="block">Animal Bite</span>
-                <span class="block">Treatment Center</span>
-                <span class="block"><span class="font-serif italic font-normal text-emerald-200">Management System</span></span>
-            </h1>
+                <p id="hero-badge" class="reveal mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+                    <span class="gold-chip-dark">Republic of the Philippines</span>
+                    <span class="text-[11px] sm:text-xs font-semibold tracking-[0.16em] uppercase text-emerald-100/80">Municipality of Dumingag · Zamboanga del Sur</span>
+                </p>
 
-            <p id="hero-sub" class="reveal mt-6 text-[16px] sm:text-[17px] leading-relaxed text-emerald-50/85 max-w-[620px] mx-auto font-medium" style="text-shadow: 0 1px 14px rgba(6,18,14,0.55)">
-                A quiet, powerful platform of the Municipal Health Office — manage patients, bite cases, vaccination schedules, and vaccine inventory in one secure, audited system.
-            </p>
+                <h1 id="hero-title" class="font-display font-bold tracking-tight text-white leading-[1.05] mt-6" style="font-size: clamp(30px, 9.5vw, 60px); text-shadow: 0 2px 30px rgba(6,18,14,0.55)">
+                    <span class="block">Animal Bite</span>
+                    <span class="block">Treatment Center</span>
+                    <span class="block"><span class="font-serif italic font-normal gold-text-light">Management System</span></span>
+                </h1>
 
-            <div id="hero-cta" class="reveal mt-9 flex flex-wrap items-center justify-center gap-3.5">
-                <a href="{% url 'pre_registrations:public_create' %}" class="magnetic inline-flex items-center gap-2.5 px-8 py-4 rounded-full bg-white text-emerald-950 text-[14px] font-bold shadow-[0_18px_40px_-12px_rgba(0,0,0,0.5)] hover:bg-emerald-50 transition-colors">
-                    Pre-register now
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                </a>
-                <a href="{% url 'pre_registrations:public_status' %}" class="inline-flex items-center gap-2 px-8 py-4 rounded-full border-[1.5px] border-white/45 text-white text-[14px] font-semibold backdrop-blur-sm hover:bg-white/10 hover:border-white/70 transition-all">
-                    Check pre-registration status
-                </a>
+                <div class="reveal mt-7 flex justify-center"><div class="gold-hairline w-40"></div></div>
+
+                <p id="hero-sub" class="reveal mt-6 text-[16px] sm:text-[17px] leading-relaxed text-emerald-50/90 max-w-[600px] mx-auto font-medium" style="text-shadow: 0 1px 14px rgba(6,18,14,0.6)">
+                    A quiet, powerful platform of the Municipal Health Office — manage patients, bite cases, vaccination schedules, and vaccine inventory in one secure, audited system.
+                </p>
+
+                <div id="hero-cta" class="reveal mt-9 flex flex-wrap items-center justify-center gap-3.5">
+                    <a href="{% url 'pre_registrations:public_create' %}" class="magnetic btn-gold inline-flex items-center gap-2.5 px-8 py-4 rounded-full text-[14px] font-bold">
+                        Pre-register now
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </a>
+                    <a href="{% url 'pre_registrations:public_status' %}" class="glass-chip inline-flex items-center gap-2 px-8 py-4 rounded-full text-[14px] font-bold text-emerald-950">
+                        Check pre-registration status
+                    </a>
+                </div>
+
+                <p id="hero-note" class="reveal mt-6 text-xs font-semibold tracking-wide text-emerald-100/80">No account needed · Takes about 3 minutes</p>
             </div>
-
-            <p id="hero-note" class="reveal mt-6 text-xs font-semibold tracking-wide text-emerald-100/70">No account needed · Takes about 3 minutes</p>
         </div>
 
         <!-- scroll hint -->
-        <a href="#stats" class="hidden lg:flex absolute bottom-7 left-1/2 -translate-x-1/2 z-10 flex-col items-center gap-2 text-emerald-100/70 hover:text-white transition-colors">
+        <a href="#stats" class="hidden lg:flex absolute bottom-7 left-1/2 -translate-x-1/2 z-10 flex-col items-center gap-2 text-emerald-100/80 hover:text-white transition-colors">
             <span class="text-[11px] uppercase tracking-widest font-medium">Scroll</span>
-            <span class="w-6 h-10 rounded-full border border-white/35 bg-white/5 flex justify-center pt-2">
-                <span class="scroll-dot w-1 h-1.5 rounded-full bg-white"></span>
+            <span class="w-6 h-10 rounded-full border border-white/40 bg-white/10 flex justify-center pt-2 backdrop-blur-sm">
+                <span class="scroll-dot w-1 h-1.5 rounded-full bg-gold-300"></span>
             </span>
         </a>
     </section>
@@ -368,26 +713,28 @@
     <!-- ============ STATS ============ -->
     <section id="stats" class="relative z-10 mt-12 sm:mt-16">
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8">
-            <div class="bento px-6 sm:px-8 py-7 grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 divide-y-0">
-                <div class="reveal text-center lg:text-left py-2">
-                    <div class="inline-flex items-center gap-2 text-[11px] font-semibold tracking-widest uppercase text-emerald-700 bg-sage-50 border border-line px-2.5 py-1 rounded-full mb-3">Platform</div>
-                    <div class="font-display text-[38px] font-bold leading-none text-emerald-950"><span class="counter" data-target="6" data-suffix="">0</span></div>
-                    <p class="mt-1.5 text-sm text-muted">Integrated modules</p>
-                </div>
-                <div class="reveal text-center lg:text-left py-2 lg:border-l lg:border-line lg:pl-8">
-                    <div class="font-display text-[38px] font-bold leading-none text-emerald-950"><span class="counter" data-target="100" data-suffix="%">0</span></div>
-                    <p class="mt-1.5 text-sm text-muted">Audit-trail coverage</p>
-                    <p class="text-xs text-muted-2 mt-1">Every edit, login, status change</p>
-                </div>
-                <div class="reveal text-center lg:text-left py-2 lg:border-l lg:border-line lg:pl-8">
-                    <div class="font-display text-[38px] font-bold leading-none text-emerald-950"><span class="counter" data-target="24" data-suffix="/7">0</span></div>
-                    <p class="mt-1.5 text-sm text-muted">Follow-up scheduling</p>
-                    <p class="text-xs text-muted-2 mt-1">Automated PEP reminders</p>
-                </div>
-                <div class="reveal text-center lg:text-left py-2 lg:border-l lg:border-line lg:pl-8">
-                    <div class="font-display text-[38px] font-bold leading-none text-emerald-950"><span class="counter" data-target="0" data-suffix="">0</span></div>
-                    <p class="mt-1.5 text-sm text-muted">Patient data lost</p>
-                    <p class="text-xs text-muted-2 mt-1">Backed & verifiable</p>
+            <div class="glass glass--liquid r32 px-5 sm:px-8 py-7 sm:py-8">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                    <div class="reveal neu-inset px-4 py-6 sm:px-5 text-center lg:text-left">
+                        <div class="gold-chip mb-3">Platform</div>
+                        <div class="font-display text-[38px] font-bold leading-none gold-text"><span class="counter" data-target="6" data-suffix="">0</span></div>
+                        <p class="mt-2 text-sm text-emerald-900 font-medium">Integrated modules</p>
+                    </div>
+                    <div class="reveal neu-inset px-4 py-6 sm:px-5 text-center lg:text-left">
+                        <div class="font-display text-[38px] font-bold leading-none gold-text"><span class="counter" data-target="100" data-suffix="%">0</span></div>
+                        <p class="mt-2 text-sm text-emerald-900 font-medium">Audit-trail coverage</p>
+                        <p class="text-xs text-muted-2 mt-1">Every edit, login, status change</p>
+                    </div>
+                    <div class="reveal neu-inset px-4 py-6 sm:px-5 text-center lg:text-left">
+                        <div class="font-display text-[38px] font-bold leading-none gold-text"><span class="counter" data-target="24" data-suffix="/7">0</span></div>
+                        <p class="mt-2 text-sm text-emerald-900 font-medium">Follow-up scheduling</p>
+                        <p class="text-xs text-muted-2 mt-1">Automated PEP reminders</p>
+                    </div>
+                    <div class="reveal neu-inset px-4 py-6 sm:px-5 text-center lg:text-left">
+                        <div class="font-display text-[38px] font-bold leading-none gold-text"><span class="counter" data-target="0" data-suffix="">0</span></div>
+                        <p class="mt-2 text-sm text-emerald-900 font-medium">Patient data lost</p>
+                        <p class="text-xs text-muted-2 mt-1">Backed &amp; verifiable</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -396,23 +743,23 @@
     <!-- ============ PUBLIC PRE-REGISTRATION BENTO ============ -->
     <section class="relative z-10 mt-6">
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8">
-            <div class="bento grid lg:grid-cols-12 gap-0 overflow-hidden">
-                <div class="lg:col-span-7 p-8 sm:p-10">
-                    <p class="reveal text-[11px] font-semibold tracking-widest uppercase text-emerald-700">Public patient pre-registration — no account needed</p>
-                    <h2 class="reveal font-display text-3xl sm:text-[34px] font-bold tracking-tight text-emerald-950 leading-tight mt-3">
+            <div class="neu-glass grid lg:grid-cols-12 overflow-hidden">
+                <div class="lg:col-span-7 p-7 sm:p-10">
+                    <p class="reveal text-[11px] font-bold tracking-[0.16em] uppercase text-gold-700">Public patient pre-registration — no account needed</p>
+                    <h2 class="reveal font-display text-3xl sm:text-[34px] font-bold tracking-tight text-emerald-950 leading-tight mt-4">
                         Save time at the <span class="font-serif italic font-normal text-emerald-700">Animal Bite</span> Treatment Center.
                     </h2>
                     <p class="reveal mt-4 text-[15px] leading-relaxed text-muted max-w-[560px]">
                         Fill out basic patient and bite incident details before arrival. Staff verify the information, check for duplicates, and convert it into an official patient and case record — only after assessment.
                     </p>
 
-                    <div class="reveal mt-6 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 flex gap-3">
-                        <span class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <div class="reveal mt-6 r24 neu-inset p-4 flex gap-3">
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style="background:linear-gradient(145deg,#f6d98a,#c9a227); color:#4a3a08; box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 6px 14px -8px rgba(138,106,28,.8)">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                         </span>
                         <div>
-                            <p class="text-sm font-semibold text-amber-900">Emergency reminder</p>
-                            <p class="text-sm text-amber-800/80 leading-relaxed">Immediately wash the wound with soap and running water for at least 15 minutes, then proceed to the nearest health facility. Do not apply garlic, chemicals, or irritants.</p>
+                            <p class="text-sm font-bold text-emerald-950">Emergency reminder</p>
+                            <p class="text-sm text-muted leading-relaxed mt-0.5">Immediately wash the wound with soap and running water for at least 15 minutes, then proceed to the nearest health facility. Do not apply garlic, chemicals, or irritants.</p>
                         </div>
                     </div>
 
@@ -421,7 +768,7 @@
                             Start pre-registration
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
-                        <a href="{% url 'pre_registrations:public_status' %}" class="btn-ghost inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold">
+                        <a href="{% url 'pre_registrations:public_status' %}" class="neu-btn inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-emerald-900">
                             Check status
                         </a>
                     </div>
@@ -429,30 +776,30 @@
                     <p class="reveal mt-4 text-xs text-muted-2">Takes ~3 minutes · You’ll receive a reference code to track status</p>
                 </div>
 
-                <div class="lg:col-span-5 bg-sage-50 border-t lg:border-t-0 lg:border-l border-line p-8 sm:p-10 flex flex-col">
+                <div class="lg:col-span-5 p-7 sm:p-10 flex flex-col neu-inset m-3 lg:m-2 r24">
                     <div class="reveal">
-                        <p class="text-xs font-semibold tracking-widest uppercase text-emerald-700">Visit & contact</p>
-                        <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Animal Bite Treatment Center</h3>
-                        <p class="text-sm text-muted">Municipal Health Office</p>
+                        <p class="gold-chip">Visit &amp; contact</p>
+                        <h3 class="font-display text-lg font-semibold text-emerald-950 mt-3">Animal Bite Treatment Center</h3>
+                        <p class="text-sm text-muted mt-0.5">Municipal Health Office</p>
                     </div>
 
                     <div class="reveal mt-6 grid grid-cols-1 gap-3 text-sm">
-                        <div class="flex gap-3 p-3 rounded-xl bg-white border border-line">
-                            <span class="w-9 h-9 rounded-xl bg-sage-100 border border-line flex items-center justify-center text-emerald-700 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+                        <div class="flex gap-3 p-3 r18 neu-sm">
+                            <span class="well well-well"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
                             <div>
                                 <p class="font-semibold text-emerald-950">Office hours</p>
                                 <p class="text-muted">Mon – Fri, 8:00 AM – 5:00 PM</p>
                             </div>
                         </div>
-                        <div class="flex gap-3 p-3 rounded-xl bg-white border border-line">
-                            <span class="w-9 h-9 rounded-xl bg-sage-100 border border-line flex items-center justify-center text-emerald-700 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>
+                        <div class="flex gap-3 p-3 r18 neu-sm">
+                            <span class="well well-well"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>
                             <div>
                                 <p class="font-semibold text-emerald-950">Location</p>
                                 <p class="text-muted">Municipal Health Office / ABTC</p>
                             </div>
                         </div>
-                        <div class="flex gap-3 p-3 rounded-xl bg-white border border-line">
-                            <span class="w-9 h-9 rounded-xl bg-sage-100 border border-line flex items-center justify-center text-emerald-700 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></span>
+                        <div class="flex gap-3 p-3 r18 neu-sm">
+                            <span class="well well-well"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></span>
                             <div>
                                 <p class="font-semibold text-emerald-950">Contact</p>
                                 <p class="text-muted">Call or visit for urgent guidance</p>
@@ -460,12 +807,12 @@
                         </div>
                     </div>
 
-                    <div class="reveal mt-6 p-4 rounded-xl bg-emerald-800 text-emerald-50">
-                        <p class="text-xs font-semibold tracking-widest uppercase text-emerald-200">While you wait</p>
+                    <div class="reveal mt-6 p-4 rounded-2xl" style="background:linear-gradient(150deg,var(--emerald-800),var(--emerald-950)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 14px 28px -16px rgba(8,32,26,.7)">
+                        <p class="text-xs font-bold tracking-widest uppercase text-gold-300">While you wait</p>
                         <ul class="mt-3 space-y-2 text-sm text-emerald-50/90">
-                            <li class="flex gap-2"><span class="text-emerald-300">•</span> Keep the biting animal under observation when safe.</li>
-                            <li class="flex gap-2"><span class="text-emerald-300">•</span> Bring a valid ID and vaccination card if available.</li>
-                            <li class="flex gap-2"><span class="text-emerald-300">•</span> Return for all scheduled doses after assessment.</li>
+                            <li class="flex gap-2"><span class="text-gold-400">•</span> Keep the biting animal under observation when safe.</li>
+                            <li class="flex gap-2"><span class="text-gold-400">•</span> Bring a valid ID and vaccination card if available.</li>
+                            <li class="flex gap-2"><span class="text-gold-400">•</span> Return for all scheduled doses after assessment.</li>
                         </ul>
                     </div>
                 </div>
@@ -478,8 +825,8 @@
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8">
             <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
                 <div class="max-w-2xl">
-                    <p class="reveal text-[11px] font-semibold tracking-widest uppercase text-emerald-700">Everything in one place</p>
-                    <h2 class="reveal font-display text-3xl sm:text-[42px] font-bold tracking-tight leading-[0.95] text-emerald-950 mt-3">
+                    <p class="reveal gold-chip">Everything in one place</p>
+                    <h2 class="reveal font-display text-3xl sm:text-[42px] font-bold tracking-tight leading-[0.98] text-emerald-950 mt-4">
                         Built for the full<br><span class="font-serif italic font-normal text-emerald-700">bite-treatment</span> workflow.
                     </h2>
                 </div>
@@ -487,49 +834,49 @@
             </div>
 
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                <article class="feature-card reveal">
-                    <div class="feature-icon mb-5">
+                <article class="feature-card neu-glass reveal p-7">
+                    <div class="well mb-5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
                     <h3 class="font-display text-[17px] font-semibold text-emerald-950">Patient Management</h3>
                     <p class="mt-2 text-sm leading-relaxed text-muted">Centralized records with full history, demographics, and treatment timelines — searchable in seconds.</p>
-                    <span class="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">Learn more <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></span>
+                    <span class="mt-4 inline-flex items-center gap-1 text-xs font-bold text-gold-700">Learn more <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></span>
                 </article>
 
-                <article class="feature-card reveal">
-                    <div class="feature-icon mb-5">
+                <article class="feature-card neu-glass reveal p-7">
+                    <div class="well mb-5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </div>
                     <h3 class="font-display text-[17px] font-semibold text-emerald-950">Bite Case Tracking</h3>
                     <p class="mt-2 text-sm leading-relaxed text-muted">Log exposure details, animal type, and wound category. Track each case from intake through resolution.</p>
                 </article>
 
-                <article class="feature-card reveal">
-                    <div class="feature-icon mb-5">
+                <article class="feature-card neu-glass reveal p-7">
+                    <div class="well mb-5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     </div>
                     <h3 class="font-display text-[17px] font-semibold text-emerald-950">Vaccination Scheduling</h3>
                     <p class="mt-2 text-sm leading-relaxed text-muted">Automated PEP dose calendar with follow-up reminders so no patient misses a critical booster.</p>
                 </article>
 
-                <article class="feature-card reveal">
-                    <div class="feature-icon mb-5">
+                <article class="feature-card neu-glass reveal p-7">
+                    <div class="well mb-5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                     </div>
                     <h3 class="font-display text-[17px] font-semibold text-emerald-950">Vaccine Inventory</h3>
                     <p class="mt-2 text-sm leading-relaxed text-muted">Real-time stock levels, batch tracking, and expiry monitoring to prevent shortages before they happen.</p>
                 </article>
 
-                <article class="feature-card reveal">
-                    <div class="feature-icon mb-5">
+                <article class="feature-card neu-glass reveal p-7">
+                    <div class="well mb-5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     </div>
-                    <h3 class="font-display text-[17px] font-semibold text-emerald-950">Reports & Analytics</h3>
+                    <h3 class="font-display text-[17px] font-semibold text-emerald-950">Reports &amp; Analytics</h3>
                     <p class="mt-2 text-sm leading-relaxed text-muted">Generate case, vaccination, and inventory reports instantly for compliance and decisions.</p>
                 </article>
 
-                <article class="feature-card reveal">
-                    <div class="feature-icon mb-5">
+                <article class="feature-card neu-glass reveal p-7">
+                    <div class="well mb-5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                     </div>
                     <h3 class="font-display text-[17px] font-semibold text-emerald-950">Audit Trail</h3>
@@ -540,43 +887,44 @@
     </section>
 
     <!-- ============ WORKFLOW ============ -->
-    <section id="workflow" class="relative z-10 py-20 sm:py-28 border-y border-line bg-white/60 backdrop-blur">
+    <section id="workflow" class="relative z-10 py-20 sm:py-28">
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8">
-            <div class="max-w-2xl mb-14">
-                <p class="reveal text-[11px] font-semibold tracking-widest uppercase text-emerald-700">How it works</p>
-                <h2 class="reveal font-display text-3xl sm:text-[40px] font-bold tracking-tight leading-[0.95] text-emerald-950 mt-3">
-                    From intake to immunity — <span class="font-serif italic font-normal text-emerald-700">three quiet steps.</span>
-                </h2>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-8 lg:gap-10 relative">
-                <!-- connecting line desktop -->
-                <div class="hidden md:block absolute top-[52px] left-[8%] right-[8%] h-px bg-gradient-to-r from-line via-emerald-700/20 to-line"></div>
-
-                <div class="reveal relative bg-white rounded-2xl border border-line p-7">
-                    <div class="step-num">01<small>01</small></div>
-                    <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Register the patient</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-muted">Capture patient details and bite exposure — animal, site, and category — in a single guided form. Online pre-registration is verified on arrival.</p>
-                    <div class="mt-4 inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-sage-50 border border-line text-emerald-700">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> ~2 min per intake
-                    </div>
+            <div class="glass glass--liquid r32 px-6 sm:px-10 lg:px-12 py-12 sm:py-16">
+                <div class="max-w-2xl">
+                    <p class="reveal gold-chip">How it works</p>
+                    <h2 class="reveal font-display text-3xl sm:text-[40px] font-bold tracking-tight leading-[0.98] text-emerald-950 mt-4">
+                        From intake to immunity — <span class="font-serif italic font-normal text-emerald-700">three quiet steps.</span>
+                    </h2>
                 </div>
 
-                <div class="reveal relative bg-white rounded-2xl border border-line p-7">
-                    <div class="step-num">02<small>02</small></div>
-                    <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Schedule & vaccinate</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-muted">The system builds the PEP calendar, deducts stock automatically, and queues follow-up reminders. Nothing falls through.</p>
-                    <div class="mt-4 inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-sage-50 border border-line text-emerald-700">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Automated
-                    </div>
-                </div>
+                <div class="grid md:grid-cols-3 gap-6 lg:gap-8 relative mt-12">
+                    <div class="hidden md:block absolute top-[58px] left-[8%] right-[8%] h-px" style="background:linear-gradient(90deg,transparent,rgba(201,162,39,.6),rgba(46,153,117,.5),rgba(201,162,39,.6),transparent)"></div>
 
-                <div class="reveal relative bg-white rounded-2xl border border-line p-7">
-                    <div class="step-num">03<small>03</small></div>
-                    <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Report & review</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-muted">Close the case, export compliance reports, and review the complete audit trail — all in a few clicks.</p>
-                    <div class="mt-4 inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-sage-50 border border-line text-emerald-700">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> One-click exports
+                    <div class="reveal neu-sm r26 p-7">
+                        <div class="step-num">01<small>01</small></div>
+                        <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Register the patient</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-muted">Capture patient details and bite exposure — animal, site, and category — in a single guided form. Online pre-registration is verified on arrival.</p>
+                        <div class="mt-4 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 round neu-inset text-emerald-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> ~2 min per intake
+                        </div>
+                    </div>
+
+                    <div class="reveal neu-sm r26 p-7">
+                        <div class="step-num">02<small>02</small></div>
+                        <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Schedule &amp; vaccinate</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-muted">The system builds the PEP calendar, deducts stock automatically, and queues follow-up reminders. Nothing falls through.</p>
+                        <div class="mt-4 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 round neu-inset text-emerald-800">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Automated
+                        </div>
+                    </div>
+
+                    <div class="reveal neu-sm r26 p-7">
+                        <div class="step-num">03<small>03</small></div>
+                        <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Report &amp; review</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-muted">Close the case, export compliance reports, and review the complete audit trail — all in a few clicks.</p>
+                        <div class="mt-4 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 round neu-inset text-emerald-800">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> One-click exports
+                        </div>
                     </div>
                 </div>
             </div>
@@ -587,32 +935,32 @@
     <section id="security" class="relative z-10 py-20 sm:py-28">
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 lg:gap-14 items-center">
             <div class="lg:col-span-6">
-                <p class="reveal text-[11px] font-semibold tracking-widest uppercase text-emerald-700">Secure by design — trusted by the clinic</p>
-                <h2 class="reveal font-display text-3xl sm:text-[42px] font-bold tracking-tight leading-[0.95] text-emerald-950 mt-3">
+                <p class="reveal gold-chip">Secure by design — trusted by the clinic</p>
+                <h2 class="reveal font-display text-3xl sm:text-[42px] font-bold tracking-tight leading-[0.98] text-emerald-950 mt-4">
                     Patient data,<br><span class="font-serif italic font-normal text-emerald-700">treated with the care</span> it deserves.
                 </h2>
                 <p class="reveal mt-5 text-[16px] leading-relaxed text-muted">Role-based access, encrypted sessions, and an immutable audit log mean every record is protected — and every change is accountable. Built for real-world clinic constraints.</p>
 
-                <ul class="mt-8 space-y-4">
-                    <li class="reveal flex gap-3 p-4 rounded-2xl bg-white border border-line">
-                        <span class="w-9 h-9 rounded-xl bg-emerald-800 text-white flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg></span>
+                <ul class="mt-8 space-y-3.5">
+                    <li class="reveal flex gap-3.5 p-4 r24 neu-sm">
+                        <span class="well well-well"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg></span>
                         <div>
-                            <p class="text-sm font-semibold text-emerald-950">Role-based permissions</p>
-                            <p class="text-sm text-muted leading-relaxed">Admins, nurses, and encoders see only what they should — enforced server-side.</p>
+                            <p class="text-sm font-bold text-emerald-950">Role-based permissions</p>
+                            <p class="text-sm text-muted leading-relaxed mt-0.5">Admins, nurses, and encoders see only what they should — enforced server-side.</p>
                         </div>
                     </li>
-                    <li class="reveal flex gap-3 p-4 rounded-2xl bg-white border border-line">
-                        <span class="w-9 h-9 rounded-xl bg-sage-100 border border-line text-emerald-800 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></span>
+                    <li class="reveal flex gap-3.5 p-4 r24 neu-sm">
+                        <span class="well well-well"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></span>
                         <div>
-                            <p class="text-sm font-semibold text-emerald-950">Tamper-evident audit trail</p>
-                            <p class="text-sm text-muted leading-relaxed">Every record change is signed and time-stamped — exportable for compliance.</p>
+                            <p class="text-sm font-bold text-emerald-950">Tamper-evident audit trail</p>
+                            <p class="text-sm text-muted leading-relaxed mt-0.5">Every record change is signed and time-stamped — exportable for compliance.</p>
                         </div>
                     </li>
-                    <li class="reveal flex gap-3 p-4 rounded-2xl bg-white border border-line">
-                        <span class="w-9 h-9 rounded-xl bg-sage-100 border border-line text-emerald-800 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 5a5 5 0 11-10 0 5 5 0 0110 0z"/></svg></span>
+                    <li class="reveal flex gap-3.5 p-4 r24 neu-sm">
+                        <span class="well well-well"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 5a5 5 0 11-10 0 5 5 0 0110 0z"/></svg></span>
                         <div>
-                            <p class="text-sm font-semibold text-emerald-950">CSRF & session hardening</p>
-                            <p class="text-sm text-muted leading-relaxed">Form protection, secure cookies, and idle timeouts by default.</p>
+                            <p class="text-sm font-bold text-emerald-950">CSRF &amp; session hardening</p>
+                            <p class="text-sm text-muted leading-relaxed mt-0.5">Form protection, secure cookies, and idle timeouts by default.</p>
                         </div>
                     </li>
                 </ul>
@@ -620,42 +968,42 @@
 
             <div class="lg:col-span-6 relative">
                 <div id="security-visual" class="reveal relative aspect-square max-w-[520px] mx-auto">
-                    <!-- soft backdrop blob -->
-                    <div class="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-sage-100 to-white border border-line shadow-[0_20px_60px_-28px_rgba(15,46,38,0.18)] overflow-hidden">
+                    <!-- glass orb backdrop -->
+                    <div class="absolute inset-0 r44 glass overflow-hidden">
                         <div class="absolute inset-0 dot-grid opacity-40"></div>
-                        <div class="absolute -top-10 -right-10 w-72 h-72 rounded-full blur-3xl opacity-30" style="background: radial-gradient(circle, var(--emerald-400), transparent 70%)"></div>
-                        <div class="absolute -bottom-10 -left-10 w-80 h-80 rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle, var(--sage-300), transparent 70%)"></div>
+                        <div class="absolute -top-10 -right-10 w-72 h-72 rounded-full blur-3xl opacity-40" style="background: radial-gradient(circle, #ddbe5c, transparent 70%)"></div>
+                        <div class="absolute -bottom-10 -left-10 w-80 h-80 rounded-full blur-3xl opacity-35" style="background: radial-gradient(circle, #93d2b7, transparent 70%)"></div>
                     </div>
 
                     <!-- concentric rings -->
                     <div class="absolute inset-0 flex items-center justify-center">
                         <div class="absolute w-[84%] h-[84%] rounded-full border border-emerald-800/10"></div>
                         <div class="absolute w-[66%] h-[66%] rounded-full border border-emerald-800/10"></div>
-                        <div class="absolute w-[48%] h-[48%] rounded-full border border-dashed border-emerald-800/15 animate-[spin_28s_linear_infinite]"></div>
-                        <!-- orbiting dots -->
+                        <div class="absolute w-[48%] h-[48%] rounded-full border border-dashed border-gold-500/25 animate-[spin_28s_linear_infinite]"></div>
                         <div id="orbit" class="absolute w-[66%] h-[66%] animate-[spin_18s_linear_infinite]">
-                            <span class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-700 shadow-lg shadow-emerald-700/20 border-2 border-white"></span>
-                            <span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-sage-400 border-2 border-white"></span>
+                            <span class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-700 shadow-lg shadow-emerald-700/25 border-2 border-white"></span>
+                            <span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-gold-400 border-2 border-white"></span>
                         </div>
                     </div>
 
                     <!-- central shield -->
                     <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="relative w-36 h-36 rounded-[1.6rem] bg-emerald-800 flex items-center justify-center shadow-[0_20px_40px_-12px_rgba(15,46,38,0.45)]">
-                            <div class="absolute inset-[1px] rounded-[1.6rem] bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
-                            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                            <span class="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-white border border-line text-emerald-800 flex items-center justify-center shadow-sm">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg>
+                        <div class="relative w-36 h-36 rounded-[1.75rem] flex items-center justify-center"
+                             style="background:linear-gradient(150deg,var(--emerald-700),var(--emerald-950)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 24px 44px -14px rgba(8,32,26,.55)">
+                            <div class="absolute inset-[1px] rounded-[1.7rem] pointer-events-none" style="background:linear-gradient(150deg,rgba(255,255,255,.16),transparent 60%)"></div>
+                            <svg class="w-16 h-16 text-gold-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <span class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center neu-sm" style="color:var(--gold-700)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" d="M5 13l4 4L19 7"/></svg>
                             </span>
                         </div>
                     </div>
 
-                    <!-- small badges outside -->
-                    <div class="absolute top-6 right-6 hidden sm:flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-line shadow-sm text-xs font-medium text-emerald-800">
-                        <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span> Live protection
+                    <!-- floating glass badges -->
+                    <div class="absolute top-6 right-4 sm:right-6 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full glass-chip text-xs font-semibold text-emerald-900">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live protection
                     </div>
-                    <div class="absolute bottom-6 left-6 hidden sm:flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-line shadow-sm text-xs font-medium text-muted">
-                        <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> 256-bit sessions
+                    <div class="absolute bottom-6 left-4 sm:left-6 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full glass-chip text-xs font-semibold text-emerald-900">
+                        <svg class="w-3.5 h-3.5 text-gold-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> 256-bit sessions
                     </div>
                 </div>
             </div>
@@ -665,80 +1013,85 @@
     <!-- ============ CTA ============ -->
     <section class="relative z-10 pb-10">
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8">
-            <div id="cta-card" class="reveal relative overflow-hidden rounded-[2rem] bg-emerald-950 p-8 sm:p-12 lg:p-16">
-                <!-- decorative -->
+            <div id="cta-card" class="reveal relative overflow-hidden rounded-[34px] p-8 sm:p-12 lg:p-16"
+                 style="background:linear-gradient(155deg,var(--emerald-900) 0%, var(--emerald-950) 55%, #061a15 100%); box-shadow: 0 44px 90px -40px rgba(8,32,26,.85), inset 0 1px 0 rgba(255,255,255,.14)">
                 <div class="absolute inset-0 pointer-events-none">
                     <div class="absolute inset-0 opacity-[0.07]" style="background-image: radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 20px 20px;"></div>
-                    <div class="absolute -top-24 -right-24 w-[560px] h-[560px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 30% 30%, #5a9a7a, transparent 65%)"></div>
-                    <div class="absolute -bottom-32 -left-20 w-[520px] h-[520px] rounded-full blur-3xl opacity-15" style="background: radial-gradient(circle at 50% 50%, #b7c9b5, transparent 65%)"></div>
+                    <div class="absolute -top-24 -right-24 w-[560px] h-[560px] rounded-full blur-3xl opacity-25" style="background: radial-gradient(circle at 30% 30%, #c9a227, transparent 65%)"></div>
+                    <div class="absolute -bottom-32 -left-20 w-[520px] h-[520px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 50% 50%, #2e9975, transparent 65%)"></div>
+                    <div class="absolute inset-x-8 top-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(221,190,92,.85),transparent)"></div>
                 </div>
 
                 <div class="relative grid lg:grid-cols-12 gap-8 items-center">
                     <div class="lg:col-span-7">
-                        <p class="inline-flex items-center gap-2 text-[11px] font-semibold tracking-widest uppercase text-emerald-200/80 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
+                        <p class="inline-flex gold-chip-dark items-center gap-2">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ready when you are
                         </p>
-                        <h2 class="font-display text-3xl sm:text-[44px] font-bold tracking-tight leading-[0.95] text-white mt-4">
-                            Ready to modernize<br><span class="font-serif italic font-normal text-emerald-200">your bite center?</span>
+                        <h2 class="font-display text-3xl sm:text-[44px] font-bold tracking-tight leading-[0.98] text-white mt-5">
+                            Ready to modernize<br><span class="font-serif italic font-normal gold-text-light">your bite center?</span>
                         </h2>
-                        <p class="mt-4 text-[15px] leading-relaxed text-emerald-100/75 max-w-xl">Sign in to the dashboard and start managing cases, vaccinations, and inventory — calm, audited, and compliant from day one.</p>
+                        <p class="mt-4 text-[15px] leading-relaxed text-emerald-100/80 max-w-xl">Sign in to the dashboard and start managing cases, vaccinations, and inventory — calm, audited, and compliant from day one.</p>
                     </div>
                     <div class="lg:col-span-5 flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3 lg:justify-end">
-                        <a href="{% url 'accounts:login' %}" class="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-white text-emerald-950 font-semibold text-sm shadow-lg shadow-black/10 hover:bg-sage-50 transition-colors">
+                        <a href="{% url 'accounts:login' %}" class="btn-gold inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full font-semibold text-sm">
                             Sign in to dashboard
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
-                        <a href="{% url 'pre_registrations:public_create' %}" class="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-emerald-800 text-white font-semibold text-sm border border-white/10 hover:bg-emerald-700 transition-colors">
+                        <a href="{% url 'pre_registrations:public_create' %}" class="glass-chip inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full font-bold text-sm text-emerald-950">
                             Pre-register as patient
                         </a>
                     </div>
                 </div>
 
-                <div class="relative mt-10 pt-6 border-t border-white/10 flex flex-wrap gap-6 text-xs text-emerald-100/60">
-                    <span class="inline-flex items-center gap-2"><svg class="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> No patient data lost</span>
-                    <span class="inline-flex items-center gap-2"><svg class="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 24/7 follow-up scheduling</span>
-                    <span class="inline-flex items-center gap-2"><svg class="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944"/></svg> Audit-trail coverage</span>
+                <div class="relative mt-10 pt-6 flex flex-wrap gap-6 text-xs text-emerald-100/70" style="border-top:1px solid rgba(255,255,255,.12)">
+                    <span class="inline-flex items-center gap-2"><svg class="w-3.5 h-3.5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> No patient data lost</span>
+                    <span class="inline-flex items-center gap-2"><svg class="w-3.5 h-3.5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 24/7 follow-up scheduling</span>
+                    <span class="inline-flex items-center gap-2"><svg class="w-3.5 h-3.5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944"/></svg> Audit-trail coverage</span>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- ============ FOOTER ============ -->
-    <footer class="relative z-10 border-t border-line bg-white/40 backdrop-blur">
-        <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-10">
-            <div class="flex flex-col lg:flex-row gap-8 lg:items-center lg:justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Municipality of Dumingag seal" class="w-9 h-9 rounded-full object-cover bg-white ring-1 ring-black/10">
-                    <div>
-                        <p class="font-display font-semibold text-emerald-950 text-sm leading-tight">ABTC Management System</p>
-                        <p class="text-xs text-muted">Animal Bite & Rabies Vaccination Management · MHO</p>
+    <footer class="relative z-10 mt-10 px-5 sm:px-6 lg:px-8 pb-8">
+        <div class="max-w-[1280px] mx-auto">
+            <div class="glass r28 px-6 sm:px-8 py-8">
+                <div class="flex flex-col lg:flex-row gap-6 lg:items-center lg:justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="neu-sm round w-10 h-10 flex items-center justify-center overflow-hidden shrink-0">
+                            <img src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Municipality of Dumingag seal" class="w-full h-full object-cover">
+                        </span>
+                        <div>
+                            <p class="font-display font-semibold text-emerald-950 text-sm leading-tight">ABTC Management System</p>
+                            <p class="text-xs text-muted mt-0.5">Animal Bite &amp; Rabies Vaccination Management · MHO</p>
+                        </div>
                     </div>
+                    <div class="flex flex-wrap gap-6 text-sm text-emerald-900 font-medium">
+                        <a href="#features" class="hover:text-gold-700">Features</a>
+                        <a href="#workflow" class="hover:text-gold-700">Workflow</a>
+                        <a href="#security" class="hover:text-gold-700">Security</a>
+                        <a href="{% url 'pre_registrations:public_create' %}" class="hover:text-gold-700">Pre-register</a>
+                        <a href="{% url 'accounts:login' %}" class="hover:text-gold-700">Sign in</a>
+                    </div>
+                    <p class="text-xs text-muted-2">© <span id="year"></span> Municipal Health Office · Animal Bite Treatment Center · Built for care, audited for trust.</p>
                 </div>
-                <div class="flex flex-wrap gap-6 text-sm text-muted">
-                    <a href="#features" class="hover:text-emerald-800">Features</a>
-                    <a href="#workflow" class="hover:text-emerald-800">Workflow</a>
-                    <a href="#security" class="hover:text-emerald-800">Security</a>
-                    <a href="{% url 'pre_registrations:public_create' %}" class="hover:text-emerald-800">Pre-register</a>
-                    <a href="{% url 'accounts:login' %}" class="hover:text-emerald-800">Sign in</a>
-                </div>
-                <p class="text-xs text-muted-2">© <span id="year"></span> Municipal Health Office · Animal Bite Treatment Center · Built for care, audited for trust.</p>
+                <div class="gold-hairline mt-7"></div>
             </div>
         </div>
     </footer>
 
-    <!-- ============ GSAP + Lenis ============ -->
+    <!-- ============ GSAP + LENIS ============ -->
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
     <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
 
-    <!-- ============ THREE.JS — GLOBAL SAGE/EMERALD SCENE ============ -->
+    <!-- ============ THREE.JS — CREAM / EMERALD / GOLD SCENE ============ -->
     <script type="module">
         import * as THREE from 'three';
 
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const bgCanvas = document.getElementById('bg-canvas');
 
-        // ---------- Global subtle background scene (sage mist) ----------
         (() => {
             if (!bgCanvas) return;
             const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: true, alpha: true });
@@ -746,42 +1099,40 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
 
             const scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0xf2f5f1, 12, 30);
+            scene.fog = new THREE.Fog(0xfdfaf4, 12, 30);
 
             const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 100);
             camera.position.set(0, 0.6, 10);
 
-            // Lights — toned down
-            scene.add(new THREE.AmbientLight(0xffffff, 0.88));
-            const dir = new THREE.DirectionalLight(0xd0ddd0, 0.6);
+            scene.add(new THREE.AmbientLight(0xfffaf0, 0.9));
+            const dir = new THREE.DirectionalLight(0xf5ebc9, 0.65);
             dir.position.set(4, 6, 5);
             scene.add(dir);
-            const point = new THREE.PointLight(0x1b4d3e, 0.35, 24);
+            const point = new THREE.PointLight(0x1f7b5e, 0.4, 24);
             point.position.set(3, 2, 4);
             scene.add(point);
 
-            // Organic blobs — pushed to the right / behind, lower opacity to avoid washing text
+            // Organic liquid blobs — cream / mint / gold
             const blobs = [];
             const blobData = [
-                { pos: [5.6, 1.0, -6], scale: 1.9, color: 0xd0ddd0, roughness: 0.9, opacity: 0.22, wireframe: false },
-                { pos: [4.0, -1.4, -8], scale: 2.4, color: 0xe6ece5, roughness: 0.95, opacity: 0.18, wireframe: false },
-                { pos: [2.2, 2.8, -10], scale: 1.2, color: 0xb7c9b5, roughness: 0.85, opacity: 0.14, wireframe: false },
+                { pos: [5.6, 1.0, -6], scale: 1.9, color: 0xf5ebc9, roughness: 0.55, opacity: 0.26, metalness: 0.12 },
+                { pos: [4.0, -1.4, -8], scale: 2.4, color: 0xe4f3ec, roughness: 0.5, opacity: 0.24, metalness: 0.08 },
+                { pos: [2.2, 2.8, -10], scale: 1.2, color: 0xebd79b, roughness: 0.45, opacity: 0.18, metalness: 0.2 },
             ];
             blobData.forEach(d => {
                 const g = new THREE.IcosahedronGeometry(d.scale, 1);
-                // perturb vertices for organic feel
                 const posAttr = g.attributes.position;
                 for (let i = 0; i < posAttr.count; i++) {
                     const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
                     const n = v.length();
-                    v.normalize().multiplyScalar(n * (0.86 + Math.random()*0.28));
+                    v.normalize().multiplyScalar(n * (0.86 + Math.random() * 0.28));
                     posAttr.setXYZ(i, v.x, v.y, v.z);
                 }
                 posAttr.needsUpdate = true;
                 const m = new THREE.MeshStandardMaterial({
                     color: d.color,
                     roughness: d.roughness,
-                    metalness: 0.02,
+                    metalness: d.metalness,
                     transparent: true,
                     opacity: d.opacity,
                     flatShading: true
@@ -791,11 +1142,10 @@
                 scene.add(mesh);
                 blobs.push(mesh);
 
-                // wireframe overlay for first blob — darker emerald, very subtle
-                if (d.color === 0xd0ddd0) {
+                if (d.color === 0xf5ebc9) {
                     const wf = new THREE.Mesh(
-                        new THREE.IcosahedronGeometry(d.scale*1.06, 1),
-                        new THREE.MeshBasicMaterial({ color: 0x1b4d3e, wireframe: true, transparent: true, opacity: 0.05 })
+                        new THREE.IcosahedronGeometry(d.scale * 1.06, 1),
+                        new THREE.MeshBasicMaterial({ color: 0xc9a227, wireframe: true, transparent: true, opacity: 0.07 })
                     );
                     wf.position.copy(mesh.position);
                     scene.add(wf);
@@ -803,82 +1153,85 @@
                 }
             });
 
-            // Floating veil rings — even more subtle, offset to right
+            // Floating veil rings
             const ringGroup = new THREE.Group();
-            const ringCols = [0x1b4d3e, 0x8aa589, 0xd0ddd0];
-            for (let i=0;i<3;i++){
-                const geo = new THREE.TorusGeometry(3.1 + i*1.35, 0.016, 16, 160);
-                const mat = new THREE.MeshBasicMaterial({ color: ringCols[i], transparent: true, opacity: 0.05 - i*0.015 });
+            const ringCols = [0xc9a227, 0x1f7b5e, 0xddbe5c];
+            for (let i = 0; i < 3; i++) {
+                const geo = new THREE.TorusGeometry(3.1 + i * 1.35, 0.018, 16, 160);
+                const mat = new THREE.MeshBasicMaterial({ color: ringCols[i], transparent: true, opacity: 0.07 - i * 0.018 });
                 const t = new THREE.Mesh(geo, mat);
-                t.rotation.x = Math.PI/2 + i*0.38;
-                t.rotation.y = i*0.52;
-                t.position.set(2.0, -0.2, -2 - i*0.8);
+                t.rotation.x = Math.PI / 2 + i * 0.38;
+                t.rotation.y = i * 0.52;
+                t.position.set(2.0, -0.2, -2 - i * 0.8);
                 ringGroup.add(t);
             }
             scene.add(ringGroup);
 
-            // Particles — sage / cream / muted emerald
+            // Particles
             const pCount = 900;
-            const positions = new Float32Array(pCount*3);
-            const colors = new Float32Array(pCount*3);
-            const cPalette = [new THREE.Color(0x143d33), new THREE.Color(0x2d6a4f), new THREE.Color(0xb7c9b5), new THREE.Color(0xeef4ee), new THREE.Color(0xffffff)];
-            for(let i=0;i<pCount;i++){
-                const i3=i*3;
-                const r = 7 + Math.random()*22;
-                const theta = Math.random()*Math.PI*2;
-                const phi = Math.acos(2*Math.random()-1);
-                positions[i3] = r*Math.sin(phi)*Math.cos(theta);
-                positions[i3+1] = r*Math.sin(phi)*Math.sin(theta)*0.7;
-                positions[i3+2] = r*Math.cos(phi) - 4;
-                const c = cPalette[Math.floor(Math.random()*cPalette.length)];
-                colors[i3]=c.r; colors[i3+1]=c.g; colors[i3+2]=c.b;
+            const positions = new Float32Array(pCount * 3);
+            const colors = new Float32Array(pCount * 3);
+            const cPalette = [
+                new THREE.Color(0x124a3a), new THREE.Color(0x1f7b5e),
+                new THREE.Color(0x93d2b7), new THREE.Color(0xf5ebc9),
+                new THREE.Color(0xc9a227), new THREE.Color(0xffffff)
+            ];
+            for (let i = 0; i < pCount; i++) {
+                const i3 = i * 3;
+                const r = 7 + Math.random() * 22;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+                positions[i3 + 1] = r * Math.sin(phi) * 0.7;
+                positions[i3 + 2] = r * Math.cos(phi) - 4;
+                const c = cPalette[Math.floor(Math.random() * cPalette.length)];
+                colors[i3] = c.r; colors[i3 + 1] = c.g; colors[i3 + 2] = c.b;
             }
             const pGeo = new THREE.BufferGeometry();
             pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             pGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             const pMat = new THREE.PointsMaterial({
-                size: 0.045, vertexColors: true, transparent: true, opacity: 0.28,
+                size: 0.05, vertexColors: true, transparent: true, opacity: 0.3,
                 blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
             });
             const particles = new THREE.Points(pGeo, pMat);
             scene.add(particles);
 
-            // Mouse
-            const mouse = { x:0, y:0, tx:0, ty:0 };
-            window.addEventListener('pointermove', e=>{
-                mouse.tx = (e.clientX/window.innerWidth -0.5)*2;
-                mouse.ty = (e.clientY/window.innerHeight -0.5)*2;
+            const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+            window.addEventListener('pointermove', e => {
+                mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+                mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
             });
-            let scrollY=0;
-            window.addEventListener('scroll', ()=>{ scrollY = window.scrollY; }, {passive:true});
+            let scrollY = 0;
+            window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
 
             const clock = new THREE.Clock();
-            function animate(){
+            function animate() {
                 const t = clock.getElapsedTime();
-                mouse.x += (mouse.tx - mouse.x)*0.04;
-                mouse.y += (mouse.ty - mouse.y)*0.04;
+                mouse.x += (mouse.tx - mouse.x) * 0.04;
+                mouse.y += (mouse.ty - mouse.y) * 0.04;
 
-                if(!reduceMotion){
-                    blobs.forEach((b,i)=>{
-                        b.rotation.y = t*0.08 + i*0.6;
-                        b.rotation.x = t*0.05 + i*0.3;
-                        b.position.y += Math.sin(t*0.4 + i)*0.002;
+                if (!reduceMotion) {
+                    blobs.forEach((b, i) => {
+                        b.rotation.y = t * 0.08 + i * 0.6;
+                        b.rotation.x = t * 0.05 + i * 0.3;
+                        b.position.y += Math.sin(t * 0.4 + i) * 0.002;
                     });
-                    ringGroup.rotation.y = t*0.06;
-                    ringGroup.rotation.x = t*0.02;
-                    particles.rotation.y = t*0.012;
-                    particles.rotation.x = Math.sin(t*0.06)*0.04;
+                    ringGroup.rotation.y = t * 0.06;
+                    ringGroup.rotation.x = t * 0.02;
+                    particles.rotation.y = t * 0.012;
+                    particles.rotation.x = Math.sin(t * 0.06) * 0.04;
                 }
-                camera.position.x += (mouse.x*0.9 - camera.position.x)*0.05;
-                camera.position.y += (-mouse.y*0.6 - camera.position.y + 0.6)*0.05;
-                camera.position.z = 10 + Math.min(scrollY/window.innerHeight, 1)*0.8;
-                camera.lookAt(0,0,-2);
-                renderer.render(scene,camera);
+                camera.position.x += (mouse.x * 0.9 - camera.position.x) * 0.05;
+                camera.position.y += (-mouse.y * 0.6 - camera.position.y + 0.6) * 0.05;
+                camera.position.z = 10 + Math.min(scrollY / window.innerHeight, 1) * 0.8;
+                camera.lookAt(0, 0, -2);
+                renderer.render(scene, camera);
                 requestAnimationFrame(animate);
             }
             animate();
-            window.addEventListener('resize', ()=>{
-                camera.aspect = window.innerWidth/window.innerHeight;
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
@@ -891,6 +1244,15 @@
 
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         gsap.registerPlugin(ScrollTrigger);
+
+        // ---- Liquid glass sheen: track pointer across every glass surface ----
+        document.addEventListener('pointermove', e => {
+            const el = e.target.closest && e.target.closest('.glass, .feature-card');
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            el.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+            el.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+        }, { passive: true });
 
         // Lenis smooth scroll
         let lenis;
@@ -905,75 +1267,74 @@
             gsap.ticker.add((time) => { lenis.raf(time * 1000); });
             gsap.ticker.lagSmoothing(0);
 
-            document.querySelectorAll('a[href^="#"]').forEach(a=>{
-                a.addEventListener('click', e=>{
-                    const id=a.getAttribute('href');
-                    if(id.length>1){
-                        const target=document.querySelector(id);
-                        if(target){ e.preventDefault(); lenis.scrollTo(target, { offset: -76 }); }
+            document.querySelectorAll('a[href^="#"]').forEach(a => {
+                a.addEventListener('click', e => {
+                    const id = a.getAttribute('href');
+                    if (id.length > 1) {
+                        const target = document.querySelector(id);
+                        if (target) { e.preventDefault(); lenis.scrollTo(target, { offset: -88 }); }
                     }
                 });
             });
         }
 
         // Mobile menu
-        const menuBtn=document.getElementById('mobile-menu-btn');
-        const sheet=document.getElementById('mobile-sheet');
-        if(menuBtn && sheet){
-            menuBtn.addEventListener('click', ()=>{
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const sheet = document.getElementById('mobile-sheet');
+        if (menuBtn && sheet) {
+            menuBtn.addEventListener('click', () => {
                 sheet.classList.toggle('hidden');
-                const open=!sheet.classList.contains('hidden');
+                const open = !sheet.classList.contains('hidden');
                 menuBtn.innerHTML = open
                     ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>'
                     : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>';
             });
-            sheet.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=> sheet.classList.add('hidden')));
+            sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => sheet.classList.add('hidden')));
         }
 
-        // Navbar glass
-        const navbar=document.getElementById('navbar');
+        // Navbar → floating glass pill after scroll
+        const navPill = document.getElementById('nav-pill');
         ScrollTrigger.create({
-            start: 'top -60',
+            start: 'top -50',
             end: 99999,
-            onUpdate: self=>{
-                if(self.progress>0) navbar.classList.add('nav-glass');
-                else navbar.classList.remove('nav-glass');
+            onUpdate: self => {
+                if (self.progress > 0) navPill.classList.add('nav-glass');
+                else navPill.classList.remove('nav-glass');
             }
         });
 
         // Magnetic buttons
-        document.querySelectorAll('.magnetic').forEach(btn=>{
-            btn.addEventListener('pointermove', e=>{
-                const r=btn.getBoundingClientRect();
-                const x=(e.clientX - r.left - r.width/2)*0.18;
-                const y=(e.clientY - r.top - r.height/2)*0.28;
-                gsap.to(btn, { x, y, duration:0.4, ease:'power2.out' });
+        document.querySelectorAll('.magnetic').forEach(btn => {
+            btn.addEventListener('pointermove', e => {
+                const r = btn.getBoundingClientRect();
+                const x = (e.clientX - r.left - r.width / 2) * 0.18;
+                const y = (e.clientY - r.top - r.height / 2) * 0.28;
+                gsap.to(btn, { x, y, duration: 0.4, ease: 'power2.out' });
             });
-            btn.addEventListener('pointerleave', ()=> gsap.to(btn, { x:0, y:0, duration:0.6, ease:'elastic.out(1,0.35)' }));
+            btn.addEventListener('pointerleave', () => gsap.to(btn, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1,0.35)' }));
         });
 
         if (!reduceMotion) {
             // Hero title reveal — split into unbreakable words, then animated chars
-            const heroTitle=document.getElementById('hero-title');
-            if(heroTitle){
+            const heroTitle = document.getElementById('hero-title');
+            if (heroTitle) {
                 const addChars = (parent, text, extra) => {
-                    [...text].forEach(ch=>{
-                        const s=document.createElement('span');
+                    [...text].forEach(ch => {
+                        const s = document.createElement('span');
                         s.className = 'char' + (extra ? ' ' + extra : '');
                         s.textContent = ch;
                         parent.appendChild(s);
                     });
                 };
-                const lines=heroTitle.querySelectorAll('span.block');
-                lines.forEach(line=>{
+                const lines = heroTitle.querySelectorAll('span.block');
+                lines.forEach(line => {
                     const nodes = Array.from(line.childNodes);
                     line.innerHTML = '';
-                    nodes.forEach(node=>{
-                        if(node.nodeType !== Node.TEXT_NODE && node.nodeType !== Node.ELEMENT_NODE) return;
-                        // chars inherit the inline element styling (serif italic emerald)
+                    nodes.forEach(node => {
+                        if (node.nodeType !== Node.TEXT_NODE && node.nodeType !== Node.ELEMENT_NODE) return;
                         const extra = node.nodeType === Node.ELEMENT_NODE ? (node.className || '') : '';
                         const words = node.textContent.split(/ +/).filter(Boolean);
-                        words.forEach((word, i)=>{
+                        words.forEach((word, i) => {
                             const w = document.createElement('span');
                             w.className = 'word';
                             addChars(w, word, extra);
@@ -983,78 +1344,68 @@
                     });
                 });
 
-                const tl=gsap.timeline({ delay:0.15 });
-                tl.to('#hero-logo', { opacity:1, y:0, duration:0.7, ease:'power2.out' })
-                  .to('#hero-badge', { opacity:1, y:0, duration:0.6, ease:'power2.out' }, '-=0.45')
-                  .to('.char', { opacity:1, y:0, rotate:0, stagger:0.016, duration:0.6, ease:'back.out(1.35)' }, '-=0.3')
-                  .to('#hero-sub', { opacity:1, y:0, duration:0.6, ease:'power2.out' }, '-=0.25')
-                  .to('#hero-cta', { opacity:1, y:0, duration:0.6, ease:'power2.out' }, '-=0.35')
-                  .to('#hero-note', { opacity:1, y:0, duration:0.5, ease:'power2.out' }, '-=0.35');
+                const tl = gsap.timeline({ delay: 0.15 });
+                tl.to('#hero-logo', { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' })
+                  .to('#hero-badge', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.45')
+                  .to('.char', { opacity: 1, y: 0, rotate: 0, stagger: 0.016, duration: 0.6, ease: 'back.out(1.35)' }, '-=0.3')
+                  .to('#hero-sub', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.25')
+                  .to('#hero-cta', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.35')
+                  .to('#hero-note', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.35');
             }
 
             // Generic reveals with batch
-            gsap.utils.toArray('.reveal').forEach(el=>{
-                if(el.closest('#top')) return;
+            gsap.utils.toArray('.reveal').forEach(el => {
+                if (el.closest('#top')) return;
                 gsap.to(el, {
-                    opacity:1, y:0, duration:0.75, ease:'power2.out',
-                    scrollTrigger:{ trigger:el, start:'top 88%', once:true }
+                    opacity: 1, y: 0, duration: 0.75, ease: 'power2.out',
+                    scrollTrigger: { trigger: el, start: 'top 88%', once: true }
                 });
             });
 
             // Stagger features
             ScrollTrigger.batch('.feature-card', {
-                start:'top 88%',
-                once:true,
-                onEnter: batch=> gsap.to(batch, { opacity:1, y:0, duration:0.7, stagger:0.08, ease:'power2.out', overwrite:true })
+                start: 'top 88%',
+                once: true,
+                onEnter: batch => gsap.to(batch, { opacity: 1, y: 0, duration: 0.7, stagger: 0.08, ease: 'power2.out', overwrite: true })
             });
-            gsap.set('.feature-card', { opacity:0, y:28 });
+            gsap.set('.feature-card', { opacity: 0, y: 28 });
 
             // Counters
-            gsap.utils.toArray('.counter').forEach(counter=>{
-                const target=parseFloat(counter.dataset.target);
-                const suffix=counter.dataset.suffix||'';
-                const obj={val:0};
+            gsap.utils.toArray('.counter').forEach(counter => {
+                const target = parseFloat(counter.dataset.target);
+                const suffix = counter.dataset.suffix || '';
+                const obj = { val: 0 };
                 ScrollTrigger.create({
-                    trigger:counter, start:'top 92%', once:true,
-                    onEnter:()=> gsap.to(obj, {
-                        val: target, duration:1.5, ease:'power2.out',
-                        onUpdate:()=> counter.textContent = Math.round(obj.val)+suffix
+                    trigger: counter, start: 'top 92%', once: true,
+                    onEnter: () => gsap.to(obj, {
+                        val: target, duration: 1.5, ease: 'power2.out',
+                        onUpdate: () => counter.textContent = Math.round(obj.val) + suffix
                     })
                 });
             });
 
             // Security orbit subtle speed on scroll
             ScrollTrigger.create({
-                trigger:'#security-visual',
-                start:'top 80%',
-                end:'bottom 20%',
-                scrub:1,
-                onUpdate: self=>{
-                    const r=self.progress;
-                    gsap.to('#orbit', { rotation: r*60, duration:0.5, overwrite:true });
+                trigger: '#security-visual',
+                start: 'top 80%',
+                end: 'bottom 20%',
+                scrub: 1,
+                onUpdate: self => {
+                    gsap.to('#orbit', { rotation: self.progress * 60, duration: 0.5, overwrite: true });
                 }
             });
 
             // CTA parallax
             gsap.to('#cta-card', {
                 y: -10,
-                scrollTrigger:{ trigger:'#cta-card', start:'top bottom', end:'bottom top', scrub:1 }
+                scrollTrigger: { trigger: '#cta-card', start: 'top bottom', end: 'bottom top', scrub: 1 }
             });
 
         } else {
-            gsap.set('.reveal, .char', { opacity:1, y:0, rotate:0 });
-            gsap.set('.feature-card', { opacity:1, y:0 });
-            document.querySelectorAll('.counter').forEach(c=> c.textContent=c.dataset.target+(c.dataset.suffix||''));
+            gsap.set('.reveal, .char', { opacity: 1, y: 0, rotate: 0 });
+            gsap.set('.feature-card', { opacity: 1, y: 0 });
+            document.querySelectorAll('.counter').forEach(c => c.textContent = c.dataset.target + (c.dataset.suffix || ''));
         }
-
-        // Spotlight follow for feature cards
-        document.querySelectorAll('.feature-card').forEach(card=>{
-            card.addEventListener('pointermove', e=>{
-                const r=card.getBoundingClientRect();
-                card.style.setProperty('--mx', ((e.clientX - r.left)/r.width*100)+'%');
-                card.style.setProperty('--my', ((e.clientY - r.top)/r.height*100)+'%');
-            });
-        });
     </script>
 </body>
 </html>

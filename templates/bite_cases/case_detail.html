@@ -204,7 +204,11 @@
                     {% if request.user.role == 'doctor' %}
                     <a href="{% url 'doctor:assess_case' case.pk %}" class="btn-primary btn-sm w-full justify-center">{% if clinical_assessment %}Edit Clinical Assessment{% else %}Input Clinical Assessment{% endif %}</a>
                     {% endif %}
-                    <a href="{% url 'vaccination:schedule_create' case.pk %}" class="btn-primary btn-sm w-full justify-center">Create Vaccination Schedule</a>
+                    {% if case.vaccination_schedule %}
+                    <a href="{% url 'vaccination:schedule_detail' case.vaccination_schedule.pk %}" class="btn-secondary btn-sm w-full justify-center">View Vaccination Schedule</a>
+                    {% elif request.user.role == 'nurse' or request.user.role == 'admin' %}
+                    <a href="{% url 'vaccination:schedule_trigger' case.pk %}" class="btn-gold btn-sm w-full justify-center">Set Vaccination Schedule</a>
+                    {% endif %}
                     {% if request.user.role != 'nurse' %}<a href="{% url 'bite_cases:classify_exposure' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Classify Exposure</a>{% endif %}
                     <a href="{% url 'vaccination:follow_up_create' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Add Follow-Up</a>
                     <a href="{% url 'vaccination:observation_create' case.pk %}" class="btn-secondary btn-sm w-full justify-center">Animal Observation</a>
@@ -220,6 +224,20 @@
                 </div>
                 {% empty %}<p class="text-sm text-muted">No doses scheduled.</p>{% endfor %}
                 <a href="{% url 'vaccination:schedule_detail' case.vaccination_schedule.pk %}" class="text-sm text-emerald-800 hover:text-red-700 font-medium mt-2 inline-block">View Full Schedule</a>
+            </div>
+            {% elif request.user.role == 'nurse' or request.user.role == 'admin' %}
+            <div class="card">
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-3">Vaccination Schedule</h3>
+                <div class="info-tile">
+                    <span class="info-icon info-icon--warn">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="info-label">Not set yet</p>
+                        <p class="info-value">Doses are never created automatically. Set the calendar once the case is assessed.</p>
+                    </div>
+                </div>
+                <a href="{% url 'vaccination:schedule_trigger' case.pk %}" class="btn-gold btn-sm w-full justify-center mt-3 inline-flex">Set Vaccination Schedule</a>
             </div>
             {% endif %}
         </div>

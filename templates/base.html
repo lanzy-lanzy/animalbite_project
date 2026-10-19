@@ -15,13 +15,22 @@
     <script src="{% static 'vendor/jsQR.js' %}"></script>
     <style>
         [x-cloak] { display: none !important; }
-        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 2px; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .slide-in { animation: slideIn 0.3s ease-in-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        /* pointer-tracked liquid sheen, applied app-wide */
+        .glass::after {
+            background: radial-gradient(280px 210px at var(--mx, 50%) var(--my, 0%),
+                rgba(255,255,255,.9) 0%, rgba(255,255,255,.25) 44%, rgba(255,255,255,0) 70%);
+        }
+        .menu-glass {
+            background: linear-gradient(158deg, rgba(255,255,255,.84) 0%, rgba(250,243,230,.64) 100%);
+            backdrop-filter: blur(26px) saturate(180%) brightness(1.03);
+            -webkit-backdrop-filter: blur(26px) saturate(180%) brightness(1.03);
+            border: 1px solid rgba(255,255,255,.72);
+            box-shadow: 0 28px 60px -24px rgba(8,32,26,.45), inset 0 1.5px 0 rgba(255,255,255,.95);
+        }
         body { font-family: 'Figtree', system-ui, sans-serif; }
         h1,h2,h3,.font-display{ font-family:'Space Grotesk', sans-serif; }
     </style>
@@ -31,31 +40,31 @@
     <div class="flex h-screen overflow-hidden">
         {% if request.user.is_authenticated %}
         <!-- Sidebar Overlay — emerald tint -->
-        <div x-show="mobileMenuOpen" x-cloak @click="mobileMenuOpen = false" class="fixed inset-0 z-40 bg-emerald-950/45 backdrop-blur-sm lg:hidden"></div>
+        <div x-show="mobileMenuOpen" x-cloak @click="mobileMenuOpen = false" class="fixed inset-0 z-40 bg-emerald-950/40 backdrop-blur-md lg:hidden"></div>
 
         <!-- Sidebar — emerald-950 high-contrast, synced with landing CTA #0a1f1a -->
         <aside x-show="sidebarOpen || mobileMenuOpen" x-cloak
-               class="fixed inset-y-0 left-0 z-50 w-64 bg-emerald-950 text-sage-100 flex flex-col transition-all duration-300 lg:static lg:translate-x-0 border-r border-white/5"
+               class="sidebar-shell fixed inset-y-0 left-0 z-50 w-64 text-emerald-950 flex flex-col transition-all duration-300 lg:static lg:translate-x-0"
                :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
-            <!-- Top accent -->
-            <div class="h-1 w-full bg-gradient-to-r from-emerald-700 via-emerald-600 to-sage-300 shrink-0"></div>
+            <!-- Top accent: emerald → gold -->
+            <div class="sidebar-topline h-1 w-full shrink-0"></div>
             <!-- Logo -->
-            <div class="h-16 flex items-center gap-3 px-5 border-b border-white/10 shrink-0 bg-emerald-950">
-                <div class="w-10 h-10 rounded-xl bg-white text-emerald-950 flex items-center justify-center text-[13px] font-bold tracking-wide shadow-lg shadow-black/20 shrink-0">{% if request.user.role == 'doctor' %}Dr{% elif request.user.role == 'nurse' %}Nr{% else %}AB{% endif %}</div>
+            <div class="h-16 flex items-center gap-3 px-5 border-b shrink-0" style="border-color:rgba(201,162,39,.22)">
+                <div class="neu-sm w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-bold tracking-wide shrink-0" style="color:var(--emerald-900)">{% if request.user.role == 'doctor' %}Dr{% elif request.user.role == 'nurse' %}Nr{% else %}AB{% endif %}</div>
                 <div class="min-w-0">
-                    <h1 class="text-sm font-bold text-white leading-tight truncate tracking-tight">{% if request.user.role == 'doctor' %}Doctor Portal{% elif request.user.role == 'nurse' %}Nurse Portal{% else %}ABTC System{% endif %}</h1>
-                    <p class="text-xs text-sage-300 font-medium">{% if request.user.role == 'doctor' %}Dashboard · ABTC{% elif request.user.role == 'nurse' %}Vaccination Care · ABTC{% else %}Municipal Health Office{% endif %}</p>
+                    <h1 class="text-sm font-bold text-emerald-950 leading-tight truncate tracking-tight">{% if request.user.role == 'doctor' %}Doctor Portal{% elif request.user.role == 'nurse' %}Nurse Portal{% else %}ABTC System{% endif %}</h1>
+                    <p class="text-xs text-muted font-medium truncate">{% if request.user.role == 'doctor' %}Dashboard · ABTC{% elif request.user.role == 'nurse' %}Vaccination Care · ABTC{% else %}Municipal Health Office{% endif %}</p>
                 </div>
-                <button type="button" @click="mobileMenuOpen = false" aria-label="Close menu" class="ml-auto lg:hidden p-2 rounded-xl text-sage-300 hover:bg-white/10 hover:text-white transition-colors shrink-0">
+                <button type="button" @click="mobileMenuOpen = false" aria-label="Close menu" class="ml-auto lg:hidden p-2 rounded-xl text-emerald-700 hover:bg-white/60 hover:text-emerald-950 transition-colors shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <!-- User Info — high contrast panel -->
-            <div class="mx-3 mt-3 px-3.5 py-3 rounded-xl bg-white/[0.06] border border-white/10 backdrop-blur">
-                <p class="text-sm font-semibold text-white truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
-                <p class="text-xs font-medium text-sage-300 flex items-center gap-1.5 mt-0.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <!-- User Info — glass chip -->
+            <div class="sidebar-user mx-3 mt-3 px-3.5 py-3 rounded-2xl">
+                <p class="text-sm font-semibold text-emerald-950 truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
+                <p class="text-xs font-medium text-muted flex items-center gap-1.5 mt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     {{ request.user.get_role_display }}
                 </p>
             </div>
@@ -78,9 +87,9 @@
                 {% elif request.user.role == 'doctor' %}
                 {% with request.resolver_match.url_name as url_name %}
                 <div class="pt-1 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Doctor Portal</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Doctor Portal</p>
                 </div>
-                <p class="px-4 pb-2 text-[11px] font-medium text-sage-300/50">My work only — other doctors hidden</p>
+                <p class="px-4 pb-2 text-[11px] font-medium text-muted-2">My work only — other doctors hidden</p>
                 <a href="{% url 'doctor:dashboard' %}" class="sidebar-link {% if url_name == 'dashboard' and request.resolver_match.app_name == 'doctor' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     Dashboard
@@ -95,7 +104,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Records · Read-Only</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Records · Read-Only</p>
                 </div>
                 <a href="{% url 'patients:patient_list' %}" class="sidebar-link {% if url_name == 'patient_list' or url_name == 'patient_detail' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -107,7 +116,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Account</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Account</p>
                 </div>
                 <a href="{% url 'accounts:profile' %}" class="sidebar-link {% if url_name == 'profile' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21a8 8 0 10-16 0m8-9a4 4 0 100-8 4 4 0 000 8z"/></svg>
@@ -117,9 +126,9 @@
                 {% elif request.user.role == 'nurse' %}
                 {% with request.resolver_match.url_name as url_name %}
                 <div class="pt-1 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Nurse Portal</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Nurse Portal</p>
                 </div>
-                <p class="px-4 pb-2 text-[11px] font-medium text-sage-300/50">Vaccination care — view only records</p>
+                <p class="px-4 pb-2 text-[11px] font-medium text-muted-2">Vaccination care — view only records</p>
                 <a href="{% url 'nurse:dashboard' %}" class="sidebar-link {% if url_name == 'dashboard' and request.resolver_match.app_name == 'nurse' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     Nurse Dashboard
@@ -138,7 +147,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Records · Read-Only</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Records · Read-Only</p>
                 </div>
                 <a href="{% url 'patients:patient_list' %}" class="sidebar-link {% if url_name == 'patient_list' or url_name == 'patient_detail' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -150,7 +159,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Care</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Care</p>
                 </div>
                 <a href="{% url 'vaccination:follow_up_list' %}" class="sidebar-link {% if url_name == 'follow_up_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -166,7 +175,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Account</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Account</p>
                 </div>
                 <a href="{% url 'accounts:profile' %}" class="sidebar-link {% if url_name == 'profile' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21a8 8 0 10-16 0m8-9a4 4 0 100-8 4 4 0 000 8z"/></svg>
@@ -181,7 +190,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Patient Management</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Patient Management</p>
                 </div>
                 <a href="{% url 'patients:patient_list' %}" class="sidebar-link {% if url_name == 'patient_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -197,7 +206,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Case Management</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Case Management</p>
                 </div>
                 <a href="{% url 'bite_cases:case_list' %}" class="sidebar-link {% if url_name == 'case_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -217,7 +226,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Inventory</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Inventory</p>
                 </div>
                 <a href="{% url 'inventory:vaccine_list' %}" class="sidebar-link {% if url_name == 'vaccine_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -225,7 +234,7 @@
                 </a>
 
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Reports</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Reports</p>
                 </div>
                 <a href="{% url 'reports:reports_index' %}" class="sidebar-link {% if url_name == 'reports_index' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -234,7 +243,7 @@
 
                 {% if request.user.role == 'admin' %}
                 <div class="pt-3 pb-1">
-                    <p class="px-4 text-xs font-bold text-sage-300/60 uppercase tracking-widest">Administration</p>
+                    <p class="px-4 text-xs font-bold text-gold-700 uppercase tracking-widest">Administration</p>
                 </div>
                 <a href="{% url 'accounts:user_list' %}" class="sidebar-link {% if url_name == 'user_list' %}active{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>
@@ -254,8 +263,8 @@
             </nav>
 
             <!-- Sidebar Footer -->
-            <div class="px-3 py-3 border-t border-white/10 bg-emerald-950">
-                <a href="{% url 'accounts:logout' %}" class="sidebar-link !text-sage-300 hover:!text-white">
+            <div class="px-3 py-3 border-t" style="border-color:rgba(201,162,39,.22)">
+                <a href="{% url 'accounts:logout' %}" class="sidebar-link !text-emerald-800 hover:!text-emerald-950">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                     Logout
                 </a>
@@ -267,29 +276,29 @@
         <div class="flex-1 flex flex-col min-w-0">
             {% if request.user.is_authenticated %}
             <!-- Topbar — white with emerald accent, synced -->
-            <header class="h-16 bg-white/90 backdrop-blur-xl border-b border-line px-4 lg:px-6 flex items-center justify-between shadow-sm shadow-emerald-950/5 shrink-0 relative z-40">
+            <header class="topbar h-16 px-4 lg:px-6 flex items-center justify-between shrink-0 relative z-40">
                 <div class="flex items-center gap-3">
-                    <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-xl text-emerald-800 hover:bg-sage-50 hover:text-emerald-900 border border-transparent hover:border-line transition-colors lg:block hidden">
+                    <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-xl text-emerald-800 hover:bg-white/60 hover:text-emerald-950 border border-transparent hover:border-white transition-colors lg:block hidden">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
-                    <button @click="mobileMenuOpen = true" class="p-2 rounded-xl text-emerald-800 hover:bg-sage-50 border border-line lg:hidden">
+                    <button @click="mobileMenuOpen = true" class="p-2 rounded-xl text-emerald-800 hover:bg-white/60 border border-white/70 lg:hidden">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
-                    <div class="hidden sm:block h-6 w-px bg-line"></div>
+                    <div class="hidden sm:block h-6 w-px" style="background:rgba(201,162,39,.35)"></div>
                     {% block page_title %}{% endblock %}
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="hidden md:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-sage-50 border border-line px-3 py-1.5 rounded-full">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <div class="hidden md:flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-white/55 border border-white/70 px-3 py-1.5 rounded-full backdrop-blur">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         MHO · ABTC Live
                     </div>
                     <div class="relative" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.window="profileOpen = false" id="profileMenuWrapper">
-                        <button id="profileMenuButton" @click.stop="profileOpen = !profileOpen" type="button" aria-haspopup="true" :aria-expanded="profileOpen.toString()" class="flex items-center gap-2.5 pl-1.5 pr-2 py-1.5 rounded-full bg-white border border-line hover:border-emerald-800/20 hover:bg-sage-50 transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20">
-                            <div class="w-8 h-8 rounded-full bg-emerald-900 text-white flex items-center justify-center text-sm font-bold">
+                        <button id="profileMenuButton" @click.stop="profileOpen = !profileOpen" type="button" aria-haspopup="true" :aria-expanded="profileOpen.toString()" class="neu-sm flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/25">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white" style="background:linear-gradient(145deg,var(--emerald-600),var(--emerald-950)); box-shadow:inset 0 1px 0 rgba(255,255,255,.25)">
                                 {{ request.user.first_name|first|default:request.user.username|first|upper }}
                             </div>
                             <span class="text-sm font-semibold text-ink hidden md:block">{{ request.user.get_full_name|default:request.user.username }}</span>
-                            <span class="hidden md:block text-xs text-muted bg-sage-100 border border-line px-2 py-0.5 rounded-full">{{ request.user.get_role_display }}</span>
+                            <span class="hidden md:block text-xs text-gold-700 bg-gold-100 border border-gold-200 px-2 py-0.5 rounded-full font-semibold">{{ request.user.get_role_display }}</span>
                             <svg class="w-4 h-4 text-sage-400 transition-transform duration-150" :class="{ 'rotate-180': profileOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div id="profileDropdownPanel"
@@ -301,35 +310,35 @@
                              x-transition:leave="transition ease-in duration-100"
                              x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                              x-transition:leave-end="opacity-0 translate-y-1 scale-95"
-                             class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl shadow-emerald-950/10 border border-line py-2 z-50 overflow-hidden origin-top-right">
-                            <div class="px-4 py-3 border-b border-line bg-sage-50/50">
+                             class="menu-glass absolute right-0 mt-2 w-64 rounded-2xl py-2 z-50 overflow-hidden origin-top-right">
+                            <div class="px-4 py-3 border-b" style="border-color:rgba(201,162,39,.28); background:linear-gradient(150deg,rgba(255,255,255,.5),rgba(245,235,201,.35))">
                                 <p class="text-sm font-bold text-ink truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
                                 <p class="text-xs text-muted truncate">{{ request.user.email|default:request.user.username }}</p>
-                                <span class="inline-flex items-center gap-1 mt-2 text-[11px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full bg-emerald-950 text-white border border-emerald-900">{{ request.user.get_role_display }}</span>
+                                <span class="inline-flex items-center gap-1 mt-2 text-[11px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full text-white border" style="background:linear-gradient(145deg,var(--emerald-700),var(--emerald-950)); border-color:rgba(201,162,39,.4)">{{ request.user.get_role_display }}</span>
                             </div>
                             <div class="py-1">
-                                <a href="{% url 'accounts:profile' %}" @click="profileOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink hover:bg-sage-50 transition-colors">
-                                    <span class="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                                <a href="{% url 'accounts:profile' %}" @click="profileOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink hover:bg-white/60 transition-colors">
+                                    <span class="neu-well !w-8 !h-8 !rounded-full shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21a8 8 0 10-16 0m8-9a4 4 0 100-8 4 4 0 000 8z"/></svg>
                                     </span>
                                     <span class="flex-1">My Profile</span>
                                     <svg class="w-3.5 h-3.5 text-sage-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                 </a>
-                                <a href="{% url 'accounts:account_settings' %}" @click="profileOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink hover:bg-sage-50 transition-colors">
-                                    <span class="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                                <a href="{% url 'accounts:account_settings' %}" @click="profileOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink hover:bg-white/60 transition-colors">
+                                    <span class="neu-well !w-8 !h-8 !rounded-full shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                     </span>
                                     <span class="flex-1">Account Settings</span>
                                     <svg class="w-3.5 h-3.5 text-sage-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                 </a>
-                                <a href="{% url 'accounts:change_password' %}" @click="profileOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink hover:bg-sage-50 transition-colors">
-                                    <span class="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                                <a href="{% url 'accounts:change_password' %}" @click="profileOpen = false" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink hover:bg-white/60 transition-colors">
+                                    <span class="neu-well !w-8 !h-8 !rounded-full shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                     </span>
                                     <span class="flex-1">Change Password</span>
                                 </a>
                             </div>
-                            <hr class="my-1 border-line">
+                            <hr class="my-1" style="border-color:rgba(201,162,39,.25)">
                             <form method="post" action="{% url 'accounts:logout' %}" class="px-2 py-1">
                                 {% csrf_token %}
                                 <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 rounded-xl transition-colors text-left">
@@ -346,19 +355,18 @@
             </header>
             {% endif %}
 
-            <!-- Page Content — sage-50 with subtle dot grid -->
-            <main class="flex-1 overflow-y-auto p-4 lg:p-6 bg-sage-50 relative">
-                <div class="absolute inset-0 pointer-events-none opacity-[0.32]" style="background-image: radial-gradient(rgba(10,31,26,0.06) 1px, transparent 1px); background-size: 22px 22px;"></div>
+            <!-- Page Content — cream canvas with emerald/gold aurora -->
+            <main class="app-canvas flex-1 overflow-y-auto p-4 lg:p-6 relative">
                 <div class="relative">
                 {% if messages %}
                 <div class="mb-4 space-y-2">
                     {% for message in messages %}
                     <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
-                         class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-sm border backdrop-blur fade-in
-                                {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
-                                {% elif message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-900
-                                {% elif message.tags == 'warning' %}bg-amber-50 border-amber-200 text-amber-900
-                                {% else %}bg-emerald-50 border-emerald-200 text-emerald-900{% endif %}">
+                         class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-sm border backdrop-blur fade-in
+                                {% if message.tags == 'error' %}bg-red-50/85 border-red-200 text-red-800
+                                {% elif message.tags == 'success' %}bg-emerald-100/85 border-emerald-300 text-emerald-900
+                                {% elif message.tags == 'warning' %}bg-gold-100/85 border-gold-300 text-gold-700
+                                {% else %}bg-emerald-100/85 border-emerald-300 text-emerald-900{% endif %}">
                         <span class="text-sm font-medium">{{ message }}</span>
                         <button @click="show = false" class="ml-auto p-1 rounded-full hover:bg-black/5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -375,6 +383,30 @@
     </div>
 
     {% block extra_scripts %}{% endblock %}
+
+    <!-- Liquid glass sheen — track pointer across every glass surface app-wide -->
+    <script>
+    (function () {
+        var raf = null, pending = null;
+        function apply() {
+            raf = null;
+            if (!pending) return;
+            var el = pending;
+            pending = null;
+            var r = el.getBoundingClientRect();
+            el.style.setProperty('--mx', ((window.__abtcX - r.left) / r.width * 100) + '%');
+            el.style.setProperty('--my', ((window.__abtcY - r.top) / r.height * 100) + '%');
+        }
+        document.addEventListener('pointermove', function (e) {
+            var el = e.target.closest && e.target.closest('.glass, .card, .glass-chip, .neu-glass');
+            if (!el) return;
+            window.__abtcX = e.clientX;
+            window.__abtcY = e.clientY;
+            pending = el;
+            if (raf === null) raf = requestAnimationFrame(apply);
+        }, { passive: true });
+    })();
+    </script>
 
     <!-- Profile dropdown fallback: vanilla JS if Alpine fails + CDN fallback -->
     <script>
@@ -489,15 +521,15 @@
          class="fixed inset-0 z-[60] hidden" aria-hidden="true">
         <div id="abtcScanBackdrop" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
         <div class="relative min-h-full flex items-center justify-center p-4">
-            <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-line overflow-hidden">
-                <div class="flex items-center justify-between px-4 py-3 border-b border-line bg-sage-50">
+            <div class="glass w-full max-w-md rounded-3xl overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:rgba(201,162,39,.28)">
                     <h3 class="text-sm font-bold text-ink flex items-center gap-2">
-                        <span class="w-7 h-7 rounded-lg bg-emerald-950 text-white flex items-center justify-center">
+                        <span class="neu-well !w-7 !h-7 !rounded-lg">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
                         </span>
                         Scan QR — Patient / Pre-Registration
                     </h3>
-                    <button type="button" id="abtcScanClose" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-sage-100" title="Close">
+                    <button type="button" id="abtcScanClose" class="w-8 h-8 round neu-sm flex items-center justify-center text-emerald-800" title="Close">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>

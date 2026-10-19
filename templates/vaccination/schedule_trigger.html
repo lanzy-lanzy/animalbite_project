@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Set Vaccination Schedule - {{ case.case_number }}{% endblock %}
+
+{% block page_title %}
+<h1 class="text-lg font-bold text-ink flex items-center gap-2">
+    <span class="neu-well !w-8 !h-8 !rounded-xl">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M9 11h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 13h2l.5 2.5-1.5 1.5-1.5-1.5L11 13z"/></svg>
+    </span>
+    Set Vaccination Schedule
+</h1>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+    <!-- Case context -->
+    <div class="card mb-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <span class="info-icon info-icon--gold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2zM9 9h6M9 13h4"/></svg>
+                </span>
+                <div>
+                    <p class="text-sm font-bold text-ink">{{ case.case_number }}</p>
+                    <p class="text-xs font-medium text-muted">{{ case.patient.full_name }}</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <span class="pill">{{ case.get_animal_type_display }}</span>
+                <span class="pill">{{ case.get_case_status_display }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div class="info-tile">
+                <span class="info-icon info-icon--mint">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M9 11h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="info-label">Date of bite</p>
+                    <p class="info-value">{{ case.date_time_bite|date:'M d, Y'|default:"—" }}</p>
+                </div>
+            </div>
+            <div class="info-tile">
+                <span class="info-icon">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 21h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="info-label">Consultation</p>
+                    <p class="info-value">
+                        {% if case.date_time_consultation %}{{ case.date_time_consultation|date:'M d, Y' }}{% else %}<span class="text-gold-700">Not recorded</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="info-tile">
+                <span class="info-icon info-icon--mint">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="info-label">Contact</p>
+                    <p class="info-value">{{ case.patient.contact_display|default:"—" }}</p>
+                </div>
+            </div>
+        </div>
+
+        {% if not case.date_time_consultation %}
+        <div class="mt-4 r24 neu-inset p-3.5 flex gap-3" style="border-radius:18px">
+            <span class="info-icon info-icon--warn shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </span>
+            <div>
+                <p class="text-sm font-bold text-ink">Consultation date not recorded</p>
+                <p class="text-xs font-medium text-muted mt-0.5">Doses will be dated from <b class="text-ink">today ({{ base_date|date:'M d, Y' }})</b>. Record the consultation on the case first if the patient started treatment earlier.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Doses that will be created -->
+    <div class="card mb-5">
+        <div class="section-head">
+            <h2>Doses that will be created</h2>
+            <span class="hint">{{ days|length }} doses</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {% for d, when in dose_dates %}
+            <div class="info-tile !items-center">
+                <span class="info-icon info-icon--gold">{{ forloop.counter }}</span>
+                <div class="min-w-0">
+                    <p class="info-label">Day {{ d }}</p>
+                    <p class="info-value">{{ when|date:'M d, Y' }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="text-xs font-medium text-muted mt-3">
+            Day offsets come from <b class="text-ink">Settings &rarr; Vaccination Days</b>. For a non-standard protocol, use
+            <a href="{% url 'vaccination:schedule_create' case.pk %}" class="font-bold text-emerald-700 hover:underline">Custom schedule</a> instead.
+        </p>
+    </div>
+
+    <!-- Trigger -->
+    <form method="POST" class="r28 neu-inset p-5 flex flex-wrap items-center justify-between gap-4" style="border-radius:22px">
+        {% csrf_token %}
+        <div class="flex items-start gap-3 min-w-0">
+            <span class="info-icon shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </span>
+            <div class="min-w-0">
+                <p class="text-sm font-bold text-ink">Confirm — set schedule now</p>
+                <p class="text-xs font-medium text-muted mt-0.5">
+                    This records you as the one who set it, and lets SMS reminders run from the first dose.
+                </p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2 shrink-0">
+            <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary inline-flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Set Schedule
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

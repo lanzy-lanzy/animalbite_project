@@ -33,6 +33,7 @@ def dashboard(request):
     """Nurse Portal hub — the 8 nurse use cases in one simple screen."""
     from vaccination.models import SMSLog, VaccineDose
     from inventory.models import VaccineInventory
+    from bite_cases.models import AnimalBiteCase
 
     today = date.today()
 
@@ -50,6 +51,17 @@ def dashboard(request):
     sms_failed = SMSLog.objects.filter(status='failed').count()
     low_stock = VaccineInventory.objects.filter(quantity_available__lte=5).count()
 
+    # Cases with no vaccination schedule yet — the nurse sets these.
+    awaiting_schedule = (
+        AnimalBiteCase.objects
+        .filter(vaccination_schedule__isnull=True)
+        .select_related('patient')
+        .order_by('-created_at')[:10]
+    )
+    awaiting_schedule_count = AnimalBiteCase.objects.filter(
+        vaccination_schedule__isnull=True
+    ).count()
+
     context = {
         'due_today': due_today,
         'due_today_count': due_today_count,
@@ -59,5 +71,7 @@ def dashboard(request):
         'sms_failed': sms_failed,
         'low_stock': low_stock,
         'today': today,
+        'awaiting_schedule': awaiting_schedule,
+        'awaiting_schedule_count': awaiting_schedule_count,
     }
     return render(request, 'nurse/dashboard.html', context)

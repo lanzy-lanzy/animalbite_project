@@ -24,23 +24,43 @@
 
     <style>
         :root {
-            --emerald-950: #0a1f1a;
-            --emerald-900: #0f2e26;
-            --emerald-800: #143d33;
-            --emerald-700: #1b4d3e;
-            --sage-50: #f2f5f1;
-            --sage-100: #e6ece5;
-            --sage-200: #d0ddd0;
-            --sage-300: #a9bfa8;
-            --line: #c8d8c6;
-            --ink: #0a1f1a;
+            --emerald-950: #08201a;
+            --emerald-900: #0d352b;
+            --emerald-800: #124a3a;
+            --emerald-700: #17614b;
+            --emerald-600: #1f7b5e;
+            --emerald-500: #2e9975;
+            --emerald-400: #5cb795;
+            --emerald-300: #93d2b7;
+            --emerald-100: #e4f3ec;
+            --gold-700: #8a6a1c;
+            --gold-600: #a9862c;
+            --gold-500: #c9a227;
+            --gold-400: #ddbe5c;
+            --gold-300: #ebd79b;
+            --gold-200: #f5ebc9;
+            --gold-100: #fbf6e6;
+            --cream-50: #fdfaf4;
+            --cream-100: #f9f3e6;
+            --sage-50: #fdfaf4;
+            --sage-100: #f9f3e6;
+            --sage-200: #f2e9d6;
+            --sage-300: #e8dcc0;
+            --sage-400: #d9c8a2;
+            --line: #e3d9c2;
+            --ink: #08201a;
+            --muted: #25443a;
         }
         html, body { height: 100%; margin: 0; padding: 0; }
         body {
             font-family: 'Figtree', system-ui, sans-serif;
-            background: var(--sage-50);
             color: var(--ink);
             overflow: hidden;
+            background-color: #fdfaf4;
+            background-image:
+                radial-gradient(1100px 700px at 10% -6%, rgba(228,243,236,.95), transparent 60%),
+                radial-gradient(900px 600px at 94% 6%, rgba(245,235,201,.90), transparent 62%),
+                linear-gradient(180deg, #fdfaf4 0%, #f8f2e5 100%);
         }
         h1, h2, h3, h4, .font-display { font-family: 'Space Grotesk', sans-serif; }
         #login-canvas {
@@ -51,44 +71,99 @@
             z-index: 0;
         }
         .grain {
-            background-image: radial-gradient(rgba(10,31,26,0.06) 1px, transparent 1px);
+            background-image: radial-gradient(rgba(120,96,50,0.05) 1px, transparent 1px);
             background-size: 22px 22px;
         }
+        /* ---- liquid glass card ---- */
         .login-card {
-            background: white;
-            border: 1.5px solid var(--line);
-            box-shadow: 0 16px 48px -16px rgba(10,31,26,0.18), 0 6px 18px -8px rgba(10,31,26,0.12);
+            position: relative;
+            background:
+                linear-gradient(152deg,
+                    rgba(255,255,255,.72) 0%,
+                    rgba(255,253,246,.50) 45%,
+                    rgba(228,243,236,.52) 100%);
+            backdrop-filter: blur(26px) saturate(180%) brightness(1.03);
+            -webkit-backdrop-filter: blur(26px) saturate(180%) brightness(1.03);
+            border: 1px solid rgba(255,255,255,.65);
+            box-shadow:
+                0 40px 80px -34px rgba(8,32,26,.45),
+                0 10px 28px -18px rgba(8,32,26,.22),
+                inset 0 1.5px 0 rgba(255,255,255,.95),
+                inset 0 -1.5px 0 rgba(255,255,255,.38),
+                20px 20px 46px -24px rgba(146,124,84,.42),
+                -16px -16px 38px -22px rgba(255,255,255,.9);
         }
+        .login-card::before {
+            content: '';
+            position: absolute; inset: 0;
+            border-radius: inherit; padding: 1.25px;
+            pointer-events: none;
+            background: conic-gradient(from 205deg at 50% 42%,
+                rgba(255,255,255,.95) 0%, rgba(201,162,39,.55) 16%, rgba(255,255,255,.22) 33%,
+                rgba(92,183,149,.52) 54%, rgba(255,255,255,.88) 72%, rgba(235,215,155,.60) 88%,
+                rgba(255,255,255,.95) 100%);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+        }
+        .login-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            border-radius: inherit; pointer-events: none;
+            background: radial-gradient(300px 220px at var(--mx, 50%) var(--my, 0%),
+                rgba(255,255,255,.85) 0%, rgba(255,255,255,.22) 44%, rgba(255,255,255,0) 70%);
+            opacity: 0; transition: opacity .4s ease;
+        }
+        .login-card:hover::after { opacity: .5; }
+        /* ---- neumorphic inset field ---- */
         .login-input {
-            background: white;
-            border: 1.5px solid var(--line);
-            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+            background: linear-gradient(145deg, #f4edde, #fefcf6);
+            border: 1px solid rgba(255,255,255,.8);
+            box-shadow:
+                inset 5px 5px 12px -9px rgba(146,124,84,.55),
+                inset -5px -5px 12px -9px rgba(255,255,255,.95),
+                0 0 0 1px rgba(255,255,255,.5);
+            transition: box-shadow .2s ease, background .2s ease;
         }
         .login-input:focus {
-            background: white;
-            border-color: var(--emerald-800);
-            box-shadow: 0 0 0 3px rgba(20,61,51,0.14), 0 4px 16px -8px rgba(10,31,26,0.12);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(201,162,39,.28), 0 0 0 1px rgba(201,162,39,.55), inset 0 1px 2px rgba(146,124,84,.12);
         }
-        .login-input::placeholder { color: #8aa589; }
+        .login-input::placeholder { color: #b5a887; }
         .btn-emerald {
-            background: var(--emerald-900);
+            background: linear-gradient(145deg, var(--emerald-700), var(--emerald-950));
             color: white;
-            box-shadow: 0 8px 24px -10px rgba(10,31,26,0.45);
+            border: 1px solid rgba(201,162,39,.35);
+            box-shadow: 0 14px 30px -14px rgba(8,32,26,.65), inset 0 1px 0 rgba(255,255,255,.2);
             transition: all .2s cubic-bezier(.16,1,.3,1);
         }
-        .btn-emerald:hover { background: var(--emerald-950); transform: translateY(-1px); box-shadow: 0 14px 36px -12px rgba(10,31,26,0.55); }
+        .btn-emerald:hover { transform: translateY(-2px); box-shadow: 0 22px 44px -16px rgba(8,32,26,.7), inset 0 1px 0 rgba(255,255,255,.26); }
         .btn-emerald:active { transform: translateY(0); }
+        .btn-gold {
+            background: linear-gradient(145deg, #e6cf82 0%, var(--gold-500) 52%, var(--gold-600) 100%);
+            color: #2c2005;
+            border: 1px solid rgba(255,255,255,.5);
+            box-shadow: 0 14px 30px -14px rgba(138,106,28,.75), inset 0 1px 0 rgba(255,255,255,.65);
+            transition: all .2s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 22px 44px -16px rgba(138,106,28,.8), inset 0 1px 0 rgba(255,255,255,.85); }
+        .gold-text {
+            background: linear-gradient(118deg, #fbf6e6 0%, #ddbe5c 40%, #c9a227 72%, #f5ebc9 100%);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; color: transparent;
+        }
         .float-ring {
             position: absolute;
             border-radius: 50%;
-            border: 1.5px solid rgba(255,255,255,0.10);
+            border: 1.5px solid rgba(201,162,39,0.22);
             animation: floatSpin 22s linear infinite;
         }
         .float-ring--1 { width: 120px; height: 120px; top: 15%; left: 20%; }
-        .float-ring--2 { width: 80px; height: 80px; bottom: 20%; right: 15%; animation-duration: 14s; animation-direction: reverse; border-color: rgba(255,255,255,0.07); }
-        .float-ring--3 { width: 200px; height: 200px; top: 50%; left: 60%; animation-duration: 28s; border-color: rgba(255,255,255,0.06); }
+        .float-ring--2 { width: 80px; height: 80px; bottom: 20%; right: 15%; animation-duration: 14s; animation-direction: reverse; border-color: rgba(147,210,183,0.18); }
+        .float-ring--3 { width: 200px; height: 200px; top: 50%; left: 60%; animation-duration: 28s; border-color: rgba(255,255,255,0.08); }
         @keyframes floatSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #5a6b63; transition: color .2s ease; cursor: pointer; z-index: 5; }
+        .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #6b7a6f; transition: color .2s ease; cursor: pointer; z-index: 5; }
         .pw-toggle:hover { color: var(--ink); }
         .msg-enter { animation: msgSlideIn .35s cubic-bezier(.16,1,.3,1); }
         @keyframes msgSlideIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -101,20 +176,31 @@
 
 <body x-data="{ loading: true }" x-init="setTimeout(() => loading = false, 100)">
 
+    <!-- SVG liquid-refraction filter -->
+    <svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+        <filter id="loginRefract" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.0055 0.011" numOctaves="2" seed="6" result="noise"/>
+            <feGaussianBlur in="noise" stdDeviation="3.5" result="softNoise"/>
+            <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="24" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
+
     <!-- 3D Canvas -->
     <canvas id="login-canvas"></canvas>
 
-    <!-- Grain + vignette -->
-    <div class="fixed inset-0 z-0 pointer-events-none" style="background:radial-gradient(800px 600px at 20% 15%, rgba(20,61,51,0.08) 0%, transparent 60%), radial-gradient(700px 500px at 90% 85%, rgba(168,191,168,0.22) 0%, transparent 65%), linear-gradient(180deg, rgba(242,245,241,0.25) 0%, rgba(242,245,241,0.85) 100%);"></div>
+    <!-- Grain + aurora -->
+    <div class="fixed inset-0 z-0 pointer-events-none" style="background:radial-gradient(800px 600px at 18% 12%, rgba(18,74,58,0.07) 0%, transparent 60%), radial-gradient(700px 520px at 92% 84%, rgba(201,162,39,0.14) 0%, transparent 65%);"></div>
     <div class="fixed inset-0 z-0 pointer-events-none grain opacity-40"></div>
 
     <!-- ============ MAIN LAYOUT ============ -->
     <div class="relative z-10 flex h-full">
 
         <!-- ── LEFT SIDE: Branding — dark emerald high-contrast, synced with landing CTA -->
-        <div class="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-center px-12 xl:px-20 overflow-hidden bg-emerald-950 text-white">
-            <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
-            <div class="absolute -top-28 -right-28 w-[520px] h-[520px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 30% 30%, #2d6a4f, transparent 65%);"></div>
+        <div class="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-center px-12 xl:px-20 overflow-hidden text-white" style="background:linear-gradient(155deg,#0d352b 0%,#08201a 55%,#061a15 100%)">
+            <div class="absolute inset-0 opacity-[0.05]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
+            <div class="absolute -top-28 -right-28 w-[520px] h-[520px] rounded-full blur-3xl opacity-25" style="background: radial-gradient(circle at 30% 30%, #c9a227, transparent 65%);"></div>
+            <div class="absolute -bottom-28 -left-24 w-[480px] h-[480px] rounded-full blur-3xl opacity-25" style="background: radial-gradient(circle at 60% 60%, #2e9975, transparent 65%);"></div>
+            <div class="absolute inset-x-0 top-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(221,190,92,.9),transparent)"></div>
             <!-- Floating rings -->
             <div class="float-ring float-ring--1"></div>
             <div class="float-ring float-ring--2"></div>
@@ -123,54 +209,54 @@
             <div class="relative z-10 max-w-lg">
                 <!-- Logo -->
                 <div id="brand-logo" class="flex items-center gap-4 mb-10 opacity-0" style="transform:translateY(20px)">
-                    <div class="w-14 h-14 rounded-2xl bg-white text-emerald-950 flex items-center justify-center font-bold text-xl shadow-xl shadow-black/20">
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl text-gold-300" style="background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.05)); border:1px solid rgba(201,162,39,.4); box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 18px 36px -18px rgba(0,0,0,.6)">
                         AB
                     </div>
                     <div>
                         <p class="font-display text-xl font-bold text-white tracking-tight">ABTC System</p>
-                        <p class="text-xs text-sage-200 font-medium tracking-widest uppercase">Municipal Health Office</p>
+                        <p class="text-xs text-emerald-200 font-medium tracking-widest uppercase">Municipal Health Office</p>
                     </div>
                 </div>
 
                 <!-- Tagline -->
                 <h1 id="brand-title" class="opacity-0 font-display text-4xl xl:text-5xl font-bold tracking-tight leading-[1.05] mb-5 text-white" style="transform:translateY(30px)">
                     Every bite case<br>
-                    <span class="font-serif italic font-normal text-sage-300">tracked with care.</span>
+                    <span class="font-serif italic font-normal gold-text">tracked with care.</span>
                 </h1>
-                <p id="brand-sub" class="opacity-0 text-sage-100 text-base xl:text-lg leading-relaxed max-w-md" style="transform:translateY(30px)">
+                <p id="brand-sub" class="opacity-0 text-emerald-100/90 text-base xl:text-lg leading-relaxed max-w-md" style="transform:translateY(30px)">
                     Securely access your Animal Bite Treatment Center dashboard — patients, vaccinations, inventory, and full audit trails in one place.
                 </p>
 
                 <!-- Trust badges — high contrast on dark -->
                 <div id="brand-badges" class="opacity-0 flex flex-wrap items-center gap-3 mt-10" style="transform:translateY(20px)">
-                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-full border border-white/15 backdrop-blur">
-                        <span class="w-6 h-6 rounded-full bg-white text-emerald-900 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></span>
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white px-3 py-1.5 rounded-full border border-gold-500/30 bg-white/10 backdrop-blur">
+                        <span class="w-6 h-6 rounded-full bg-gold-200 text-emerald-900 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></span>
                         Encrypted sessions
                     </span>
-                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-full border border-white/15 backdrop-blur">
-                        <span class="w-6 h-6 rounded-full bg-white/15 border border-white/20 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white px-3 py-1.5 rounded-full border border-gold-500/30 bg-white/10 backdrop-blur">
+                        <span class="w-6 h-6 rounded-full bg-gold-500/25 border border-gold-400/40 flex items-center justify-center text-gold-200"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
                         Audit-trail ready
                     </span>
-                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1.5 rounded-full border border-white/15 backdrop-blur">
-                        <span class="w-6 h-6 rounded-full bg-white text-emerald-900 flex items-center justify-center text-[10px] font-bold">R</span>
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-white px-3 py-1.5 rounded-full border border-gold-500/30 bg-white/10 backdrop-blur">
+                        <span class="w-6 h-6 rounded-full bg-gold-200 text-emerald-900 flex items-center justify-center text-[10px] font-bold">R</span>
                         Role-based access
                     </span>
                 </div>
             </div>
-            <p class="absolute bottom-6 left-12 xl:left-20 text-xs text-sage-300/60">© Municipal Health Office · ABTC</p>
+            <p class="absolute bottom-6 left-12 xl:left-20 text-xs text-gold-300/70">© Municipal Health Office · ABTC</p>
         </div>
 
         <!-- ── RIGHT SIDE: Login Form — light high-contrast -->
-        <div class="flex-1 flex items-center justify-center px-5 sm:px-8 bg-sage-50/70 backdrop-blur-sm">
+        <div class="flex-1 flex items-center justify-center px-5 sm:px-8">
             <div class="w-full max-w-md">
 
                 <!-- Mobile-only logo -->
                 <div id="mobile-logo" class="lg:hidden text-center mb-8 opacity-0" style="transform:translateY(20px)">
-                    <a href="{% url 'accounts:landing' %}" class="inline-flex items-center gap-2 text-emerald-800 hover:text-emerald-900 text-xs font-semibold mb-5 transition-colors group">
+                    <a href="{% url 'accounts:landing' %}" class="inline-flex items-center gap-2 text-muted hover:text-gold-700 text-xs font-semibold mb-5 transition-colors group">
                         <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Back to home
                     </a>
-                    <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-900 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-emerald-900/20 mb-3">AB</div>
+                    <div class="neu-sm w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-2xl font-bold mb-3" style="color:var(--emerald-800)">AB</div>
                     <h1 class="text-lg font-display font-bold text-ink">ABTC System</h1>
                     <p class="text-muted text-xs font-medium">Animal Bite Treatment Center</p>
                 </div>
@@ -179,7 +265,7 @@
                 <div id="login-card" class="login-card rounded-[1.75rem] p-8 sm:p-10 opacity-0" style="transform:translateY(30px)">
 
                     <!-- Desktop back link -->
-                    <a href="{% url 'accounts:landing' %}" class="hidden lg:inline-flex items-center gap-2 text-muted hover:text-ink text-xs font-semibold mb-7 transition-colors group">
+                    <a href="{% url 'accounts:landing' %}" class="hidden lg:inline-flex items-center gap-2 text-muted hover:text-gold-700 text-xs font-semibold mb-7 transition-colors group">
                         <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Back to home
                     </a>
@@ -196,8 +282,8 @@
                         {% for message in messages %}
                         <div class="msg-enter flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold border
                                     {% if message.tags == 'error' %}bg-red-50 text-red-800 border-red-200
-                                    {% elif message.tags == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-200
-                                    {% else %}bg-sage-100 text-ink border-line{% endif %}">
+                                    {% elif message.tags == 'success' %}bg-emerald-100 text-emerald-900 border-emerald-300
+                                    {% else %}bg-cream-200 text-ink border-cream-300{% endif %}">
                             {% if message.tags == 'error' %}
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             {% elif message.tags == 'success' %}
@@ -259,11 +345,11 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                         </button>
                     </form>
-                    <p class="mt-5 text-center text-sm font-medium text-muted">New patient? <a href="{% url 'pre_registrations:public_create' %}" class="font-bold text-emerald-800 hover:text-emerald-900 underline decoration-emerald-800/20 underline-offset-2">Sign up and pre-register</a></p>
+                    <p class="mt-5 text-center text-sm font-medium text-muted">New patient? <a href="{% url 'pre_registrations:public_create' %}" class="font-bold text-emerald-800 hover:text-emerald-900 underline decoration-gold-500/50 underline-offset-2 hover:text-gold-700">Sign up and pre-register</a></p>
                 </div>
 
                 <!-- Footer — dark ink on sage for contrast -->
-                <p id="login-footer" class="text-center text-muted font-medium text-[11px] tracking-wide mt-7 opacity-0" style="transform:translateY(15px)">
+                <p id="login-footer" class="text-center text-muted-2 font-medium text-[11px] tracking-wide mt-7 opacity-0" style="transform:translateY(15px)">
                     Municipal Health Office — Animal Bite Treatment Center · Secure & audited
                 </p>
             </div>
@@ -284,29 +370,29 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
 
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0xf2f5f1, 10, 26);
+        scene.fog = new THREE.Fog(0xfdfaf4, 10, 26);
 
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 0, 10);
 
         // Central muted emerald wireframe — low opacity, not washing
         const coreGeo = new THREE.IcosahedronGeometry(2.6, 1);
-        const coreMat = new THREE.MeshBasicMaterial({ color: 0x143d33, wireframe: true, transparent: true, opacity: 0.14 });
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xc9a227, wireframe: true, transparent: true, opacity: 0.14 });
         const core = new THREE.Mesh(coreGeo, coreMat);
         scene.add(core);
 
         // Inner sage glow — subtle
         const innerGeo = new THREE.IcosahedronGeometry(1.7, 2);
-        const innerMat = new THREE.MeshBasicMaterial({ color: 0xd0ddd0, transparent: true, opacity: 0.18 });
+        const innerMat = new THREE.MeshBasicMaterial({ color: 0xe4f3ec, transparent: true, opacity: 0.24 });
         const inner = new THREE.Mesh(innerGeo, innerMat);
         scene.add(inner);
 
         // Rings — emerald muted, pushed to right/left to avoid form wash
         const ringGroup = new THREE.Group();
         const ringData = [
-            { r: 3.4, color: 0x143d33, rot: [Math.PI/2, 0.3, 0], opacity: 0.10 },
-            { r: 4.1, color: 0xa9bfa8, rot: [Math.PI/2 + 0.4, 0.8, 0.2], opacity: 0.07 },
-            { r: 4.8, color: 0xd0ddd0, rot: [Math.PI/2 - 0.3, 1.1, -0.1], opacity: 0.05 },
+            { r: 3.4, color: 0xc9a227, rot: [Math.PI/2, 0.3, 0], opacity: 0.16 },
+            { r: 4.1, color: 0x93d2b7, rot: [Math.PI/2 + 0.4, 0.8, 0.2], opacity: 0.12 },
+            { r: 4.8, color: 0xebd79b, rot: [Math.PI/2 - 0.3, 1.1, -0.1], opacity: 0.10 },
         ];
         ringData.forEach(d => {
             const geo = new THREE.TorusGeometry(d.r, 0.010, 16, 140);
@@ -322,7 +408,7 @@
         const pCount = 700;
         const pos = new Float32Array(pCount * 3);
         const cols = new Float32Array(pCount * 3);
-        const palette = [new THREE.Color(0xe6ece5), new THREE.Color(0x143d33), new THREE.Color(0xa9bfa8), new THREE.Color(0xffffff)];
+        const palette = [new THREE.Color(0xf5ebc9), new THREE.Color(0xc9a227), new THREE.Color(0x93d2b7), new THREE.Color(0xe4f3ec), new THREE.Color(0xffffff)];
         for (let i = 0; i < pCount; i++) {
             const i3 = i * 3;
             const radius = 4 + Math.random() * 20;
@@ -377,6 +463,19 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+    </script>
+
+    <!-- Liquid glass sheen � pointer tracked on the login card -->
+    <script>
+    (function () {
+        var card = document.getElementById('login-card');
+        if (!card) return;
+        card.addEventListener('pointermove', function (e) {
+            var r = card.getBoundingClientRect();
+            card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+            card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+        }, { passive: true });
+    })();
     </script>
 
     <!-- ============ GSAP ENTRANCE ============ -->

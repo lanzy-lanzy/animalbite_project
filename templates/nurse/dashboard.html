@@ -18,7 +18,7 @@
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
     <div class="card p-4 border-l-4 border-l-emerald-800">
       <p class="text-xs font-bold tracking-widest uppercase text-muted">Due Today</p>
       <p class="text-2xl font-bold text-ink mt-1">{{ due_today_count }}</p>
@@ -34,10 +34,52 @@
       <p class="text-2xl font-bold text-ink mt-1">{{ sms_pending }}</p>
       <p class="text-xs text-muted mt-1">{% if sms_failed %}{{ sms_failed }} failed{% else %}Auto-reminders on track{% endif %}</p>
     </div>
+    <div class="card p-4 border-l-4 {% if awaiting_schedule_count %}border-l-amber-500{% else %}border-l-emerald-500{% endif %}">
+      <p class="text-xs font-bold tracking-widest uppercase text-muted">Awaiting Schedule</p>
+      <p class="text-2xl font-bold text-ink mt-1">{{ awaiting_schedule_count }}</p>
+      <p class="text-xs text-muted mt-1">{% if awaiting_schedule_count %}case(s) need you to set doses{% else %}All cases scheduled{% endif %}</p>
+    </div>
     <div class="card p-4 border-l-4 border-l-emerald-500">
       <p class="text-xs font-bold tracking-widest uppercase text-muted">Upcoming / Low Stock</p>
       <p class="text-2xl font-bold text-ink mt-1">{{ upcoming_count }}</p>
       <p class="text-xs text-muted mt-1">{% if low_stock %}{{ low_stock }} item(s) low stock{% else %}Stock OK{% endif %}</p>
+    </div>
+  </div>
+
+  <!-- Awaiting schedule — nurse trigger -->
+  <div class="card mb-6">
+    <div class="flex items-center justify-between mb-4 gap-3">
+      <h3 class="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+        <span class="neu-well !w-7 !h-7 !rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </span>
+        Cases Awaiting Schedule
+        {% if awaiting_schedule_count %}<span class="pill !bg-gold-100 !text-gold-700 border border-gold-300">{{ awaiting_schedule_count }}</span>{% endif %}
+      </h3>
+      <a href="{% url 'bite_cases:case_list' %}" class="text-xs font-bold text-emerald-700 hover:underline shrink-0">All cases →</a>
+    </div>
+    <p class="text-xs font-medium text-muted mb-3">Schedules are no longer created automatically. Set the PEP dose calendar once the case has been assessed.</p>
+    <div class="space-y-2">
+      {% for c in awaiting_schedule %}
+      <div class="info-tile">
+        <span class="info-icon info-icon--warn">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="info-label">{{ c.case_number }} · {{ c.get_animal_type_display }}</p>
+          <p class="info-value">{{ c.patient.full_name }} <span class="text-xs font-medium text-muted">· bite {{ c.date_time_bite|date:'M d, Y'|default:"—" }}</span></p>
+        </div>
+        <a href="{% url 'vaccination:schedule_trigger' c.pk %}" class="btn-primary btn-sm shrink-0 inline-flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Set Schedule
+        </a>
+      </div>
+      {% empty %}
+      <div class="text-center py-8 r24 neu-inset" style="border-radius:18px">
+        <p class="text-sm font-bold text-ink">Every case has a schedule</p>
+        <p class="text-xs text-muted mt-1">New cases will appear here until you set their dose calendar.</p>
+      </div>
+      {% endfor %}
     </div>
   </div>
 

@@ -45,16 +45,11 @@ def case_create(request):
             case.case_number = generate_case_number()
             case.created_by = request.user
             case.save()
-            # Auto-create vaccination schedule so SMS reminders work end-to-end
-            try:
-                from vaccination.schedule_utils import ensure_vaccination_schedule
-                schedule, created = ensure_vaccination_schedule(case, created_by=request.user)
-                if created:
-                    AuditLog.objects.create(user=request.user, action='AUTO_CREATE_SCHEDULE', description=f'Auto-created vaccination schedule for {case.case_number}')
-            except Exception:
-                pass
+            # NOTE: the vaccination schedule is NOT auto-created. A nurse must
+            # trigger it from the case page or the Nurse Portal, so dosing never
+            # starts off an unset/stale consultation date.
             AuditLog.objects.create(user=request.user, action='CREATE_CASE', description=f'Created bite case {case.case_number}')
-            messages.success(request, f'Case {case.case_number} created successfully. Vaccination schedule auto-created — SMS reminders will trigger via RHUDumingag.')
+            messages.success(request, f'Case {case.case_number} created. No vaccination schedule yet - a nurse must set it from the case page or Nurse Portal.')
             return redirect('bite_cases:case_detail', pk=case.pk)
     else:
         form = AnimalBiteCaseForm()
