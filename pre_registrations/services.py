@@ -110,6 +110,6 @@ def convert_to_official_case(pre_registration, user):
     AuditLog.objects.create(
         user=user,
         action="CONVERT_PRE_REGISTRATION",
-        description=f"Converted pre-registration {pre_registration.pre_registration_number} to case {case.case_number}",
+        description=f"Converted online registration {pre_registration.pre_registration_number} to case {case.case_number}",
     )
     return patient, case

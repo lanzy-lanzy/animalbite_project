@@ -13,14 +13,6 @@
 
     <link rel="stylesheet" href="{% static 'css/output.css' %}">
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-        }
-    }
-    </script>
-
     <style>
         /* ================================================================
            LIQUID GLASS · NEUMORPHIC SYSTEM
@@ -87,16 +79,6 @@
         h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-serif { font-family: 'Instrument Serif', serif; }
 
-        #bg-canvas {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            pointer-events: none;
-            opacity: 0.42;
-        }
-
         /* ---------- Reveal ---------- */
         .reveal { opacity: 0; transform: translateY(28px); }
         .char { display: inline-block; opacity: 0; transform: translateY(60%) rotate(5deg); }
@@ -147,21 +129,21 @@
                     mask-composite: exclude;
             opacity: .9;
         }
-        /* pointer-tracked specular sheen */
+        /* pointer-tracked specular sheen — kept tight and subtle */
         .glass::after {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: inherit;
             pointer-events: none;
-            background: radial-gradient(280px 210px at var(--mx, 50%) var(--my, 0%),
-                rgba(255,255,255,.92) 0%,
-                rgba(255,255,255,.26) 44%,
-                rgba(255,255,255,0) 70%);
+            background: radial-gradient(150px 110px at var(--mx, 50%) var(--my, 0%),
+                rgba(255,255,255,.75) 0%,
+                rgba(255,255,255,.18) 46%,
+                rgba(255,255,255,0) 72%);
             opacity: 0;
             transition: opacity .4s ease;
         }
-        .glass:hover::after { opacity: .55; }
+        .glass:hover::after { opacity: .30; }
 
         /* hero / feature panels get a true refracting liquid edge */
         .glass--liquid { overflow: hidden; }
@@ -484,7 +466,7 @@
             inset: 0;
             border-radius: inherit;
             pointer-events: none;
-            background: radial-gradient(420px 240px at var(--mx,50%) var(--my,0%),
+            background: radial-gradient(250px 150px at var(--mx,50%) var(--my,0%),
                 rgba(255,255,255,.9) 0%, rgba(255,255,255,.25) 45%, rgba(255,255,255,0) 72%);
             opacity: 0;
             transition: opacity .4s ease;
@@ -496,7 +478,7 @@
                 -18px -18px 40px -22px rgba(255,255,255,1),
                 inset 0 1.5px 0 rgba(255,255,255,1);
         }
-        .feature-card:hover::after { opacity: .6; }
+        .feature-card:hover::after { opacity: .40; }
         .feature-card:hover .well {
             color: #fff;
             background: linear-gradient(145deg, var(--emerald-700), var(--emerald-950));
@@ -594,12 +576,9 @@
         <filter id="liquidRefract" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
             <feTurbulence type="fractalNoise" baseFrequency="0.0055 0.011" numOctaves="2" seed="4" result="noise"/>
             <feGaussianBlur in="noise" stdDeviation="3.5" result="softNoise"/>
-            <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+            <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="13" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
     </svg>
-
-    <!-- Fixed Three.js background -->
-    <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
     <!-- Aurora wash -->
     <div class="fixed inset-0 z-0 pointer-events-none" style="background:
@@ -627,7 +606,6 @@
                 <a href="#workflow" class="nav-link">Workflow</a>
                 <a href="#security" class="nav-link">Security</a>
                 <a href="{% url 'pre_registrations:public_status' %}" class="nav-link">Check status</a>
-                <a href="{% url 'accounts:login' %}" class="nav-link">Sign in</a>
             </div>
 
             <div class="flex items-center gap-3">
@@ -635,7 +613,7 @@
                     Sign in
                 </a>
                 <a href="{% url 'pre_registrations:public_create' %}" class="btn-emerald inline-flex items-center gap-2 text-sm font-semibold px-5 py-[11px] rounded-full">
-                    Pre-register now
+                    Register online
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                 </a>
                 <button id="mobile-menu-btn" class="lg:hidden w-10 h-10 round neu-sm border flex items-center justify-center" style="color:var(--emerald-800)">
@@ -689,11 +667,11 @@
 
                 <div id="hero-cta" class="reveal mt-9 flex flex-wrap items-center justify-center gap-3.5">
                     <a href="{% url 'pre_registrations:public_create' %}" class="magnetic btn-gold inline-flex items-center gap-2.5 px-8 py-4 rounded-full text-[14px] font-bold">
-                        Pre-register now
+                        Register online
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
                     <a href="{% url 'pre_registrations:public_status' %}" class="glass-chip inline-flex items-center gap-2 px-8 py-4 rounded-full text-[14px] font-bold text-emerald-950">
-                        Check pre-registration status
+                        Check registration status
                     </a>
                 </div>
 
@@ -740,12 +718,12 @@
         </div>
     </section>
 
-    <!-- ============ PUBLIC PRE-REGISTRATION BENTO ============ -->
+    <!-- ============ PUBLIC ONLINE REGISTRATION BENTO ============ -->
     <section class="relative z-10 mt-6">
         <div class="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8">
             <div class="neu-glass grid lg:grid-cols-12 overflow-hidden">
                 <div class="lg:col-span-7 p-7 sm:p-10">
-                    <p class="reveal text-[11px] font-bold tracking-[0.16em] uppercase text-gold-700">Public patient pre-registration — no account needed</p>
+                    <p class="reveal text-[11px] font-bold tracking-[0.16em] uppercase text-gold-700">Public online registration — no account needed</p>
                     <h2 class="reveal font-display text-3xl sm:text-[34px] font-bold tracking-tight text-emerald-950 leading-tight mt-4">
                         Save time at the <span class="font-serif italic font-normal text-emerald-700">Animal Bite</span> Treatment Center.
                     </h2>
@@ -765,7 +743,7 @@
 
                     <div class="reveal mt-7 flex flex-wrap gap-3">
                         <a href="{% url 'pre_registrations:public_create' %}" class="btn-emerald inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold">
-                            Start pre-registration
+                            Start online registration
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
                         <a href="{% url 'pre_registrations:public_status' %}" class="neu-btn inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-emerald-900">
@@ -903,7 +881,7 @@
                     <div class="reveal neu-sm r26 p-7">
                         <div class="step-num">01<small>01</small></div>
                         <h3 class="font-display text-lg font-semibold text-emerald-950 mt-2">Register the patient</h3>
-                        <p class="mt-2 text-sm leading-relaxed text-muted">Capture patient details and bite exposure — animal, site, and category — in a single guided form. Online pre-registration is verified on arrival.</p>
+                        <p class="mt-2 text-sm leading-relaxed text-muted">Capture patient details and bite exposure — animal, site, and category — in a single guided form. Online online registration is verified on arrival.</p>
                         <div class="mt-4 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 round neu-inset text-emerald-800">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> ~2 min per intake
                         </div>
@@ -1038,7 +1016,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
                         <a href="{% url 'pre_registrations:public_create' %}" class="glass-chip inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full font-bold text-sm text-emerald-950">
-                            Pre-register as patient
+                            Register online as patient
                         </a>
                     </div>
                 </div>
@@ -1070,7 +1048,7 @@
                         <a href="#features" class="hover:text-gold-700">Features</a>
                         <a href="#workflow" class="hover:text-gold-700">Workflow</a>
                         <a href="#security" class="hover:text-gold-700">Security</a>
-                        <a href="{% url 'pre_registrations:public_create' %}" class="hover:text-gold-700">Pre-register</a>
+                        <a href="{% url 'pre_registrations:public_create' %}" class="hover:text-gold-700">Register online</a>
                         <a href="{% url 'accounts:login' %}" class="hover:text-gold-700">Sign in</a>
                     </div>
                     <p class="text-xs text-muted-2">© <span id="year"></span> Municipal Health Office · Animal Bite Treatment Center · Built for care, audited for trust.</p>
@@ -1085,160 +1063,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
     <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
 
-    <!-- ============ THREE.JS — CREAM / EMERALD / GOLD SCENE ============ -->
-    <script type="module">
-        import * as THREE from 'three';
-
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const bgCanvas = document.getElementById('bg-canvas');
-
-        (() => {
-            if (!bgCanvas) return;
-            const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: true, alpha: true });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            const scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0xfdfaf4, 12, 30);
-
-            const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 100);
-            camera.position.set(0, 0.6, 10);
-
-            scene.add(new THREE.AmbientLight(0xfffaf0, 0.9));
-            const dir = new THREE.DirectionalLight(0xf5ebc9, 0.65);
-            dir.position.set(4, 6, 5);
-            scene.add(dir);
-            const point = new THREE.PointLight(0x1f7b5e, 0.4, 24);
-            point.position.set(3, 2, 4);
-            scene.add(point);
-
-            // Organic liquid blobs — cream / mint / gold
-            const blobs = [];
-            const blobData = [
-                { pos: [5.6, 1.0, -6], scale: 1.9, color: 0xf5ebc9, roughness: 0.55, opacity: 0.26, metalness: 0.12 },
-                { pos: [4.0, -1.4, -8], scale: 2.4, color: 0xe4f3ec, roughness: 0.5, opacity: 0.24, metalness: 0.08 },
-                { pos: [2.2, 2.8, -10], scale: 1.2, color: 0xebd79b, roughness: 0.45, opacity: 0.18, metalness: 0.2 },
-            ];
-            blobData.forEach(d => {
-                const g = new THREE.IcosahedronGeometry(d.scale, 1);
-                const posAttr = g.attributes.position;
-                for (let i = 0; i < posAttr.count; i++) {
-                    const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-                    const n = v.length();
-                    v.normalize().multiplyScalar(n * (0.86 + Math.random() * 0.28));
-                    posAttr.setXYZ(i, v.x, v.y, v.z);
-                }
-                posAttr.needsUpdate = true;
-                const m = new THREE.MeshStandardMaterial({
-                    color: d.color,
-                    roughness: d.roughness,
-                    metalness: d.metalness,
-                    transparent: true,
-                    opacity: d.opacity,
-                    flatShading: true
-                });
-                const mesh = new THREE.Mesh(g, m);
-                mesh.position.set(...d.pos);
-                scene.add(mesh);
-                blobs.push(mesh);
-
-                if (d.color === 0xf5ebc9) {
-                    const wf = new THREE.Mesh(
-                        new THREE.IcosahedronGeometry(d.scale * 1.06, 1),
-                        new THREE.MeshBasicMaterial({ color: 0xc9a227, wireframe: true, transparent: true, opacity: 0.07 })
-                    );
-                    wf.position.copy(mesh.position);
-                    scene.add(wf);
-                    blobs.push(wf);
-                }
-            });
-
-            // Floating veil rings
-            const ringGroup = new THREE.Group();
-            const ringCols = [0xc9a227, 0x1f7b5e, 0xddbe5c];
-            for (let i = 0; i < 3; i++) {
-                const geo = new THREE.TorusGeometry(3.1 + i * 1.35, 0.018, 16, 160);
-                const mat = new THREE.MeshBasicMaterial({ color: ringCols[i], transparent: true, opacity: 0.07 - i * 0.018 });
-                const t = new THREE.Mesh(geo, mat);
-                t.rotation.x = Math.PI / 2 + i * 0.38;
-                t.rotation.y = i * 0.52;
-                t.position.set(2.0, -0.2, -2 - i * 0.8);
-                ringGroup.add(t);
-            }
-            scene.add(ringGroup);
-
-            // Particles
-            const pCount = 900;
-            const positions = new Float32Array(pCount * 3);
-            const colors = new Float32Array(pCount * 3);
-            const cPalette = [
-                new THREE.Color(0x124a3a), new THREE.Color(0x1f7b5e),
-                new THREE.Color(0x93d2b7), new THREE.Color(0xf5ebc9),
-                new THREE.Color(0xc9a227), new THREE.Color(0xffffff)
-            ];
-            for (let i = 0; i < pCount; i++) {
-                const i3 = i * 3;
-                const r = 7 + Math.random() * 22;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                positions[i3] = r * Math.sin(phi) * Math.cos(theta);
-                positions[i3 + 1] = r * Math.sin(phi) * 0.7;
-                positions[i3 + 2] = r * Math.cos(phi) - 4;
-                const c = cPalette[Math.floor(Math.random() * cPalette.length)];
-                colors[i3] = c.r; colors[i3 + 1] = c.g; colors[i3 + 2] = c.b;
-            }
-            const pGeo = new THREE.BufferGeometry();
-            pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            pGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            const pMat = new THREE.PointsMaterial({
-                size: 0.05, vertexColors: true, transparent: true, opacity: 0.3,
-                blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
-            });
-            const particles = new THREE.Points(pGeo, pMat);
-            scene.add(particles);
-
-            const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
-            window.addEventListener('pointermove', e => {
-                mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
-                mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
-            });
-            let scrollY = 0;
-            window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
-
-            const clock = new THREE.Clock();
-            function animate() {
-                const t = clock.getElapsedTime();
-                mouse.x += (mouse.tx - mouse.x) * 0.04;
-                mouse.y += (mouse.ty - mouse.y) * 0.04;
-
-                if (!reduceMotion) {
-                    blobs.forEach((b, i) => {
-                        b.rotation.y = t * 0.08 + i * 0.6;
-                        b.rotation.x = t * 0.05 + i * 0.3;
-                        b.position.y += Math.sin(t * 0.4 + i) * 0.002;
-                    });
-                    ringGroup.rotation.y = t * 0.06;
-                    ringGroup.rotation.x = t * 0.02;
-                    particles.rotation.y = t * 0.012;
-                    particles.rotation.x = Math.sin(t * 0.06) * 0.04;
-                }
-                camera.position.x += (mouse.x * 0.9 - camera.position.x) * 0.05;
-                camera.position.y += (-mouse.y * 0.6 - camera.position.y + 0.6) * 0.05;
-                camera.position.z = 10 + Math.min(scrollY / window.innerHeight, 1) * 0.8;
-                camera.lookAt(0, 0, -2);
-                renderer.render(scene, camera);
-                requestAnimationFrame(animate);
-            }
-            animate();
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        })();
-    </script>
-
-    <!-- ============ LENIS SMOOTH + GSAP ANIMATIONS ============ -->
+<!-- ============ LENIS SMOOTH + GSAP ANIMATIONS ============ -->
     <script>
         document.getElementById('year').textContent = new Date().getFullYear();
 

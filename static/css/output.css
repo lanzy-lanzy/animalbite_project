@@ -3539,12 +3539,12 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(280px 210px at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,.92) 0%, rgba(255,255,255,.26) 44%, rgba(255,255,255,0) 70%);
+    background: radial-gradient(140px 100px at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,.72) 0%, rgba(255,255,255,.17) 46%, rgba(255,255,255,0) 72%);
     opacity: 0;
     transition: opacity .4s ease;
   }
   .glass:hover::after {
-    opacity: .55;
+    opacity: .30;
   }
   .glass-chip {
     position: relative;
@@ -4147,27 +4147,6 @@
     margin-top: 0.1rem;
     overflow-wrap: anywhere;
   }
-  .field-wrap {
-    position: relative;
-  }
-  .field-wrap > .field-icon {
-    position: absolute;
-    left: 0.85rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1rem;
-    height: 1rem;
-    color: var(--color-emerald-700);
-    pointer-events: none;
-    z-index: 1;
-  }
-  .field-wrap--area > .field-icon {
-    top: 0.9rem;
-    transform: none;
-  }
-  .field-wrap .form-input, .field-wrap .form-select, .field-wrap .form-textarea, .field-wrap input, .field-wrap select, .field-wrap textarea {
-    padding-left: 2.5rem;
-  }
   .text-muted {
     color: var(--color-muted) !important;
   }
@@ -4200,6 +4179,43 @@
       transform: translateX(0);
     }
   }
+}
+.field-wrap {
+  position: relative;
+}
+.field-wrap > .field-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--color-emerald-700);
+  pointer-events: none;
+  z-index: 2;
+  transition: color .18s ease;
+}
+.field-wrap > .field-icon.text-amber-600 {
+  color: #d97706;
+}
+.field-wrap > .field-icon.text-red-700 {
+  color: #b91c1c;
+}
+.field-wrap > .field-icon.text-gold-600 {
+  color: var(--color-gold-600);
+}
+.field-wrap--area > .field-icon {
+  top: 0.95rem;
+  transform: none;
+}
+.field-wrap .form-input, .field-wrap .form-select, .field-wrap .form-textarea, .field-wrap input, .field-wrap select, .field-wrap textarea {
+  padding-left: 2.75rem;
+}
+.field-wrap .form-select, .field-wrap select {
+  padding-right: 2.5rem;
+}
+.field-wrap:focus-within > .field-icon {
+  color: var(--color-emerald-600);
 }
 @media (max-width: 1023px) {
   :root {

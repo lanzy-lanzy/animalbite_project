@@ -36,7 +36,7 @@ def public_create(request):
             record = form.save()
             if not request.user.is_authenticated:
                 login(request, form.account, backend="django.contrib.auth.backends.ModelBackend")
-            messages.success(request, "Your account and pre-registration are ready. You can now track treatment online.")
+            messages.success(request, "Your account and online registration are ready. You can now track treatment online.")
             return redirect("pre_registrations:public_success", number=record.pre_registration_number)
     else:
         form = PatientSignupPreRegistrationForm(account=account)
@@ -47,7 +47,7 @@ def public_create(request):
 def patient_report_bite(request):
     """For logged-in patients: report another bite directly as a case without refilling personal info."""
     if getattr(request.user, 'role', '') != 'patient':
-        messages.info(request, "Please use the public pre-registration form.")
+        messages.info(request, "Please use the public online registration form.")
         return redirect('pre_registrations:public_create')
     try:
         patient = request.user.patient_profile
@@ -195,9 +195,9 @@ def staff_edit(request, pk):
             AuditLog.objects.create(
                 user=request.user,
                 action="UPDATE_PRE_REGISTRATION",
-                description=f"Updated pre-registration {updated.pre_registration_number}",
+                description=f"Updated online registration {updated.pre_registration_number}",
             )
-            messages.success(request, "Pre-registration updated.")
+            messages.success(request, "Online registration updated.")
             return redirect("pre_registrations:staff_detail", pk=record.pk)
     else:
         form = StaffPreRegistrationForm(instance=record)
@@ -213,9 +213,9 @@ def mark_duplicate(request, pk):
     AuditLog.objects.create(
         user=request.user,
         action="MARK_PRE_REGISTRATION_DUPLICATE",
-        description=f"Marked pre-registration {record.pre_registration_number} as duplicate",
+        description=f"Marked online registration {record.pre_registration_number} as duplicate",
     )
-    messages.warning(request, "Pre-registration marked as duplicate.")
+    messages.warning(request, "Online registration marked as duplicate.")
     return redirect("pre_registrations:staff_detail", pk=record.pk)
 
 
@@ -228,9 +228,9 @@ def mark_no_show(request, pk):
     AuditLog.objects.create(
         user=request.user,
         action="MARK_PRE_REGISTRATION_NO_SHOW",
-        description=f"Marked pre-registration {record.pre_registration_number} as no show",
+        description=f"Marked online registration {record.pre_registration_number} as no show",
     )
-    messages.warning(request, "Pre-registration marked as no show.")
+    messages.warning(request, "Online registration marked as no show.")
     return redirect("pre_registrations:staff_detail", pk=record.pk)
 
 
@@ -279,9 +279,9 @@ def verify_approve(request, pk):
     AuditLog.objects.create(
         user=request.user,
         action="VERIFY_PRE_REGISTRATION",
-        description=f"Verified pre-registration {record.pre_registration_number} via scan console",
+        description=f"Verified online registration {record.pre_registration_number} via scan console",
     )
-    messages.success(request, "Pre-registration approved (verified). You can now convert it to an official case.")
+    messages.success(request, "Online registration approved (verified). You can now convert it to an official case.")
     return redirect("pre_registrations:verify", pk=record.pk)
 
 
@@ -294,7 +294,7 @@ def verify_reject(request, pk):
     if request.method != "POST":
         return redirect("pre_registrations:verify", pk=record.pk)
     if record.converted_case_id or record.converted_patient_id:
-        messages.error(request, "Converted pre-registrations cannot be rejected — amend the official record instead.")
+        messages.error(request, "Converted online registrations cannot be rejected — amend the official record instead.")
         return redirect("pre_registrations:verify", pk=record.pk)
     reason = (request.POST.get("reason") or "").strip()[:300]
     record.status = PreRegistration.Status.CANCELLED
@@ -305,9 +305,9 @@ def verify_reject(request, pk):
     AuditLog.objects.create(
         user=request.user,
         action="REJECT_PRE_REGISTRATION",
-        description=f"Rejected pre-registration {record.pre_registration_number}" + (f" — {reason}" if reason else ""),
+        description=f"Rejected online registration {record.pre_registration_number}" + (f" — {reason}" if reason else ""),
     )
-    messages.warning(request, "Pre-registration rejected." + (f" Reason recorded: {reason}" if reason else ""))
+    messages.warning(request, "Online registration rejected." + (f" Reason recorded: {reason}" if reason else ""))
     return redirect("pre_registrations:staff_list")
 
 
@@ -335,11 +335,11 @@ def convert(request, pk):
             'password': temp_pass,
             'created': True,
         }
-        messages.success(request, f"Pre-registration converted to {case.case_number} and patient login created: {temp_user} / Temp: {temp_pass} — please ask patient to change password after login (no SMS sent for credentials).")
+        messages.success(request, f"Online registration converted to {case.case_number} and patient login created: {temp_user} / Temp: {temp_pass} — please ask patient to change password after login (no SMS sent for credentials).")
         # Also store for case_detail display
         request.session['temp_creds_last'] = {'patient_pk': patient.pk, 'username': temp_user, 'password': temp_pass}
     else:
-        messages.success(request, f"Pre-registration converted to official case {case.case_number}.")
+        messages.success(request, f"Online registration converted to official case {case.case_number}.")
     messages.info(request, "Vaccination schedule is not set automatically — a nurse must trigger it from the case page or Nurse Portal.")
     return redirect("bite_cases:case_detail", pk=case.pk)
 

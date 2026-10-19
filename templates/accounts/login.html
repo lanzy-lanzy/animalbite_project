@@ -14,15 +14,7 @@
 
     <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-        }
-    }
-    </script>
-
-    <style>
+<style>
         :root {
             --emerald-950: #08201a;
             --emerald-900: #0d352b;
@@ -63,14 +55,7 @@
                 linear-gradient(180deg, #fdfaf4 0%, #f8f2e5 100%);
         }
         h1, h2, h3, h4, .font-display { font-family: 'Space Grotesk', sans-serif; }
-        #login-canvas {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
-        .grain {
+.grain {
             background-image: radial-gradient(rgba(120,96,50,0.05) 1px, transparent 1px);
             background-size: 22px 22px;
         }
@@ -185,10 +170,7 @@
         </filter>
     </svg>
 
-    <!-- 3D Canvas -->
-    <canvas id="login-canvas"></canvas>
-
-    <!-- Grain + aurora -->
+<!-- Grain + aurora -->
     <div class="fixed inset-0 z-0 pointer-events-none" style="background:radial-gradient(800px 600px at 18% 12%, rgba(18,74,58,0.07) 0%, transparent 60%), radial-gradient(700px 520px at 92% 84%, rgba(201,162,39,0.14) 0%, transparent 65%);"></div>
     <div class="fixed inset-0 z-0 pointer-events-none grain opacity-40"></div>
 
@@ -345,7 +327,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                         </button>
                     </form>
-                    <p class="mt-5 text-center text-sm font-medium text-muted">New patient? <a href="{% url 'pre_registrations:public_create' %}" class="font-bold text-emerald-800 hover:text-emerald-900 underline decoration-gold-500/50 underline-offset-2 hover:text-gold-700">Sign up and pre-register</a></p>
+                    <p class="mt-5 text-center text-sm font-medium text-muted">New patient? <a href="{% url 'pre_registrations:public_create' %}" class="font-bold text-emerald-800 hover:text-emerald-900 underline decoration-gold-500/50 underline-offset-2 hover:text-gold-700">Register online</a></p>
                 </div>
 
                 <!-- Footer — dark ink on sage for contrast -->
@@ -359,113 +341,7 @@
     <!-- ============ GSAP ============ -->
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-    <!-- ============ THREE.JS 3D SCENE — emerald synced, low wash -->
-    <script type="module">
-        import * as THREE from 'three';
-        const canvas = document.getElementById('login-canvas');
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0xfdfaf4, 10, 26);
-
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 0, 10);
-
-        // Central muted emerald wireframe — low opacity, not washing
-        const coreGeo = new THREE.IcosahedronGeometry(2.6, 1);
-        const coreMat = new THREE.MeshBasicMaterial({ color: 0xc9a227, wireframe: true, transparent: true, opacity: 0.14 });
-        const core = new THREE.Mesh(coreGeo, coreMat);
-        scene.add(core);
-
-        // Inner sage glow — subtle
-        const innerGeo = new THREE.IcosahedronGeometry(1.7, 2);
-        const innerMat = new THREE.MeshBasicMaterial({ color: 0xe4f3ec, transparent: true, opacity: 0.24 });
-        const inner = new THREE.Mesh(innerGeo, innerMat);
-        scene.add(inner);
-
-        // Rings — emerald muted, pushed to right/left to avoid form wash
-        const ringGroup = new THREE.Group();
-        const ringData = [
-            { r: 3.4, color: 0xc9a227, rot: [Math.PI/2, 0.3, 0], opacity: 0.16 },
-            { r: 4.1, color: 0x93d2b7, rot: [Math.PI/2 + 0.4, 0.8, 0.2], opacity: 0.12 },
-            { r: 4.8, color: 0xebd79b, rot: [Math.PI/2 - 0.3, 1.1, -0.1], opacity: 0.10 },
-        ];
-        ringData.forEach(d => {
-            const geo = new THREE.TorusGeometry(d.r, 0.010, 16, 140);
-            const mat = new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: d.opacity });
-            const m = new THREE.Mesh(geo, mat);
-            m.rotation.set(...d.rot);
-            m.position.set(1.2, -0.4, -1.5);
-            ringGroup.add(m);
-        });
-        scene.add(ringGroup);
-
-        // Particles — sage / emerald / white, low opacity
-        const pCount = 700;
-        const pos = new Float32Array(pCount * 3);
-        const cols = new Float32Array(pCount * 3);
-        const palette = [new THREE.Color(0xf5ebc9), new THREE.Color(0xc9a227), new THREE.Color(0x93d2b7), new THREE.Color(0xe4f3ec), new THREE.Color(0xffffff)];
-        for (let i = 0; i < pCount; i++) {
-            const i3 = i * 3;
-            const radius = 4 + Math.random() * 20;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            pos[i3]     = radius * Math.sin(phi) * Math.cos(theta) + 1.5;
-            pos[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-            pos[i3 + 2] = radius * Math.cos(phi) - 2;
-            const c = palette[Math.floor(Math.random() * palette.length)];
-            cols[i3] = c.r; cols[i3+1] = c.g; cols[i3+2] = c.b;
-        }
-        const pGeo = new THREE.BufferGeometry();
-        pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        pGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-        const pMat = new THREE.PointsMaterial({
-            size: 0.05, vertexColors: true, transparent: true, opacity: 0.35,
-            blending: THREE.AdditiveBlending, depthWrite: false
-        });
-        scene.add(new THREE.Points(pGeo, pMat));
-
-        // Mouse parallax — gentle
-        const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
-        window.addEventListener('pointermove', e => {
-            mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
-            mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
-        });
-
-        const clock = new THREE.Clock();
-        (function loop() {
-            const t = clock.getElapsedTime();
-            mouse.x += (mouse.tx - mouse.x) * 0.04;
-            mouse.y += (mouse.ty - mouse.y) * 0.04;
-
-            if (!reduceMotion) {
-                core.rotation.y = t * 0.10;
-                core.rotation.x = t * 0.06;
-                inner.rotation.y = -t * 0.08;
-                ringGroup.rotation.y = t * 0.10;
-                ringGroup.rotation.x = t * 0.04;
-            }
-
-            camera.position.x += (mouse.x * 1.2 - camera.position.x) * 0.04;
-            camera.position.y += (-mouse.y * 0.7 - camera.position.y) * 0.04;
-            camera.lookAt(0, 0, 0);
-
-            renderer.render(scene, camera);
-            requestAnimationFrame(loop);
-        })();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-
-    <!-- Liquid glass sheen � pointer tracked on the login card -->
+<!-- Liquid glass sheen � pointer tracked on the login card -->
     <script>
     (function () {
         var card = document.getElementById('login-card');

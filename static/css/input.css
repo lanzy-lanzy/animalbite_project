@@ -142,19 +142,19 @@
             mask-composite: exclude;
     opacity: .9;
   }
-  /* pointer-tracked specular sheen */
+  /* pointer-tracked specular sheen — kept tight and subtle */
   .glass::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(280px 210px at var(--mx, 50%) var(--my, 0%),
-      rgba(255,255,255,.92) 0%, rgba(255,255,255,.26) 44%, rgba(255,255,255,0) 70%);
+    background: radial-gradient(140px 100px at var(--mx, 50%) var(--my, 0%),
+      rgba(255,255,255,.72) 0%, rgba(255,255,255,.17) 46%, rgba(255,255,255,0) 72%);
     opacity: 0;
     transition: opacity .4s ease;
   }
-  .glass:hover::after { opacity: .55; }
+  .glass:hover::after { opacity: .30; }
 
   /* lighter glass for chips / inline surfaces */
   .glass-chip {
@@ -831,25 +831,11 @@
     overflow-wrap: anywhere;
   }
 
-  /* ---------- Form field with leading icon ---------- */
-  .field-wrap { position: relative; }
-  .field-wrap > .field-icon {
-    position: absolute;
-    left: 0.85rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1rem; height: 1rem;
-    color: var(--color-emerald-700);
-    pointer-events: none;
-    z-index: 1;
-  }
-  .field-wrap--area > .field-icon { top: 0.9rem; transform: none; }
-  .field-wrap .form-input,
-  .field-wrap .form-select,
-  .field-wrap .form-textarea,
-  .field-wrap input,
-  .field-wrap select,
-  .field-wrap textarea { padding-left: 2.5rem; }
+  /* ---------- Form field with leading icon ----------
+     NOTE: the padding/positioning rules live in the UNLAYERED block at the
+     end of this file. Tailwind emits px-4 etc. in @layer utilities, which
+     beats @layer components — so here the icon would sit on top of the
+     text. Keep the unlayered copy as the single source of truth. */
 
   /* ---------- Utility text ---------- */
   .text-muted  { color: var(--color-muted) !important; }
@@ -861,6 +847,57 @@
   .slide-in { animation: slideIn .3s ease-in-out; }
   @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
 }
+
+/* ==================================================================
+   UNLAYERED — must beat Tailwind's @layer utilities
+   ================================================================== */
+
+/* ---------- Leading-icon form fields ----------
+   Unlayered on purpose: widget classes such as `px-4` are emitted in
+   @layer utilities, which takes precedence over @layer components.
+   Without this, the absolutely-positioned icon overlaps the input text. */
+.field-wrap {
+  position: relative;
+}
+.field-wrap > .field-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--color-emerald-700);
+  pointer-events: none;
+  z-index: 2;
+  transition: color .18s ease;
+}
+/* icon picks up the warning tone where the field is a risk field */
+.field-wrap > .field-icon.text-amber-600 { color: #d97706; }
+.field-wrap > .field-icon.text-red-700 { color: #b91c1c; }
+.field-wrap > .field-icon.text-gold-600 { color: var(--color-gold-600); }
+
+/* textareas: align the icon to the first line instead of the middle */
+.field-wrap--area > .field-icon {
+  top: 0.95rem;
+  transform: none;
+}
+
+/* reserve room for the icon — beats `px-4` from the utility layer */
+.field-wrap .form-input,
+.field-wrap .form-select,
+.field-wrap .form-textarea,
+.field-wrap input,
+.field-wrap select,
+.field-wrap textarea {
+  padding-left: 2.75rem;
+}
+/* keeps the select chevron clear of the icon */
+.field-wrap .form-select,
+.field-wrap select {
+  padding-right: 2.5rem;
+}
+/* the icon brightens with the focused field */
+.field-wrap:focus-within > .field-icon { color: var(--color-emerald-600); }
 
 /* ==================================================================
    RESPONSIVE + FALLBACKS

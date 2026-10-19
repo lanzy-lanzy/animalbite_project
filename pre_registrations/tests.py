@@ -232,7 +232,7 @@ class PublicPreRegistrationTests(TestCase):
         self.assertContains(found, record.pre_registration_number)
         self.assertContains(found, "Submitted")
         self.assertNotContains(missing, record.full_name())
-        self.assertContains(missing, "No pre-registration was found")
+        self.assertContains(missing, "No online registration was found")
 
 
 class StaffPreRegistrationTests(TestCase):

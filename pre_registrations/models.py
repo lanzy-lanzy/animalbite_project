@@ -110,6 +110,8 @@ class PreRegistration(models.Model):
 
     class Meta:
         ordering = ["-submitted_at"]
+        verbose_name = "Online Registration"
+        verbose_name_plural = "Online Registrations"
         indexes = [
             models.Index(fields=["pre_registration_number"]),
             models.Index(fields=["status", "submitted_at"]),

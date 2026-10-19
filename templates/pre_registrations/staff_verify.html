@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Verify {{ record.pre_registration_number }} - ABTC System{% endblock %}
-{% block page_title %}<h1 class="text-lg font-bold text-ink">Verify Pre-Registration</h1>{% endblock %}
+{% block page_title %}<h1 class="text-lg font-bold text-ink">Verify Registration</h1>{% endblock %}
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-5">
     <div class="flex flex-wrap items-center gap-3">
@@ -86,7 +86,7 @@
             <form method="POST" action="{% url 'pre_registrations:verify_reject' record.pk %}" class="flex-1 space-y-2">{% csrf_token %}
                 <input type="text" name="reason" class="form-input" placeholder="Reason for rejection (optional)" maxlength="300">
                 <button class="btn-secondary w-full !text-red-700 !border-red-200 hover:!bg-red-50" type="submit">Reject</button>
-                <p class="text-xs text-muted text-center">Cancels the pre-registration and records the reason.</p>
+                <p class="text-xs text-muted text-center">Cancels the online registration and records the reason.</p>
             </form>
             <form method="POST" action="{% url 'pre_registrations:convert' record.pk %}" class="flex-1 space-y-2">{% csrf_token %}
                 {% if already_verified %}
@@ -101,9 +101,9 @@
     {% else %}
     <div class="card text-sm text-muted">
         {% if is_converted %}
-        Actions are closed because this pre-registration is already converted. Manage the official record from the links above.
+        Actions are closed because this online registration is already converted. Manage the official record from the links above.
         {% else %}
-        This pre-registration was rejected/cancelled — reopen it via <a class="underline font-semibold" href="{% url 'pre_registrations:staff_edit' record.pk %}">Edit</a> if that was a mistake.
+        This online registration was rejected/cancelled — reopen it via <a class="underline font-semibold" href="{% url 'pre_registrations:staff_edit' record.pk %}">Edit</a> if that was a mistake.
         {% endif %}
     </div>
     {% endif %}

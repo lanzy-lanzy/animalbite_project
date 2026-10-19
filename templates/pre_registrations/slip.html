@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Pre-Registration Slip - ABTC System{% endblock %}
+{% block title %}Registration Slip - ABTC System{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <div class="no-print mb-5 flex flex-wrap gap-3">
@@ -14,7 +14,7 @@
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 border-b border-line pb-5">
             <div>
                 <p class="text-sm font-semibold text-muted">Municipal Health Office / Animal Bite Treatment Center</p>
-                <h1 class="text-2xl font-bold text-ink">Pre-Registration Slip</h1>
+                <h1 class="text-2xl font-bold text-ink">Registration Slip</h1>
                 <p class="mt-2 text-xl font-bold text-emerald-800">{{ record.pre_registration_number }}</p>
             </div>
             <img class="h-36 w-36" src="{% url 'pre_registrations:qr_code' record.pre_registration_number %}" alt="QR code">
@@ -32,9 +32,9 @@
         </dl>
 
         <div class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Please proceed immediately to the Animal Bite Treatment Center. This pre-registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.
+            Please proceed immediately to the Animal Bite Treatment Center. This online registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.
         </div>
-        <p class="mt-4 text-xs text-muted">Pre-registration is only for faster encoding and initial information gathering. It is not yet an official treatment record until verified by authorized staff.</p>
+        <p class="mt-4 text-xs text-muted">Online registration is only for faster encoding and initial information gathering. It is not yet an official treatment record until verified by authorized staff.</p>
     </div>
 </div>
 {% endblock %}

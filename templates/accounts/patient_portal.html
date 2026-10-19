@@ -36,7 +36,7 @@
                 {% for case in cases %}
                     <tr><td class="table-cell font-medium">{{ case.case_number }}</td><td class="table-cell">{{ case.date_time_bite|date:'M d, Y' }}</td><td class="table-cell">{{ case.get_animal_type_display }}</td><td class="table-cell">{{ case.get_exposure_type_display }}</td><td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td></tr>
                 {% empty %}
-                    <tr><td colspan="5" class="text-center py-8 text-muted">No official bite case yet. Staff will create it after verifying your preregistration.</td></tr>
+                    <tr><td colspan="5" class="text-center py-8 text-muted">No official bite case yet. Staff will create it after verifying your online registration.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -44,7 +44,7 @@
     </section>
 
     <section class="card">
-        <h2 class="text-lg font-bold text-ink mb-4">My Pre-Registrations</h2>
+        <h2 class="text-lg font-bold text-ink mb-4">My Registrations</h2>
         <div class="space-y-3">
         {% for record in pre_registrations %}
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-line p-4">
@@ -52,7 +52,7 @@
                 <div class="flex items-center gap-2"><span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span><a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-secondary btn-xs">Slip</a></div>
             </div>
         {% empty %}
-            <p class="text-center py-6 text-muted">No preregistrations found.</p>
+            <p class="text-center py-6 text-muted">No online registrations found.</p>
         {% endfor %}
         </div>
     </section>

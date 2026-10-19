@@ -9,7 +9,9 @@ from utils.phone import normalize_to_09, validate_ph_number
 from .models import PreRegistration
 
 
-INPUT_CLASS = "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8A0303] focus:border-transparent"
+INPUT_CLASS = "form-input"
+SELECT_CLASS = "form-select"
+TEXTAREA_CLASS = "form-textarea"
 User = get_user_model()
 
 
@@ -51,9 +53,9 @@ class PreRegistrationForm(forms.ModelForm):
             "last_name": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "suffix": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "birthdate": forms.DateInput(attrs={"type": "date", "class": INPUT_CLASS}),
-            "sex": forms.Select(attrs={"class": INPUT_CLASS}),
+            "sex": forms.Select(attrs={"class": SELECT_CLASS}),
             "contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
-            "address": forms.Textarea(attrs={"rows": 3, "class": INPUT_CLASS}),
+            "address": forms.Textarea(attrs={"rows": 3, "class": TEXTAREA_CLASS}),
             "barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "guardian_name": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "guardian_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
@@ -62,17 +64,17 @@ class PreRegistrationForm(forms.ModelForm):
             "bite_datetime": forms.DateTimeInput(attrs={"type": "datetime-local", "class": INPUT_CLASS}),
             "incident_place": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "incident_barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "animal_type": forms.Select(attrs={"class": INPUT_CLASS}),
-            "animal_ownership": forms.Select(attrs={"class": INPUT_CLASS}),
-            "animal_vaccination_status": forms.Select(attrs={"class": INPUT_CLASS}),
-            "animal_condition": forms.Select(attrs={"class": INPUT_CLASS}),
-            "exposure_type": forms.Select(attrs={"class": INPUT_CLASS}),
+            "animal_type": forms.Select(attrs={"class": SELECT_CLASS}),
+            "animal_ownership": forms.Select(attrs={"class": SELECT_CLASS}),
+            "animal_vaccination_status": forms.Select(attrs={"class": SELECT_CLASS}),
+            "animal_condition": forms.Select(attrs={"class": SELECT_CLASS}),
+            "exposure_type": forms.Select(attrs={"class": SELECT_CLASS}),
             "body_part_affected": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "number_of_wounds": forms.NumberInput(attrs={"class": INPUT_CLASS, "min": 1}),
-            "wound_washed": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-[#8A0303] focus:ring-[#8A0303] border-gray-300 rounded"}),
-            "first_aid_given": forms.Textarea(attrs={"rows": 3, "class": INPUT_CLASS}),
-            "remarks": forms.Textarea(attrs={"rows": 3, "class": INPUT_CLASS}),
-            "consent_given": forms.CheckboxInput(attrs={"class": "h-4 w-4 text-[#8A0303] focus:ring-[#8A0303] border-gray-300 rounded"}),
+            "wound_washed": forms.CheckboxInput(attrs={"class": "form-check h-4 w-4 rounded border-cream-300"}),
+            "first_aid_given": forms.Textarea(attrs={"rows": 3, "class": TEXTAREA_CLASS}),
+            "remarks": forms.Textarea(attrs={"rows": 3, "class": TEXTAREA_CLASS}),
+            "consent_given": forms.CheckboxInput(attrs={"class": "form-check h-4 w-4 rounded border-cream-300"}),
         }
         labels = {
             "animal_vaccination_status": "Animal vaccination status",
@@ -200,7 +202,7 @@ class StaffPreRegistrationForm(PreRegistrationForm):
         fields = [field for field in PreRegistrationForm.Meta.fields if field != "consent_given"] + ["status"]
         widgets = {
             **PreRegistrationForm.Meta.widgets,
-            "status": forms.Select(attrs={"class": INPUT_CLASS}),
+            "status": forms.Select(attrs={"class": SELECT_CLASS}),
         }
 
     def clean_consent_given(self):
@@ -209,7 +211,7 @@ class StaffPreRegistrationForm(PreRegistrationForm):
 
 class StatusLookupForm(forms.Form):
     pre_registration_number = forms.CharField(
-        label="Pre-registration number",
+        label="Registration number",
         max_length=20,
         widget=forms.TextInput(
             attrs={

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
-{% block title %}Check Pre-Registration Status - ABTC System{% endblock %}
+{% block title %}Check Registration Status - ABTC System{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <div class="mb-6">
         <a href="{% url 'accounts:landing' %}" class="text-sm text-ink/70 hover:text-emerald-800">&larr; Back to landing page</a>
-        <h1 class="mt-3 text-2xl font-bold text-ink">Check Pre-Registration Status</h1>
-        <p class="mt-2 text-sm text-ink/70">Enter your unique pre-registration number. Public users can only retrieve a result when they know the exact number.</p>
+        <h1 class="mt-3 text-2xl font-bold text-ink">Check Registration Status</h1>
+        <p class="mt-2 text-sm text-ink/70">Enter your unique registration number. Public users can only retrieve a result when they know the exact number.</p>
     </div>
     <div class="card">
         <form method="POST" class="flex flex-col sm:flex-row gap-3">
@@ -16,7 +16,7 @@
     </div>
     {% if record %}
     <div class="card mt-5">
-        <p class="text-sm text-muted">Pre-registration number</p>
+        <p class="text-sm text-muted">Registration number</p>
         <h2 class="text-2xl font-bold text-ink">{{ record.pre_registration_number }}</h2>
         <p class="mt-3 text-ink">Status: <span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span></p>
         <p class="mt-2 text-ink">Patient: {{ record.full_name }}</p>
@@ -24,7 +24,7 @@
         <a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-secondary mt-4">View Slip</a>
     </div>
     {% elif missing %}
-    <div class="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">No pre-registration was found for that number.</div>
+    <div class="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">No online registration was found for that number.</div>
     {% endif %}
 </div>
 {% endblock %}
