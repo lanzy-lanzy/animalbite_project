@@ -168,7 +168,88 @@
         {% endif %}
     </div>
 
-    <!-- Vital Signs — dynamic admin input (same layout as print) -->
+    <div class="card mb-6" id="bite-incidents">
+        <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h3 class="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-emerald-800 text-white flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </span>
+                Bite Incident Details
+            </h3>
+            {% if bite_cases %}<span class="text-xs font-bold text-muted">{{ bite_cases|length }} recorded</span>{% endif %}
+        </div>
+
+        {% for case in bite_cases %}
+        <div class="{% if not forloop.last %}pb-5 mb-5 border-b border-line{% endif %}">
+            <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <p class="text-sm font-bold text-ink">{{ case.case_number }}</p>
+                    <span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span>
+                    <span class="text-xs font-medium text-muted">Reported {{ case.date_time_consultation|date:"M d, Y · g:i A" }}</span>
+                </div>
+                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="text-xs font-bold text-emerald-700 hover:underline">View Case →</a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="info-tile">
+                    <span class="info-icon info-icon--gold"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M9 11h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Date &amp; Time of Bite</p><p class="info-value">{{ case.date_time_bite|date:"M d, Y · g:i A" }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 12a7.5 7.5 0 0115 0M4.5 12a7.5 7.5 0 0015 0M12 4.5v15M4.5 12h15"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Animal</p><p class="info-value">{{ case.get_animal_type_display }}{% if case.animal_other %} ({{ case.animal_other }}){% endif %} · {{ case.get_animal_ownership_display }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon info-icon--mint"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Animal Vaccination</p><p class="info-value">{{ case.get_animal_vax_status_display }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon info-icon--warn"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Animal Condition</p><p class="info-value">{{ case.get_animal_condition_display }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon info-icon--danger"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 3L4 14h6l-1 7 9-11h-6l1-7z"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Exposure Type</p><p class="info-value">{{ case.get_exposure_type_display }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon info-icon--gold"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM5 20a7 7 0 0114 0"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Body Part Affected</p><p class="info-value">{{ case.body_part_affected }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon info-icon--mint"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M8 6v14m8-14v14M4 12h16"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Number of Wounds</p><p class="info-value">{{ case.number_of_wounds }}</p></div>
+                </div>
+                <div class="info-tile">
+                    <span class="info-icon {% if case.wound_washed_immediately %}info-icon--mint{% else %}info-icon--warn{% endif %}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Wound Washed</p><p class="info-value">{% if case.wound_washed_immediately %}Yes, immediately{% else %}No{% endif %}</p></div>
+                </div>
+                <div class="info-tile info-tile--wide">
+                    <span class="info-icon info-icon--gold"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Place of Incident</p><p class="info-value">{{ case.place_of_incident }}{% if case.incident_barangay %} · Brgy. {{ case.incident_barangay }}{% endif %}</p></div>
+                </div>
+                {% if case.first_aid_given %}
+                <div class="info-tile info-tile--wide">
+                    <span class="info-icon"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-4-4h8M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">First Aid Given</p><p class="info-value">{{ case.first_aid_given }}</p></div>
+                </div>
+                {% endif %}
+                {% if case.initial_consultation_notes %}
+                <div class="info-tile info-tile--wide">
+                    <span class="info-icon"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></span>
+                    <div class="min-w-0"><p class="info-label">Notes</p><p class="info-value">{{ case.initial_consultation_notes }}</p></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="rounded-xl bg-sage-50 border border-dashed border-line p-6 text-center">
+            <p class="text-sm font-bold text-muted">No bite incident recorded yet</p>
+            {% if request.user.role != 'patient' and request.user.role != 'nurse' %}
+            <a href="{% url 'bite_cases:case_create' %}?patient={{ patient.pk }}" class="mt-3 inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">+ Record Bite Incident</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
     <div class="card mb-6" id="vitals">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
