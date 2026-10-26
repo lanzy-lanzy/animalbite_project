@@ -4,7 +4,7 @@
 {% block content %}
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-muted">Scan a patient's slip QR to jump straight to its verification console (approve / reject / convert).</p>
+        <p class="text-sm text-muted">Scan a patient's slip QR to open its online registration, then convert it to an official case.</p>
         <button type="button" onclick="window.ABTCScan && window.ABTCScan.open()" class="btn-secondary btn-sm inline-flex items-center gap-1.5" title="Scan an online registration slip QR (AB-…) or patient QR (PAT-…)">
             <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
             Scan Slip QR
@@ -49,8 +49,8 @@
                     <td class="table-cell text-right whitespace-nowrap">
                         {% if record.status == 'converted' %}
                         <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Verified</span>
-                        {% else %}
-                        <a href="{% url 'pre_registrations:verify' record.pk %}" class="btn-success btn-sm">Verify</a>
+                        {% elif not record.converted_case_id %}
+                        <form method="POST" action="{% url 'pre_registrations:convert' record.pk %}" class="inline">{% csrf_token %}<button type="submit" class="btn-success btn-sm">Convert to Case</button></form>
                         {% endif %}
                         <a href="{% url 'pre_registrations:staff_detail' record.pk %}" class="btn-secondary btn-sm">Open</a>
                     </td>

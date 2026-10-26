@@ -740,6 +740,30 @@
     color: var(--color-muted-2);
     margin-top: .35rem;
   }
+  /* Free-text notes use a calm, neutral surface. Error colours are applied
+     only by .has-error below, so a resting notes field never looks invalid. */
+  .form-notes {
+    color: var(--color-ink);
+    background: linear-gradient(145deg, #f7f2e7, #fdfbf6);
+    border-color: var(--color-line);
+    box-shadow: inset 0 1px 2px rgba(146,124,84,.08);
+  }
+  .form-notes::placeholder { color: #b5a887; }
+  .form-notes:focus {
+    outline: none;
+    background: #fff;
+    border-color: var(--color-emerald-600);
+    box-shadow:
+      0 0 0 3px rgba(31,123,94,.16),
+      0 0 0 1px rgba(31,123,94,.38);
+  }
+  .has-error .form-notes,
+  .form-notes.is-invalid {
+    color: #7f1d1d;
+    background: #fef2f2;
+    border-color: #fca5a5;
+  }
+  .has-error .field-icon { color: #b91c1c; }
   .form-error {
     font-size: .75rem;
     color: #b91c1c;

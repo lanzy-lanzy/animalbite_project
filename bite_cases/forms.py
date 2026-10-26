@@ -80,7 +80,7 @@ class PatientBiteReportForm(forms.ModelForm):
             'wound_description': forms.Textarea(attrs={'rows': 3, 'class': 'form-input', 'placeholder': 'Describe wounds...'}),
             'wound_washed_immediately': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-emerald-700 focus:ring-emerald-700 border-line rounded'}),
             'first_aid_given': forms.Textarea(attrs={'rows': 3, 'class': 'form-input', 'placeholder': 'What first aid was given?'}),
-            'initial_consultation_notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-input', 'placeholder': 'Any additional notes...'}),
+            'initial_consultation_notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-input form-notes', 'placeholder': 'Any additional notes...'}),
         }
         labels = {
             'date_time_bite': 'Date & time of bite',

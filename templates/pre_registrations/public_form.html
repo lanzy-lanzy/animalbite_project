@@ -14,6 +14,11 @@
 
     <form method="POST" class="space-y-6">
         {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+        {% endif %}
         {% if existing_account %}
         <section class="card border border-green-200 bg-green-50">
             <h2 class="text-lg font-bold text-ink">Signed in as {{ existing_account.username }}</h2>
@@ -73,9 +78,11 @@
 
         <section class="card">
             <h2 class="text-lg font-bold text-ink mb-4">Bite Incident Information</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label class="form-label">Date and time of bite *</label>
-<div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>{{ form.bite_datetime }}</div></div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div><label class="form-label">Date of bite *</label>
+<div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M9 11h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>{{ form.bite_date }}</div>{% if form.bite_date.errors %}<p class="text-red-600 text-xs mt-1">{{ form.bite_date.errors.0 }}</p>{% endif %}</div>
+                <div><label class="form-label">Time of bite *</label>
+<div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>{{ form.bite_time }}</div>{% if form.bite_time.errors %}<p class="text-red-600 text-xs mt-1">{{ form.bite_time.errors.0 }}</p>{% endif %}</div>
                 <div><label class="form-label">Place of incident *</label>
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>{{ form.incident_place }}</div></div>
                 <div><label class="form-label">Barangay of incident *</label>
@@ -106,8 +113,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div><label class="form-label">First aid given</label>
 <div class="field-wrap field-wrap--area"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>{{ form.first_aid_given }}</div></div>
-                <div><label class="form-label">Additional remarks</label>
-<div class="field-wrap field-wrap--area"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>{{ form.remarks }}</div></div>
+                <div><label class="form-label">Additional notes</label>
+<div class="field-wrap field-wrap--area{% if form.remarks.errors %} has-error{% endif %}"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>{{ form.remarks }}</div>{% if form.remarks.errors %}<p class="text-red-600 text-xs mt-1">{{ form.remarks.errors.0 }}</p>{% endif %}</div>
             </div>
         </section>
 

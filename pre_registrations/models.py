@@ -1,8 +1,9 @@
-from datetime import date
+from datetime import datetime, time, timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -170,13 +171,55 @@ class PreRegistration(models.Model):
         return " ".join(parts)
 
     def possible_duplicates(self):
+        local_day = timezone.localtime(self.bite_datetime).date()
+        day_start = timezone.make_aware(
+            datetime.combine(local_day, time.min), timezone.get_current_timezone()
+        )
+        day_end = day_start + timedelta(days=1)
         return PreRegistration.objects.filter(
             first_name__iexact=self.first_name,
             last_name__iexact=self.last_name,
             birthdate=self.birthdate,
             contact_number=self.contact_number,
-            bite_datetime__date=self.bite_datetime.date(),
+            bite_datetime__gte=day_start,
+            bite_datetime__lt=day_end,
         ).exclude(pk=self.pk)
+
+    @classmethod
+    def find_duplicates(
+        cls,
+        *,
+        first_name="",
+        last_name="",
+        contact_number="",
+        exclude_pk=None,
+        exclude_account_id=None,
+    ):
+        """Active registrations sharing a full name or contact number.
+
+        Cancelled and duplicate records no longer block a fresh submission.
+        A signed-in patient reporting another bite under the same account is
+        not a duplicate, so their own records are excluded.
+        """
+        query = Q()
+        first_name = (first_name or "").strip()
+        last_name = (last_name or "").strip()
+        contact_number = (contact_number or "").strip()
+        if first_name and last_name:
+            query |= Q(first_name__iexact=first_name, last_name__iexact=last_name)
+        if contact_number:
+            query |= Q(contact_number__iexact=contact_number)
+        if not query:
+            return cls.objects.none()
+
+        duplicates = cls.objects.filter(query).exclude(
+            status__in=[cls.Status.CANCELLED, cls.Status.DUPLICATE]
+        )
+        if exclude_pk:
+            duplicates = duplicates.exclude(pk=exclude_pk)
+        if exclude_account_id:
+            duplicates = duplicates.exclude(account_id=exclude_account_id)
+        return duplicates.order_by("-submitted_at")
 
     def _qr_payload(self):
         # Host-independent token. The QR image view (pre_registrations:qr_code)

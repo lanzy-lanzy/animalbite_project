@@ -149,9 +149,10 @@
                     <label class="form-label">First aid given</label>
                     {{ form.first_aid_given }}
                 </div>
-                <div>
+                <div{% if form.initial_consultation_notes.errors %} class="has-error"{% endif %}>
                     <label class="form-label">Additional notes</label>
                     {{ form.initial_consultation_notes }}
+                    {% if form.initial_consultation_notes.errors %}<p class="text-red-600 text-xs mt-1">{{ form.initial_consultation_notes.errors.0 }}</p>{% endif %}
                 </div>
             </div>
 

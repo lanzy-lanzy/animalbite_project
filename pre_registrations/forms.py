@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from utils.phone import normalize_to_09, validate_ph_number
 
@@ -12,10 +15,20 @@ from .models import PreRegistration
 INPUT_CLASS = "form-input"
 SELECT_CLASS = "form-select"
 TEXTAREA_CLASS = "form-textarea"
+NOTES_CLASS = f"{TEXTAREA_CLASS} form-notes"
 User = get_user_model()
 
 
 class PreRegistrationForm(forms.ModelForm):
+    bite_date = forms.DateField(
+        label="Date of bite",
+        widget=forms.DateInput(attrs={"type": "date", "class": INPUT_CLASS}),
+    )
+    bite_time = forms.TimeField(
+        label="Time of bite",
+        widget=forms.TimeInput(attrs={"type": "time", "class": INPUT_CLASS}),
+    )
+
     class Meta:
         model = PreRegistration
         fields = [
@@ -32,7 +45,8 @@ class PreRegistrationForm(forms.ModelForm):
             "guardian_contact_number",
             "emergency_contact_name",
             "emergency_contact_number",
-            "bite_datetime",
+            "bite_date",
+            "bite_time",
             "incident_place",
             "incident_barangay",
             "animal_type",
@@ -61,7 +75,6 @@ class PreRegistrationForm(forms.ModelForm):
             "guardian_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
             "emergency_contact_name": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "emergency_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
-            "bite_datetime": forms.DateTimeInput(attrs={"type": "datetime-local", "class": INPUT_CLASS}),
             "incident_place": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "incident_barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "animal_type": forms.Select(attrs={"class": SELECT_CLASS}),
@@ -73,7 +86,7 @@ class PreRegistrationForm(forms.ModelForm):
             "number_of_wounds": forms.NumberInput(attrs={"class": INPUT_CLASS, "min": 1}),
             "wound_washed": forms.CheckboxInput(attrs={"class": "form-check h-4 w-4 rounded border-cream-300"}),
             "first_aid_given": forms.Textarea(attrs={"rows": 3, "class": TEXTAREA_CLASS}),
-            "remarks": forms.Textarea(attrs={"rows": 3, "class": TEXTAREA_CLASS}),
+            "remarks": forms.Textarea(attrs={"rows": 3, "class": NOTES_CLASS}),
             "consent_given": forms.CheckboxInput(attrs={"class": "form-check h-4 w-4 rounded border-cream-300"}),
         }
         labels = {
@@ -86,6 +99,55 @@ class PreRegistrationForm(forms.ModelForm):
             "guardian_contact_number": "Optional, must be valid PH mobile if for minor (fallback SMS).",
             "emergency_contact_number": "Optional, valid PH mobile for fallback.",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.bite_datetime:
+            local_bite = timezone.localtime(self.instance.bite_datetime)
+            self.initial.setdefault("bite_date", local_bite.date())
+            self.initial.setdefault(
+                "bite_time", local_bite.time().replace(second=0, microsecond=0)
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        bite_date = cleaned_data.get("bite_date")
+        bite_time = cleaned_data.get("bite_time")
+        if bite_date and bite_time:
+            bite_datetime = datetime.combine(bite_date, bite_time)
+            if timezone.is_naive(bite_datetime):
+                bite_datetime = timezone.make_aware(
+                    bite_datetime, timezone.get_current_timezone()
+                )
+            cleaned_data["bite_datetime"] = bite_datetime
+
+        if self.instance.pk is None:
+            duplicates = PreRegistration.find_duplicates(
+                first_name=cleaned_data.get("first_name", ""),
+                last_name=cleaned_data.get("last_name", ""),
+                contact_number=cleaned_data.get("contact_number", ""),
+                exclude_account_id=getattr(getattr(self, "account", None), "pk", None),
+            )
+            if duplicates.exists():
+                numbers = ", ".join(
+                    duplicates.values_list("pre_registration_number", flat=True)[:3]
+                )
+                self.add_error(
+                    None,
+                    "A registration with the same name or contact number already "
+                    f"exists ({numbers}). If you already registered, please check "
+                    "your registration status or log in to your patient account.",
+                )
+        return cleaned_data
+
+    def _post_clean(self):
+        # bite_datetime is intentionally not a form field (the UI collects a
+        # separate date and time), so apply the combined value before the
+        # model instance is validated and saved.
+        self.instance.bite_datetime = (
+            self.cleaned_data.get("bite_datetime") or self.instance.bite_datetime
+        )
+        super()._post_clean()
 
     def clean_contact_number(self):
         val = self.cleaned_data.get("contact_number", "").strip()

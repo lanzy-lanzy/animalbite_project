@@ -10,6 +10,7 @@
         <p class="mt-4 text-sm text-ink/70">This online registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.</p>
         <div class="mt-6 flex flex-wrap justify-center gap-3">
             {% if request.user.is_authenticated and request.user.role == 'patient' %}<a href="{% url 'accounts:patient_portal' %}" class="btn-primary">Go to My Treatment</a>{% endif %}
+            <a href="{% url 'pre_registrations:qr_code' record.pre_registration_number %}?download=1" download="ABTC_registration_{{ record.pre_registration_number }}.png" class="btn-success">Download QR Code</a>
             <a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-primary">View Printable Slip</a>
             <button type="button" onclick="window.print()" class="btn-secondary">Print This Page</button>
             <a href="{% url 'accounts:landing' %}" class="btn-secondary">Back to Home</a>

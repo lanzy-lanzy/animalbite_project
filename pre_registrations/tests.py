@@ -131,7 +131,8 @@ class PublicPreRegistrationTests(TestCase):
             "guardian_contact_number": "",
             "emergency_contact_name": "Nora Garcia",
             "emergency_contact_number": "09175554321",
-            "bite_datetime": "2026-06-29T08:30",
+            "bite_date": "2026-06-29",
+            "bite_time": "08:30",
             "incident_place": "Public market",
             "incident_barangay": "Poblacion",
             "animal_type": "dog",
@@ -172,6 +173,19 @@ class PublicPreRegistrationTests(TestCase):
         self.assertEqual(int(self.client.session['_auth_user_id']), record.account_id)
         self.assertEqual(record.age, 31)
         self.assertTrue(record.qr_code)
+        local_bite = timezone.localtime(record.bite_datetime)
+        self.assertEqual(local_bite.strftime("%Y-%m-%d %H:%M"), "2026-06-29 08:30")
+
+        success = self.client.get(response.url)
+        self.assertContains(success, "Download QR Code")
+
+        download = self.client.get(
+            reverse("pre_registrations:qr_code", args=[record.pre_registration_number]),
+            {"download": "1"},
+        )
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(download["Content-Type"], "image/png")
+        self.assertIn("attachment;", download["Content-Disposition"])
 
     def test_existing_email_does_not_create_partial_registration(self):
         User = get_user_model()
@@ -184,13 +198,81 @@ class PublicPreRegistrationTests(TestCase):
         self.assertEqual(PreRegistration.objects.count(), 0)
         self.assertEqual(User.objects.count(), 1)
 
+    def test_duplicate_name_or_contact_is_rejected(self):
+        PreRegistration.objects.create(
+            first_name="Lina",
+            last_name="Garcia",
+            birthdate=date(1995, 6, 15),
+            sex="female",
+            contact_number="09175551234",
+            address="123 Rizal Street",
+            barangay="Poblacion",
+            bite_datetime=timezone.now(),
+            incident_place="Public market",
+            incident_barangay="Poblacion",
+            animal_type="dog",
+            animal_ownership="stray",
+            animal_vaccination_status="unknown",
+            animal_condition="missing",
+            exposure_type="bite",
+            body_part_affected="Right calf",
+            number_of_wounds=1,
+            consent_given=True,
+        )
+
+        same_name = self.valid_payload()
+        same_name["contact_number"] = "09179998888"
+        response = self.client.post(reverse("pre_registrations:public_create"), same_name)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "same name or contact number")
+        self.assertEqual(PreRegistration.objects.count(), 1)
+
+        same_contact = self.valid_payload()
+        same_contact["first_name"] = "Another"
+        same_contact["last_name"] = "Person"
+        response = self.client.post(reverse("pre_registrations:public_create"), same_contact)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "same name or contact number")
+        self.assertEqual(PreRegistration.objects.count(), 1)
+        self.assertEqual(get_user_model().objects.filter(role="patient").count(), 0)
+
+    def test_cancelled_registration_does_not_block_a_new_submission(self):
+        cancelled = PreRegistration.objects.create(
+            first_name="Lina",
+            last_name="Garcia",
+            birthdate=date(1995, 6, 15),
+            sex="female",
+            contact_number="09175551234",
+            address="123 Rizal Street",
+            barangay="Poblacion",
+            bite_datetime=timezone.now(),
+            incident_place="Public market",
+            incident_barangay="Poblacion",
+            animal_type="dog",
+            animal_ownership="stray",
+            animal_vaccination_status="unknown",
+            animal_condition="missing",
+            exposure_type="bite",
+            body_part_affected="Right calf",
+            number_of_wounds=1,
+            consent_given=True,
+            status=PreRegistration.Status.CANCELLED,
+        )
+
+        response = self.client.post(reverse("pre_registrations:public_create"), self.valid_payload())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(PreRegistration.objects.count(), 2)
+        self.assertTrue(PreRegistration.objects.exclude(pk=cancelled.pk).exists())
+
     def test_signed_in_patient_can_add_another_preregistration_to_same_account(self):
         self.client.post(reverse("pre_registrations:public_create"), self.valid_payload())
         account = get_user_model().objects.get(username="lina.garcia")
         second_payload = self.valid_payload()
         for field in ("username", "email", "password1", "password2"):
             second_payload.pop(field)
-        second_payload["bite_datetime"] = "2026-07-30T09:00"
+        second_payload["bite_date"] = "2026-07-30"
+        second_payload["bite_time"] = "09:00"
 
         response = self.client.post(reverse("pre_registrations:public_create"), second_payload)
 
@@ -291,18 +373,21 @@ class StaffPreRegistrationTests(TestCase):
         self.assertContains(response, self.record.pre_registration_number)
         self.assertContains(response, "Rico Bautista")
 
-    def test_staff_can_mark_duplicate_and_no_show(self):
+    def test_staff_pages_offer_conversion_without_verify_console_or_duplicate_action(self):
         self.client.login(username="encoder", password="pass12345")
 
-        duplicate_response = self.client.post(
-            reverse("pre_registrations:mark_duplicate", args=[self.record.pk])
-        )
-        self.record.refresh_from_db()
-        self.assertRedirects(
-            duplicate_response,
-            reverse("pre_registrations:staff_detail", args=[self.record.pk]),
-        )
-        self.assertEqual(self.record.status, PreRegistration.Status.DUPLICATE)
+        detail = self.client.get(reverse("pre_registrations:staff_detail", args=[self.record.pk]))
+        self.assertNotContains(detail, "Verify Console")
+        self.assertNotContains(detail, "Mark Duplicate")
+        self.assertContains(detail, "Convert to Official Case")
+
+        listing = self.client.get(reverse("pre_registrations:staff_list"))
+        self.assertNotContains(listing, "Verify Console")
+        self.assertNotContains(listing, "Mark Duplicate")
+        self.assertContains(listing, "Convert to Case")
+
+    def test_staff_can_mark_no_show(self):
+        self.client.login(username="encoder", password="pass12345")
 
         no_show_response = self.client.post(
             reverse("pre_registrations:mark_no_show", args=[self.record.pk])

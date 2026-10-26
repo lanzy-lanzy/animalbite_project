@@ -10,13 +10,10 @@
         {% if record.converted_patient_id %}
         <a href="{% url 'patients:patient_detail' record.converted_patient_id %}" class="btn-success">View Patient Record</a>
         {% endif %}
-        {% else %}
-        <a href="{% url 'pre_registrations:verify' record.pk %}" class="btn-success">Verify Console</a>
         {% endif %}
         <a href="{% url 'pre_registrations:staff_edit' record.pk %}" class="btn-secondary">Edit</a>
         <a href="{% url 'pre_registrations:staff_slip' record.pk %}" class="btn-secondary">Print Slip</a>
         {% if record.status != 'converted' %}
-        <form method="POST" action="{% url 'pre_registrations:mark_duplicate' record.pk %}">{% csrf_token %}<button class="btn-secondary" type="submit">Mark Duplicate</button></form>
         <form method="POST" action="{% url 'pre_registrations:mark_no_show' record.pk %}">{% csrf_token %}<button class="btn-secondary" type="submit">Mark No Show</button></form>
         {% endif %}
         {% if not record.converted_case_id %}

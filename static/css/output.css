@@ -1355,9 +1355,6 @@
     --tw-border-style: dashed;
     border-style: dashed;
   }
-  .\!border-red-200 {
-    border-color: var(--color-red-200) !important;
-  }
   .border-amber-200 {
     border-color: var(--color-amber-200);
   }
@@ -2300,9 +2297,6 @@
   .opacity-40 {
     opacity: 40%;
   }
-  .opacity-60 {
-    opacity: 60%;
-  }
   .opacity-75 {
     opacity: 75%;
   }
@@ -2659,13 +2653,6 @@
     &:hover {
       @media (hover: hover) {
         border-color: var(--color-white);
-      }
-    }
-  }
-  .hover\:\!bg-red-50 {
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-red-50) !important;
       }
     }
   }
@@ -3368,11 +3355,6 @@
       align-items: flex-end;
     }
   }
-  .lg\:items-start {
-    @media (width >= 64rem) {
-      align-items: flex-start;
-    }
-  }
   .lg\:justify-between {
     @media (width >= 64rem) {
       justify-content: space-between;
@@ -4045,6 +4027,29 @@
     font-size: .75rem;
     color: var(--color-muted-2);
     margin-top: .35rem;
+  }
+  .form-notes {
+    color: var(--color-ink);
+    background: linear-gradient(145deg, #f7f2e7, #fdfbf6);
+    border-color: var(--color-line);
+    box-shadow: inset 0 1px 2px rgba(146,124,84,.08);
+  }
+  .form-notes::placeholder {
+    color: #b5a887;
+  }
+  .form-notes:focus {
+    outline: none;
+    background: #fff;
+    border-color: var(--color-emerald-600);
+    box-shadow: 0 0 0 3px rgba(31,123,94,.16), 0 0 0 1px rgba(31,123,94,.38);
+  }
+  .has-error .form-notes, .form-notes.is-invalid {
+    color: #7f1d1d;
+    background: #fef2f2;
+    border-color: #fca5a5;
+  }
+  .has-error .field-icon {
+    color: #b91c1c;
   }
   .form-error {
     font-size: .75rem;

@@ -968,8 +968,8 @@ _SAFE_INTERNAL_ROOTS = ('/patients', '/vaccination', '/bite_cases', '/doctor', '
 def _resolve_pre_registration(number):
     """Map a pre-registration number to the freshest record: once converted,
     scanning leads to the official patient record (which always carries the
-    current data); before conversion it lands on the scan-verification
-    console, where staff can approve / reject / convert in one step."""
+    current data); before conversion it opens the online registration detail
+    page, where staff can review and convert it to an official case."""
     try:
         from pre_registrations.models import PreRegistration
         pr = (PreRegistration.objects
@@ -979,7 +979,7 @@ def _resolve_pre_registration(number):
             return None
         if pr.converted_patient_id:
             return reverse('patients:patient_detail', args=[pr.converted_patient_id])
-        return reverse('pre_registrations:verify', args=[pr.pk])
+        return reverse('pre_registrations:staff_detail', args=[pr.pk])
     except Exception:
         return None
 
