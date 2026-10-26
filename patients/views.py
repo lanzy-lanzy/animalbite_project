@@ -212,8 +212,8 @@ def patient_detail(request, pk):
     # Vital signs — latest and recent for admin dynamic editing
     latest_vitals = patient.get_latest_vitals() if hasattr(patient, 'get_latest_vitals') else None
     recent_vitals = list(patient.vital_signs.select_related('taken_by').order_by('-taken_at')[:5]) if hasattr(patient, 'vital_signs') else []
-    patient_qr_data_uri, patient_qr_payload = _patient_qr_data_uri(patient)
-    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'patient_qr_payload': patient_qr_payload, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals})
+    patient_qr_data_uri, _ = _patient_qr_data_uri(patient)
+    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals})
 
 
 @login_required
