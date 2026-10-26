@@ -7,6 +7,7 @@ class PatientPortalAccessMiddleware:
 
     ALLOWED_PREFIXES = (
         "/patient-portal/",
+        "/vaccination/patient-portal/",
         "/patient/report-bite/",
         "/patient/",
         "/pre-register/",

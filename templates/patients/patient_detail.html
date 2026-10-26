@@ -546,11 +546,11 @@
                                 </div>
                             {% endif %}
                         </td>
-                        <td class="table-cell text-right">
+                        <td class="table-cell text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
-                                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary btn-xs">View</a>
+                                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary btn-xs shrink-0">View</a>
                                 {% if case.vaccination_schedule %}
-                                <a href="{% url 'vaccination:schedule_detail' case.vaccination_schedule.pk %}" class="btn-primary btn-xs">Doses</a>
+                                <a href="{% url 'vaccination:schedule_detail' case.vaccination_schedule.pk %}" class="btn-primary btn-xs shrink-0">Doses</a>
                                 {% endif %}
                             </div>
                         </td>

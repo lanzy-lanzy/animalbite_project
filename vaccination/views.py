@@ -164,6 +164,30 @@ def schedule_detail(request, pk):
         'total': total, 'completed': completed, 'progress': progress,
     })
 
+
+@login_required
+def my_schedule_detail(request, pk):
+    """Read-only schedule view for the patient portal.
+
+    Patients may only open schedules that belong to their own bite cases;
+    anything else bounces back to the portal.
+    """
+    if getattr(request.user, 'role', '') != 'patient':
+        return redirect('vaccination:schedule_detail', pk=pk)
+    schedule = get_object_or_404(
+        VaccinationSchedule.objects.select_related('bite_case__patient'),
+        pk=pk,
+        bite_case__patient__account=request.user,
+    )
+    today = timezone.localdate()
+    total = schedule.doses.count()
+    completed = schedule.doses.filter(dose_status='completed').count()
+    progress = int((completed / total * 100) if total else 0)
+    return render(request, 'vaccination/patient_schedule_detail.html', {
+        'schedule': schedule, 'today': today,
+        'total': total, 'completed': completed, 'progress': progress,
+    })
+
 @login_required
 def dose_update(request, pk):
     dose = get_object_or_404(VaccineDose, pk=pk)

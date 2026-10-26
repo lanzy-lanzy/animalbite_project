@@ -9,6 +9,8 @@ urlpatterns = [
     path('schedules/trigger/<int:case_pk>/', views.schedule_trigger, name='schedule_trigger'),
     path('schedules/create/<int:case_pk>/', views.schedule_create, name='schedule_create'),
     path('schedules/<int:pk>/', views.schedule_detail, name='schedule_detail'),
+    # Patient portal — read-only view of the patient's own schedule
+    path('patient-portal/schedules/<int:pk>/', views.my_schedule_detail, name='my_schedule_detail'),
     path('doses/<int:pk>/update/', views.dose_update, name='dose_update'),
     path('follow-ups/', views.follow_up_list, name='follow_up_list'),
     path('follow-ups/create/<int:case_pk>/', views.follow_up_create, name='follow_up_create'),
