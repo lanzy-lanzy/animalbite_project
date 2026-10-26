@@ -236,7 +236,16 @@ def patient_detail(request, pk):
     except Exception:
         pass
     patient_qr_data_uri, _ = _patient_qr_data_uri(patient)
-    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'assessments': assessments})
+    # Primary vaccination schedule for this patient — the most recent bite case
+    # that actually has one. Used by the "Vaccination Schedule" shortcut so it
+    # opens this patient's schedule detail instead of the global list.
+    primary_schedule = None
+    for _case in bite_cases:
+        _sched = getattr(_case, 'vaccination_schedule', None)
+        if _sched:
+            primary_schedule = _sched
+            break
+    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'assessments': assessments, 'primary_schedule': primary_schedule})
 
 
 @login_required
