@@ -152,3 +152,75 @@ class NurseTriggeredScheduleTests(TestCase):
         self.assertFalse(created2)
         self.assertEqual(sched2.pk, sched.pk)
         self.assertEqual(VaccineDose.objects.filter(schedule=sched).count(), 3)
+
+
+class ScheduleOwnershipEnforcementTests(TestCase):
+    """The vaccination schedule detail page must be scoped to the owning patient:
+    a patient can open only their own schedule, never another patient's."""
+
+    def _make_patient_with_login(self, number, first, user_name):
+        user = U.objects.create_user(user_name, password="pw12345678", role="patient")
+        patient = Patient.objects.create(
+            patient_number=number, first_name=first, last_name="Doe",
+            birthdate=datetime.date(1990, 1, 1), contact_number="09170001111",
+            account=user,
+        )
+        case = AnimalBiteCase.objects.create(
+            case_number=f"ABC-{number}", patient=patient, created_by=user,
+            animal_type="dog", exposure_type="bite",
+            date_time_bite=datetime.datetime(2026, 10, 1, 9, 0),
+        )
+        sched = VaccinationSchedule.objects.create(bite_case=case)
+        VaccineDose.objects.create(
+            schedule=sched, dose_label="Day 0",
+            scheduled_date=datetime.date(2026, 10, 1),
+        )
+        return user, patient, sched
+
+    def setUp(self):
+        self.alice, self.alice_patient, self.alice_sched = self._make_patient_with_login(
+            "PAT-A0001", "Alice", "alice"
+        )
+        self.bob, self.bob_patient, self.bob_sched = self._make_patient_with_login(
+            "PAT-B0002", "Bob", "bob"
+        )
+        self.admin = U.objects.create_user("adm", password="pw12345678", role="admin")
+
+    # ---- patient portal read-only view (the page patients actually reach) ----
+    def test_patient_can_view_own_schedule(self):
+        self.client.force_login(self.alice)
+        response = self.client.get(
+            reverse("vaccination:my_schedule_detail", args=[self.alice_sched.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.alice_sched.bite_case.case_number)
+
+    def test_patient_cannot_view_another_patient_schedule(self):
+        """Bob must get a 404 (not a soft render) when requesting Alice's schedule."""
+        self.client.force_login(self.bob)
+        response = self.client.get(
+            reverse("vaccination:my_schedule_detail", args=[self.alice_sched.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+        # Alice's case identifier must never appear in the response body.
+        self.assertNotIn(self.alice_sched.bite_case.case_number.encode(), response.content)
+
+    # ---- staff schedule detail ----
+    def test_staff_can_view_any_schedule(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse("vaccination:schedule_detail", args=[self.alice_sched.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_patient_redirected_away_from_staff_schedule_detail(self):
+        """A patient hitting the staff schedule_detail URL must not see the data.
+        Either the middleware or the view guard bounces them to their portal."""
+        self.client.force_login(self.bob)
+        response = self.client.get(
+            reverse("vaccination:schedule_detail", args=[self.alice_sched.pk]),
+            follow=True,
+        )
+        self.assertNotContains(response, self.alice_sched.bite_case.case_number)
+        # Ultimately lands on the patient portal, not the schedule page.
+        self.assertEqual(response.redirect_chain[-1][0], reverse("accounts:patient_portal"))

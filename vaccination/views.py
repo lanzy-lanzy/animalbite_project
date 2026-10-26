@@ -154,6 +154,15 @@ def schedule_create(request, case_pk):
 @login_required
 def schedule_detail(request, pk):
     schedule = get_object_or_404(VaccinationSchedule.objects.select_related('bite_case__patient'), pk=pk)
+    # Ownership enforcement: a patient may only open a schedule that belongs to
+    # their own account, and is routed to the read-only portal view. Any attempt
+    # to reach another patient's schedule is denied — no cross-patient exposure.
+    # Staff (admin / nurse / doctor) keep their normal RBAC-scoped access.
+    if getattr(request.user, 'role', '') == 'patient':
+        if schedule.bite_case.patient.account_id != request.user.pk:
+            messages.error(request, 'You do not have access to this vaccination schedule.')
+            return redirect('accounts:patient_portal')
+        return redirect('vaccination:my_schedule_detail', pk=schedule.pk)
     # for badge "Today" and progress
     today = timezone.localdate()
     total = schedule.doses.count()
