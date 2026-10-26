@@ -212,8 +212,31 @@ def patient_detail(request, pk):
     # Vital signs — latest and recent for admin dynamic editing
     latest_vitals = patient.get_latest_vitals() if hasattr(patient, 'get_latest_vitals') else None
     recent_vitals = list(patient.vital_signs.select_related('taken_by').order_by('-taken_at')[:5]) if hasattr(patient, 'vital_signs') else []
+    # Clinical Assessments (Section 3) — latest + history for doctor edit/update on this record
+    latest_assessment = None
+    clinical_by_case = {}
+    assessments = []
+    try:
+        from doctor.models import ClinicalAssessment
+        assessments = list(ClinicalAssessment.objects.select_related('assessed_by', 'bite_case').filter(patient=patient).order_by('-encounter_date', '-updated_at')[:10])
+        if assessments:
+            latest_assessment = assessments[0]
+        for a in ClinicalAssessment.objects.select_related('assessed_by', 'bite_case').filter(patient=patient):
+            if a.bite_case_id:
+                clinical_by_case[a.bite_case_id] = a
+        # prefer the assessment linked to the latest bite case
+        try:
+            bite_list = list(bite_cases) if bite_cases else []
+            if bite_list:
+                newest = bite_list[0]
+                if newest.pk in clinical_by_case:
+                    latest_assessment = clinical_by_case[newest.pk]
+        except Exception:
+            pass
+    except Exception:
+        pass
     patient_qr_data_uri, _ = _patient_qr_data_uri(patient)
-    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals})
+    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'assessments': assessments})
 
 
 @login_required
