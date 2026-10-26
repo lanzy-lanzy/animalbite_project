@@ -67,7 +67,6 @@ def generate_patient_number():
 def patient_list(request):
     query = request.GET.get('q', '')
     barangay = request.GET.get('barangay', '')
-    sex = request.GET.get('sex', '')
     patients_qs = Patient.objects.filter(is_archived=False)
 
     if query:
@@ -75,14 +74,13 @@ def patient_list(request):
         # Match both the raw query and the 63... Semaphore equivalent for stored numbers
         query_63 = normalize_to_63(query) or query
         patients_qs = patients_qs.filter(
-            Q(first_name__icontains=query) | Q(last_name__icontains=query) |
-            Q(patient_number__icontains=query) | Q(contact_number__icontains=query) |
-            Q(contact_number__icontains=query_63)
+            Q(first_name__icontains=query) | Q(middle_name__icontains=query) |
+            Q(last_name__icontains=query) | Q(patient_number__icontains=query) |
+            Q(contact_number__icontains=query) | Q(contact_number__icontains=query_63) |
+            Q(address__icontains=query) | Q(barangay__name__icontains=query)
         )
     if barangay:
         patients_qs = patients_qs.filter(barangay_id=barangay)
-    if sex:
-        patients_qs = patients_qs.filter(sex=sex)
 
     # Access control (RBAC): doctors only see their own patients + unassigned cases.
     is_doctor = getattr(request.user, 'role', '') == 'doctor'
@@ -120,7 +118,7 @@ def patient_list(request):
 
     return render(request, 'patients/patient_list.html', {
         'patients': page, 'barangays': barangays, 'query': query,
-        'selected_barangay': barangay, 'selected_sex': sex,
+        'selected_barangay': barangay,
     })
 
 @login_required

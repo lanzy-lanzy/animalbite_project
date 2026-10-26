@@ -210,21 +210,6 @@ def staff_edit(request, pk):
 
 @login_required
 @user_passes_test(is_authorized_staff)
-def mark_no_show(request, pk):
-    record = get_object_or_404(PreRegistration, pk=pk)
-    record.status = PreRegistration.Status.NO_SHOW
-    record.save(update_fields=["status", "updated_at"])
-    AuditLog.objects.create(
-        user=request.user,
-        action="MARK_PRE_REGISTRATION_NO_SHOW",
-        description=f"Marked online registration {record.pre_registration_number} as no show",
-    )
-    messages.warning(request, "Online registration marked as no show.")
-    return redirect("pre_registrations:staff_detail", pk=record.pk)
-
-
-@login_required
-@user_passes_test(is_authorized_staff)
 def convert(request, pk):
     record = get_object_or_404(PreRegistration, pk=pk)
     duplicates = record.possible_duplicates()

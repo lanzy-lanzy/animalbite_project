@@ -23,19 +23,13 @@
 <div class="card mb-6">
     <form method="GET" class="flex flex-wrap gap-3">
         <div class="flex-1 min-w-[200px]">
-            <input type="text" name="q" value="{{ query }}" placeholder="Search by name, ID, or contact..." class="form-input">
+            <input type="search" name="q" value="{{ query }}" placeholder="Search by name, ID, contact, barangay, or address..." class="form-input">
         </div>
         <select name="barangay" class="form-input w-auto">
             <option value="">All Barangays</option>
             {% for b in barangays %}<option value="{{ b.id }}" {% if selected_barangay|stringformat:'s' == b.id|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
         </select>
-        <select name="sex" class="form-input w-auto">
-            <option value="">All Sex</option>
-            <option value="male" {% if selected_sex == 'male' %}selected{% endif %}>Male</option>
-            <option value="female" {% if selected_sex == 'female' %}selected{% endif %}>Female</option>
-        </select>
-        <button type="submit" class="btn-primary btn-sm">Filter</button>
-        <a href="{% url 'patients:patient_list' %}" class="btn-secondary btn-sm">Reset</a>
+        <button type="submit" class="btn-primary btn-sm">Search</button>
     </form>
 </div>
 <div class="card">
@@ -43,18 +37,20 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-line">
+                    <th class="table-header">#</th>
                     <th class="table-header">Patient #</th>
                     <th class="table-header">Name</th>
                     <th class="table-header">Age/Sex</th>
                     <th class="table-header">Barangay</th>
                     <th class="table-header">Contact</th>
-                    <th class="table-header">Registered</th>
+                    <th class="table-header">Approved Date</th>
                     <th class="table-header text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-sage-100">
                 {% for p in patients %}
                 <tr class="hover:bg-sage-50 transition-colors">
+                    <td class="table-cell table-cell-num text-muted">{{ forloop.counter0|add:patients.start_index }}</td>
                     <td class="table-cell font-medium">{{ p.patient_number }}</td>
                     <td class="table-cell">{{ p.full_name }}</td>
                     <td class="table-cell">{{ p.age }} / {{ p.get_sex_display }}</td>
@@ -91,7 +87,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center py-8 text-muted">No patients found.</td></tr>
+                <tr><td colspan="8" class="text-center py-8 text-muted">No patients found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

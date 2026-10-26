@@ -379,25 +379,13 @@ class StaffPreRegistrationTests(TestCase):
         detail = self.client.get(reverse("pre_registrations:staff_detail", args=[self.record.pk]))
         self.assertNotContains(detail, "Verify Console")
         self.assertNotContains(detail, "Mark Duplicate")
+        self.assertNotContains(detail, "Mark No Show")
         self.assertContains(detail, "Convert to Official Case")
 
         listing = self.client.get(reverse("pre_registrations:staff_list"))
         self.assertNotContains(listing, "Verify Console")
         self.assertNotContains(listing, "Mark Duplicate")
         self.assertContains(listing, "Convert to Case")
-
-    def test_staff_can_mark_no_show(self):
-        self.client.login(username="encoder", password="pass12345")
-
-        no_show_response = self.client.post(
-            reverse("pre_registrations:mark_no_show", args=[self.record.pk])
-        )
-        self.record.refresh_from_db()
-        self.assertRedirects(
-            no_show_response,
-            reverse("pre_registrations:staff_detail", args=[self.record.pk]),
-        )
-        self.assertEqual(self.record.status, PreRegistration.Status.NO_SHOW)
 
     def test_staff_can_convert_to_official_patient_and_case(self):
         self.client.login(username="encoder", password="pass12345")
