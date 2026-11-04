@@ -38,6 +38,7 @@ class PreRegistrationForm(forms.ModelForm):
             "suffix",
             "birthdate",
             "sex",
+            "civil_status",
             "contact_number",
             "address",
             "barangay",
@@ -45,6 +46,9 @@ class PreRegistrationForm(forms.ModelForm):
             "guardian_contact_number",
             "emergency_contact_name",
             "emergency_contact_number",
+            "medical_history",
+            "allergy_info",
+            "previous_rabies_vax",
             "bite_date",
             "bite_time",
             "incident_place",
@@ -68,6 +72,7 @@ class PreRegistrationForm(forms.ModelForm):
             "suffix": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "birthdate": forms.DateInput(attrs={"type": "date", "class": INPUT_CLASS}),
             "sex": forms.Select(attrs={"class": SELECT_CLASS}),
+            "civil_status": forms.Select(attrs={"class": SELECT_CLASS}),
             "contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
             "address": forms.Textarea(attrs={"rows": 3, "class": TEXTAREA_CLASS}),
             "barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
@@ -75,6 +80,27 @@ class PreRegistrationForm(forms.ModelForm):
             "guardian_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
             "emergency_contact_name": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "emergency_contact_number": forms.TextInput(attrs={"class": INPUT_CLASS, "type": "tel", "placeholder": "09123456789", "pattern": r"^(09\d{9}|639\d{9}|\+639\d{9})$", "title": "09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX"}),
+            "medical_history": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "class": TEXTAREA_CLASS,
+                    "placeholder": "Chronic illnesses, maintenance medicines, etc. Write \"None\" if none.",
+                }
+            ),
+            "allergy_info": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "class": TEXTAREA_CLASS,
+                    "placeholder": "Drug, food, or vaccine allergies. Write \"None\" if none.",
+                }
+            ),
+            "previous_rabies_vax": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "class": TEXTAREA_CLASS,
+                    "placeholder": "Any previous anti-rabies vaccination (year, number of doses). Write \"None\" if none.",
+                }
+            ),
             "incident_place": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "incident_barangay": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "animal_type": forms.Select(attrs={"class": SELECT_CLASS}),
@@ -90,12 +116,15 @@ class PreRegistrationForm(forms.ModelForm):
             "consent_given": forms.CheckboxInput(attrs={"class": "form-check h-4 w-4 rounded border-cream-300"}),
         }
         labels = {
+            "medical_history": "Medical history",
+            "allergy_info": "Allergies",
+            "previous_rabies_vax": "Previous rabies vaccination",
             "animal_vaccination_status": "Animal vaccination status",
             "wound_washed": "Was the wound washed immediately?",
             "consent_given": "I confirm that the information I provided is true and correct. I agree that my information will be used by the Municipal Health Office for animal bite case recording, treatment processing, follow-up, and reporting purposes.",
         }
         help_texts = {
-            "contact_number": "Required for SMS reminders (RHUDumingag): 09123456789 / 639123456789 / +639123456789.",
+            "contact_number": "Required for SMS reminders: 09123456789 / 639123456789 / +639123456789.",
             "guardian_contact_number": "Optional, must be valid PH mobile if for minor (fallback SMS).",
             "emergency_contact_number": "Optional, valid PH mobile for fallback.",
         }
@@ -261,14 +290,58 @@ class PatientSignupPreRegistrationForm(PreRegistrationForm):
 
 class StaffPreRegistrationForm(PreRegistrationForm):
     class Meta(PreRegistrationForm.Meta):
-        fields = [field for field in PreRegistrationForm.Meta.fields if field != "consent_given"] + ["status"]
+        fields = [
+            field
+            for field in PreRegistrationForm.Meta.fields
+            if field != "consent_given"
+        ] + ["status", "rejection_reason"]
         widgets = {
             **PreRegistrationForm.Meta.widgets,
             "status": forms.Select(attrs={"class": SELECT_CLASS}),
+            "rejection_reason": forms.Textarea(
+                attrs={"rows": 3, "class": TEXTAREA_CLASS}
+            ),
+        }
+        labels = {
+            **PreRegistrationForm.Meta.labels,
+            "rejection_reason": "Rejection reason (required when status is Rejected)",
         }
 
     def clean_consent_given(self):
         return self.cleaned_data.get("consent_given", True)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("status") == PreRegistration.Status.REJECTED
+            and not (cleaned_data.get("rejection_reason") or "").strip()
+            and not (self.instance.rejection_reason or "").strip()
+        ):
+            self.add_error(
+                "rejection_reason",
+                "Provide a reason for rejecting this registration so the patient knows why.",
+            )
+        return cleaned_data
+
+
+class RejectPreRegistrationForm(forms.Form):
+    reason = forms.CharField(
+        label="Reason for rejection",
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": TEXTAREA_CLASS,
+                "placeholder": "Explain why this registration is being rejected. The patient will see this reason.",
+            }
+        ),
+    )
+
+    def clean_reason(self):
+        reason = (self.cleaned_data.get("reason") or "").strip()
+        if not reason:
+            raise forms.ValidationError("A reason is required.")
+        return reason
 
 
 class StatusLookupForm(forms.Form):

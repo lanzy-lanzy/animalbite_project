@@ -42,12 +42,16 @@ def convert_to_official_case(pre_registration, user):
             suffix=pre_registration.suffix,
             birthdate=pre_registration.birthdate,
             sex=pre_registration.sex,
+            civil_status=pre_registration.civil_status or "single",
             contact_number=pre_registration.contact_number,
             address=pre_registration.address,
             barangay=barangay,
             parent_guardian=pre_registration.guardian_name,
             emergency_contact_name=emergency_name,
             emergency_contact_number=emergency_number,
+            medical_history=pre_registration.medical_history,
+            allergy_info=pre_registration.allergy_info,
+            previous_rabies_vax=pre_registration.previous_rabies_vax,
             remarks=pre_registration.remarks,
             created_by=user,
         )
@@ -113,3 +117,93 @@ def convert_to_official_case(pre_registration, user):
         description=f"Converted online registration {pre_registration.pre_registration_number} to case {case.case_number}",
     )
     return patient, case
+
+
+PENDING_STATUSES = (
+    PreRegistration.Status.SUBMITTED,
+    PreRegistration.Status.FOR_VERIFICATION,
+)
+
+
+class RegistrationDeletionBlocked(Exception):
+    def __init__(self, labels):
+        self.labels = labels
+        super().__init__("; ".join(labels))
+
+
+def registration_retention_blockers(record):
+    """Why this registration must be retained instead of permanently deleted.
+
+    Only unconverted pending submissions may be erased. Anything approved,
+    linked to an official patient/case, or already finalised is an intake
+    record the clinic keeps, so it can only be archived.
+    """
+    labels = []
+    if record.converted_patient_id:
+        labels.append("linked patient profile")
+    if record.converted_case_id:
+        labels.append("official bite case")
+    if record.status == PreRegistration.Status.VERIFIED:
+        labels.append("approved registration awaiting conversion")
+    elif record.status not in PENDING_STATUSES:
+        labels.append(f"{record.get_status_display().lower()} registration")
+    return labels
+
+
+@transaction.atomic
+def delete_pre_registration(record, deleted_by):
+    record = PreRegistration.objects.select_for_update().get(pk=record.pk)
+    blockers = registration_retention_blockers(record)
+    if blockers:
+        raise RegistrationDeletionBlocked(blockers)
+    number = record.pre_registration_number
+    record.delete()
+    AuditLog.objects.create(
+        user=deleted_by,
+        action="DELETE_PRE_REGISTRATION",
+        description=(
+            f"Permanently deleted online registration {number} by admin "
+            f"{deleted_by.username}. Linked patient and clinical records were preserved."
+        ),
+    )
+    return number
+
+
+@transaction.atomic
+def archive_pre_registration(record, archived_by):
+    record = PreRegistration.objects.select_for_update().get(pk=record.pk)
+    already_archived = record.is_archived
+    if not already_archived:
+        record.is_archived = True
+        record.save(update_fields=["is_archived", "updated_at"])
+        AuditLog.objects.create(
+            user=archived_by,
+            action="ARCHIVE_PRE_REGISTRATION",
+            target_type="pre_registration",
+            target_id=record.pk,
+            description=(
+                f"Archived online registration {record.pre_registration_number} by admin "
+                f"{archived_by.username}. The record was retained and removed from active lists."
+            ),
+        )
+    return already_archived
+
+
+@transaction.atomic
+def retrieve_pre_registration(record, retrieved_by):
+    record = PreRegistration.objects.select_for_update().get(pk=record.pk)
+    was_archived = record.is_archived
+    if was_archived:
+        record.is_archived = False
+        record.save(update_fields=["is_archived", "updated_at"])
+        AuditLog.objects.create(
+            user=retrieved_by,
+            action="RETRIEVE_PRE_REGISTRATION",
+            target_type="pre_registration",
+            target_id=record.pk,
+            description=(
+                f"Retrieved online registration {record.pre_registration_number} by admin "
+                f"{retrieved_by.username}. The record was restored to the active list."
+            ),
+        )
+    return was_archived

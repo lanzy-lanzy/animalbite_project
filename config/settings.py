@@ -8,11 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 DEBUG = config('DEBUG', default=not bool(os.environ.get('RENDER')), cast=bool)
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
-    if host.strip()
-]
+ALLOWED_HOSTS = ["*"]
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
@@ -75,6 +71,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.settings_context",
+                "config.context_processors.doctor_notifications",
             ],
         },
     },

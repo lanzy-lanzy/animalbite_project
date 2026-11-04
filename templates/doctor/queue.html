@@ -14,26 +14,12 @@
   </div>
 
   <div class="card mb-6">
-    <form method="GET" class="flex flex-col lg:flex-row gap-3">
-      <div class="flex-1 min-w-[260px]">
-        <input type="text" name="q" value="{{ q }}" placeholder="Search case #, patient name, ID..." class="form-input w-full">
-      </div>
-      <div class="flex flex-wrap gap-3 lg:flex-nowrap">
-        <select name="status" class="form-input min-w-[180px] w-full lg:w-auto">
-          <option value="">All status</option>
-          <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending (no assessment)</option>
-          <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
-          <option value="final" {% if status == 'final' %}selected{% endif %}>Final</option>
-        </select>
-        <select name="category" class="form-input min-w-[180px] w-full lg:w-auto">
-          <option value="">All categories</option>
-          <option value="category_i" {% if category == 'category_i' %}selected{% endif %}>Category I</option>
-          <option value="category_ii" {% if category == 'category_ii' %}selected{% endif %}>Category II</option>
-          <option value="category_iii" {% if category == 'category_iii' %}selected{% endif %}>Category III</option>
-        </select>
-        <button class="inline-flex items-center justify-center px-5 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Filter</button>
-        <a href="{% url 'doctor:queue' %}" class="inline-flex items-center justify-center px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Reset</a>
-      </div>
+    <form method="GET" class="flex items-center gap-3">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search case #, patient name, or patient ID..." class="form-input flex-1 min-w-0" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.requestSubmit(); }">
+      <button type="submit" class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-full text-white text-sm font-bold shadow-sm transition-colors" style="background-color:#0f172a; width:110px">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+        Search
+      </button>
     </form>
   </div>
 
@@ -41,6 +27,7 @@
     <div class="hidden lg:block overflow-x-auto">
       <table class="w-full min-w-[1100px]">
         <colgroup>
+          <col style="width: 64px">
           <col style="width: 110px">
           <col style="width: 210px">
           <col style="width: 200px">
@@ -50,6 +37,7 @@
         </colgroup>
         <thead>
           <tr class="border-b border-line bg-sage-50/80">
+            <th class="table-header">#</th>
             <th class="table-header">Case #</th>
             <th class="table-header">Patient</th>
             <th class="table-header">Animal / Exposure</th>
@@ -61,6 +49,7 @@
         <tbody class="divide-y divide-sage-100">
           {% for c in cases %}
           <tr class="hover:bg-sage-50/70 transition-colors">
+            <td class="table-cell text-sm font-semibold text-muted">{{ forloop.counter0|add:cases.start_index }}</td>
             <td class="table-cell">
               <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-bold font-mono tracking-tight">{{ c.case_number }}</span>
             </td>
@@ -119,7 +108,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="text-center py-16">
+          <tr><td colspan="7" class="text-center py-16">
             <div class="w-12 h-12 rounded-full bg-sage-100 border border-line flex items-center justify-center mx-auto mb-3">
               <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M9 8h6M5 5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/></svg>
             </div>
@@ -185,8 +174,8 @@
     <div class="flex items-center justify-between px-6 py-4 border-t border-line bg-sage-50/50">
       <p class="text-sm font-medium text-muted">Page {{ cases.number }} of {{ cases.paginator.num_pages }} · {{ cases.paginator.count }} total</p>
       <div class="flex gap-2">
-        {% if cases.has_previous %}<a href="?page={{ cases.previous_page_number }}&q={{ q }}&status={{ status }}&category={{ category }}" class="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Previous</a>{% endif %}
-        {% if cases.has_next %}<a href="?page={{ cases.next_page_number }}&q={{ q }}&status={{ status }}&category={{ category }}" class="inline-flex items-center px-4 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Next →</a>{% endif %}
+        {% if cases.has_previous %}<a href="?page={{ cases.previous_page_number }}&q={{ q|urlencode }}" class="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Previous</a>{% endif %}
+        {% if cases.has_next %}<a href="?page={{ cases.next_page_number }}&q={{ q|urlencode }}" class="inline-flex items-center px-4 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Next →</a>{% endif %}
       </div>
     </div>
     {% endif %}

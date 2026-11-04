@@ -1,16 +1,15 @@
 """
 Vaccination schedule helpers.
 
-Schedules are deliberately NOT created automatically when a bite case is
-created or converted. A nurse (or admin) triggers them explicitly via
-vaccination.views.schedule_trigger once the case has been assessed, so dose
-dates never start from an unset consultation date.
+Schedules are not created when a bite case is created or converted — dose dates
+must never start from an unset consultation date. They are materialised either
+by a nurse/admin explicitly (vaccination.views.schedule_trigger) or when a
+doctor signs a PEP assessment (ClinicalAssessment.save), which uses the
+protocol and Day 0 recorded on that assessment.
 
 These helpers are the single source of truth for the PEP day offsets and for
 materialising a schedule + its doses.
 """
-from datetime import timedelta
-
 from django.utils import timezone
 
 # Fallback PEP offsets used when no 'vaccination_days' SystemSetting is set.
@@ -36,17 +35,71 @@ def get_dose_days():
 def schedule_base_date(case):
     """Doses are dated from the consultation date, falling back to today."""
     if case.date_time_consultation:
-        return case.date_time_consultation.date()
+        # Stored UTC; take the clinic-local calendar day so early-morning
+        # consultations are not dated a day earlier.
+        value = case.date_time_consultation
+        if timezone.is_naive(value):
+            value = timezone.make_aware(value, timezone.get_current_timezone())
+        return timezone.localtime(value).date()
     return timezone.localdate()
 
 
-def ensure_vaccination_schedule(case, created_by=None):
+def _offset(days, position):
+    if position <= len(days):
+        return days[position - 1]
+    return None
+
+
+def _dose_label(position, offset):
+    return 'Day %s' % offset if offset is not None else 'Dose %d' % position
+
+
+def _dose_count(value, days):
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = 0
+    if count < 1:
+        count = len(days)
+    return max(1, min(count, 5))
+
+
+def materialise_doses(schedule, days=None, base_date=None, dose_count=None):
+    """Create the dose rows for a schedule that has none.
+
+    Only the 1st dose is dated (Day 0) and marked Scheduled; every other dose
+    starts as Pending Scheduling — the nurse assigns those within the protocol.
+    """
+    from .models import VaccineDose
+
+    if base_date is None:
+        base_date = schedule_base_date(schedule.bite_case)
+    if days is None:
+        days = get_dose_days()
+    days = [int(d) for d in days]
+    count = _dose_count(dose_count, days)
+    doses = []
+    for position in range(1, count + 1):
+        offset = _offset(days, position)
+        doses.append(VaccineDose.objects.create(
+            schedule=schedule,
+            dose_label=_dose_label(position, offset),
+            protocol_day=offset,
+            scheduled_date=base_date if position == 1 else None,
+            dose_status='scheduled' if position == 1 else 'pending',
+        ))
+    return doses
+
+
+def ensure_vaccination_schedule(case, created_by=None, days=None, base_date=None, dose_count=None):
     """
     Create the VaccinationSchedule + dose rows for a case if it has none yet.
     Returns (schedule, created_bool). Safe to call more than once — it is a
     no-op once a schedule exists.
+
+    The doctor's dose count decides how many rows exist.
     """
-    from .models import VaccinationSchedule, VaccineDose
+    from .models import VaccinationSchedule
 
     try:
         return case.vaccination_schedule, False
@@ -57,15 +110,56 @@ def ensure_vaccination_schedule(case, created_by=None):
         bite_case=case,
         created_by=created_by,
     )
-    base_date = schedule_base_date(case)
-    for d in get_dose_days():
-        try:
-            di = int(d)
-        except (TypeError, ValueError):
-            continue
-        VaccineDose.objects.create(
-            schedule=schedule,
-            dose_label='Day %s' % di,
-            scheduled_date=base_date + timedelta(days=di),
-        )
+    materialise_doses(schedule, days=days, base_date=base_date, dose_count=dose_count)
     return schedule, True
+
+
+def sync_schedule_doses(schedule, dose_count, first_dose_date=None, days=None):
+    """Reconcile an existing schedule with the doctor's selected dose count.
+
+    New positions become Pending Scheduling rows, never pre-dated. The 1st
+    dose keeps the doctor's confirmed date and Completed/cancelled history is
+    never rewritten. Dropping the count only removes untouched pending rows.
+    """
+    from .models import VaccineDose
+
+    if schedule is None:
+        return []
+    if days is None:
+        days = get_dose_days()
+    days = [int(d) for d in days]
+    count = _dose_count(dose_count, days)
+    doses = list(schedule.doses.order_by('id'))
+    touched = []
+
+    for position in range(1, count + 1):
+        offset = _offset(days, position)
+        if position <= len(doses):
+            dose = doses[position - 1]
+            changed = []
+            if dose.protocol_day is None and offset is not None:
+                dose.protocol_day = offset
+                changed.append('protocol_day')
+            if position == 1 and first_dose_date and dose.dose_status not in ('completed', 'cancelled'):
+                if dose.scheduled_date != first_dose_date:
+                    dose.scheduled_date = first_dose_date
+                    changed.append('scheduled_date')
+                if dose.dose_status == 'pending':
+                    dose.dose_status = 'scheduled'
+                    changed.append('dose_status')
+            if changed:
+                dose.save(update_fields=changed + ['updated_at'])
+            touched.append(dose)
+        else:
+            touched.append(VaccineDose.objects.create(
+                schedule=schedule,
+                dose_label=_dose_label(position, offset),
+                protocol_day=offset,
+                scheduled_date=first_dose_date if position == 1 else None,
+                dose_status='scheduled' if position == 1 and first_dose_date else 'pending',
+            ))
+
+    for dose in doses[count:]:
+        if dose.dose_status == 'pending' and dose.scheduled_date is None:
+            dose.delete()
+    return touched

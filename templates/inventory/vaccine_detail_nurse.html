@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% block title %}{{ item.vaccine_name }} - Vaccine Inventory{% endblock %}
+{% block extra_head %}
+<style>
+    .vd-wrap { max-width: 1050px; margin: 0 auto; }
+
+    .vd-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+    .vd-back {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        border-radius: 9999px;
+        border: 1px solid rgba(201, 162, 39, .28);
+        background: rgba(255, 255, 255, .6);
+        color: var(--color-emerald-900);
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: background-color .15s ease;
+    }
+    .vd-back:hover { background: #FBF6E6; }
+    .vd-title-block { min-width: 0; flex: 1 1 auto; }
+    .vd-title {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--color-ink);
+        line-height: 1.2;
+    }
+    .vd-subtitle {
+        margin: 3px 0 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-muted-2);
+    }
+
+    .vd-section { margin-bottom: 18px; }
+    .vd-section-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: var(--color-emerald-950);
+        color: #FFFFFF;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        box-shadow: 0 8px 18px -14px rgba(8, 32, 26, .7);
+    }
+    .vd-section-body { margin-top: 12px; }
+
+    .vd-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .vd-info-card {
+        min-width: 0;
+        padding: 11px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(201, 162, 39, .22);
+        background: linear-gradient(145deg, #FDFAF2, #F6EEDC);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+    }
+    .vd-label {
+        margin: 0 0 3px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: var(--color-gold-700);
+    }
+    .vd-value {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-emerald-900);
+        overflow-wrap: anywhere;
+    }
+
+    .vd-stock-grid {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .vd-stock-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 104px;
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(201, 162, 39, .24);
+        background: linear-gradient(150deg, #FDFAF2 0%, #F4EBD7 100%);
+        box-shadow: 0 10px 24px -22px rgba(8, 32, 26, .6), inset 0 1px 0 rgba(255, 255, 255, .85);
+        text-align: center;
+    }
+    .vd-stock-label {
+        margin: 0;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--color-gold-700);
+    }
+    .vd-stock-value {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 800;
+        line-height: 1.1;
+        color: var(--color-emerald-900);
+        font-variant-numeric: tabular-nums;
+    }
+    .vd-stock-value--low { color: #B45309; }
+    .vd-stock-value--out { color: #B91C1C; }
+
+    .vd-table {
+        margin-top: 12px;
+        border: 1px solid rgba(201, 162, 39, .24);
+        border-radius: 14px;
+        overflow-x: auto;
+        background: rgba(255, 255, 255, .55);
+        box-shadow: 0 10px 24px -24px rgba(8, 32, 26, .5);
+    }
+    .vd-table table { width: 100%; border-collapse: collapse; }
+    .vd-table .table-header { white-space: nowrap; }
+    .vd-table .table-cell { white-space: nowrap; }
+    .vd-history-table { table-layout: fixed; width: 100%; min-width: 960px; }
+    .vd-history-table .vd-col-received { width: 16%; }
+    .vd-history-table .vd-col-time { width: 11%; }
+    .vd-history-table .vd-col-supplier { width: 17%; }
+    .vd-history-table .vd-col-batch { width: 16%; }
+    .vd-history-table .vd-col-expiry { width: 18%; }
+    .vd-history-table .vd-col-qty { width: 10%; }
+    .vd-history-table .vd-col-type { width: 12%; }
+    .vd-history-table th,
+    .vd-history-table td {
+        padding: 17px 15px;
+        vertical-align: middle;
+    }
+    .vd-history-table th { text-align: left; }
+    .vd-history-table .table-cell { white-space: normal; }
+    .vd-history-table .vd-cell-date,
+    .vd-history-table .vd-cell-time,
+    .vd-history-table .vd-cell-qty,
+    .vd-history-table .vd-cell-type { white-space: nowrap; }
+    .vd-history-table th:nth-child(6),
+    .vd-history-table td:nth-child(6) { text-align: right; }
+    .vd-history-table th:nth-child(7),
+    .vd-history-table td:nth-child(7) { text-align: center; }
+    .vd-empty {
+        padding: 22px 16px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--color-muted-2);
+    }
+    .vd-dispense-meta {
+        display: block;
+        margin-top: 2px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-muted-2);
+    }
+
+    @media (max-width: 640px) {
+        .vd-info-grid { grid-template-columns: 1fr; }
+        .vd-stock-grid { grid-template-columns: 1fr; }
+        .vd-stock-card { min-height: 84px; }
+        .vd-title { font-size: 19px; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="vd-wrap">
+    <div class="vd-header">
+        <a href="{% url 'inventory:vaccine_list' %}" class="vd-back">&larr; Back</a>
+        <div class="vd-title-block">
+            <h1 class="vd-title">{{ item.vaccine_name }}</h1>
+            <p class="vd-subtitle">Vaccine Inventory Details</p>
+        </div>
+        {% if stock_status == 'expired' %}<span class="status-badge bg-red-100 text-red-800">Expired</span>
+        {% elif stock_status == 'low' %}<span class="status-badge bg-yellow-100 text-yellow-800">Low Stock</span>
+        {% else %}<span class="status-badge bg-green-100 text-green-800">Available</span>{% endif %}
+    </div>
+
+    <section class="vd-section">
+        <div class="vd-section-head">1. Vaccine Information</div>
+        <div class="vd-section-body">
+            <div class="vd-info-grid">
+                <div class="vd-info-card">
+                    <p class="vd-label">Vaccine Name</p>
+                    <p class="vd-value">{{ item.vaccine_name }}</p>
+                </div>
+                <div class="vd-info-card">
+                    <p class="vd-label">Brand</p>
+                    <p class="vd-value">{{ item.brand }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="vd-section">
+        <div class="vd-section-head">2. Stock Summary</div>
+        <div class="vd-stock-grid">
+            <div class="vd-stock-card">
+                <p class="vd-stock-label">Received</p>
+                <p class="vd-stock-value">{{ totals.received|default:0 }}</p>
+            </div>
+            <div class="vd-stock-card">
+                <p class="vd-stock-label">Used</p>
+                <p class="vd-stock-value">{{ totals.used|default:0 }}</p>
+            </div>
+            <div class="vd-stock-card">
+                <p class="vd-stock-label">Available</p>
+                <p class="vd-stock-value {% if totals.available <= 0 %}vd-stock-value--out{% elif stock_status == 'low' %}vd-stock-value--low{% endif %}">{{ totals.available|default:0 }}</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="vd-section">
+        <div class="vd-section-head">3. Stock Transaction History</div>
+        <div class="vd-table">
+            <table class="vd-history-table">
+                <colgroup>
+                    <col class="vd-col-received">
+                    <col class="vd-col-time">
+                    <col class="vd-col-supplier">
+                    <col class="vd-col-batch">
+                    <col class="vd-col-expiry">
+                    <col class="vd-col-qty">
+                    <col class="vd-col-type">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="table-header">Date Received</th>
+                        <th class="table-header">Time</th>
+                        <th class="table-header">Supplier</th>
+                        <th class="table-header">Batch Number</th>
+                        <th class="table-header">Expiration Date</th>
+                        <th class="table-header">Quantity</th>
+                        <th class="table-header">Type</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for m in movements %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell vd-cell-date">{% if m.movement_type == 'stock_in' %}{{ m.date_received|default:m.vaccine.date_received|date:'M d, Y' }}{% else %}—{% endif %}</td>
+                        <td class="table-cell vd-cell-time">{% if m.movement_type == 'stock_in' %}{% if m.time_received %}{{ m.time_received|time:'h:i A' }}{% else %}—{% endif %}{% else %}{{ m.created_at|time:'h:i A' }}{% endif %}</td>
+                        <td class="table-cell">{% if m.movement_type == 'stock_in' %}{{ m.supplier|default:m.vaccine.source_supplier|default:'—' }}{% else %}—{% endif %}</td>
+                        <td class="table-cell font-mono text-xs">{{ m.batch_number|default:m.vaccine.batch_number|default:'—' }}</td>
+                        <td class="table-cell vd-cell-date">{{ m.expiration_date|default:m.vaccine.expiration_date|date:'M d, Y' }}</td>
+                        <td class="table-cell vd-cell-qty font-medium">{{ m.quantity }}</td>
+                        <td class="table-cell vd-cell-type"><span class="status-badge {% if m.movement_type == 'stock_in' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">{{ m.get_movement_type_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="vd-empty">No stock transaction history recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="vd-section">
+        <div class="vd-section-head">4. Dispensing History</div>
+        <div class="vd-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="table-header">Patient</th>
+                        <th class="table-header">Case</th>
+                        <th class="table-header">Dosage</th>
+                        <th class="table-header">Qty</th>
+                        <th class="table-header">Dispensed</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for dose in dispensing_records %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell font-medium">{{ dose.schedule.bite_case.patient.full_name }}</td>
+                        <td class="table-cell text-muted">{{ dose.schedule.bite_case.case_number|default:'General' }}</td>
+                        <td class="table-cell">
+                            {{ dose.dose_label }}
+                            {% if dose.vaccine_brand %}<span class="vd-dispense-meta">{{ dose.vaccine_brand }}</span>{% endif %}
+                        </td>
+                        <td class="table-cell">1 vial</td>
+                        <td class="table-cell text-muted">
+                            {% if dose.actual_date %}
+                            {{ dose.actual_date|date:'M d, Y' }}{% if dose.actual_time %} {{ dose.actual_time|time:'h:i A' }}{% endif %} · {% if dose.administered_by %}{{ dose.administered_by.get_full_name|default:dose.administered_by.username }}{% else %}—{% endif %}
+                            {% else %}
+                            <span class="status-badge bg-yellow-100 text-yellow-800">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="vd-empty">No dispensing history recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

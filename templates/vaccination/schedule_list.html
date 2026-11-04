@@ -47,6 +47,7 @@
                     <select name="status" class="form-input">
                         <option value="">All schedules</option>
                         <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Has scheduled doses</option>
+                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending Scheduling</option>
                         <option value="completed" {% if status == 'completed' %}selected{% endif %}>Has completed</option>
                         <option value="missed" {% if status == 'missed' %}selected{% endif %}>Has missed</option>
                     </select>

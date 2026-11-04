@@ -29,6 +29,7 @@ class AnimalBiteCase(models.Model):
     first_aid_given = models.TextField(blank=True)
     initial_consultation_notes = models.TextField(blank=True)
     case_status = models.CharField(max_length=20, choices=CASE_STATUS, default='new')
+    pre_archive_status = models.CharField(max_length=20, blank=True, default='')
     is_locked = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_cases')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -39,6 +40,10 @@ class AnimalBiteCase(models.Model):
 
     def __str__(self):
         return f"{self.case_number} - {self.patient.full_name()}"
+
+    @property
+    def is_archived(self):
+        return self.case_status == 'archived'
 
 class ExposureClassification(models.Model):
     CATEGORIES = [('category_i', 'Category I'), ('category_ii', 'Category II'), ('category_iii', 'Category III')]

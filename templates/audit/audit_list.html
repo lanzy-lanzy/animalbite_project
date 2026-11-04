@@ -2,7 +2,10 @@
 {% block title %}Audit Trail - ABTC System{% endblock %}
 {% block content %}
 <div class="max-w-5xl mx-auto">
-    <h1 class="text-xl font-bold text-ink mb-6">Audit Trail</h1>
+    <div class="mb-6">
+        <h1 class="text-xl font-bold text-ink">{% if own_only %}Activity Logs{% else %}Audit Trail{% endif %}</h1>
+        <p class="text-sm text-muted mt-1">{% if own_only %}Your own activity in the ABTC system.{% else %}Every recorded action across the ABTC system.{% endif %}</p>
+    </div>
     <div class="card mb-6">
         <form method="GET" class="flex flex-wrap gap-3">
             <input type="text" name="q" value="{{ query }}" placeholder="Search user, action, description..." class="form-input max-w-md flex-1 min-w-[180px]">
@@ -13,7 +16,7 @@
     <div class="card">
         <div class="overflow-x-auto">
             <table class="w-full">
-                <thead><tr class="border-b border-line"><th class="table-header">Date/Time</th><th class="table-header">User</th><th class="table-header">Action</th><th class="table-header">Description</th></tr></thead>
+                <thead><tr class="border-b border-line"><th class="table-header">Date/Time</th><th class="table-header">User</th><th class="table-header">Action</th><th class="table-header">Description</th><th class="table-header text-right">Actions</th></tr></thead>
                 <tbody class="divide-y divide-sage-100">
                     {% for log in logs %}
                     <tr class="hover:bg-sage-50">
@@ -21,8 +24,24 @@
                         <td class="table-cell">{% if log.user %}{{ log.user.get_full_name|default:log.user.username }}{% else %}<span class="italic text-muted-2">System</span>{% endif %}</td>
                         <td class="table-cell"><span class="status-badge bg-gold-100 text-gold-700 border border-gold-300 text-xs">{{ log.action }}</span></td>
                         <td class="table-cell text-ink/70">{{ log.description }}</td>
+                        <td class="table-cell text-right whitespace-nowrap">
+                            {% if log.retrieve_url %}
+                            <form method="POST" action="{{ log.retrieve_url }}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-50"
+                                        title="Restore this archived record to its active list">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 010 8H9m-6-8l4-4m-4 4l4 4"/></svg>
+                                    Retrieve
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-xs text-muted-2">—</span>
+                            {% endif %}
+                        </td>
                     </tr>
-                    {% empty %}<tr><td colspan="4" class="text-center py-8 text-muted">No audit logs.</td></tr>{% endfor %}
+                    {% empty %}<tr><td colspan="5" class="text-center py-8 text-muted">No audit logs.</td></tr>{% endfor %}
                 </tbody>
             </table>
         </div>

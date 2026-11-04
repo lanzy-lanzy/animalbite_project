@@ -1,0 +1,23 @@
+<div class="rx-row grid grid-cols-1 md:grid-cols-12 gap-3 items-start rounded-xl border border-line bg-white p-3" data-rx-row>
+  {% for hidden in rx.hidden_fields %}{{ hidden }}{% endfor %}
+  <div class="md:col-span-7">
+    <label class="text-[11px] font-bold uppercase tracking-wide text-muted">Prescription (from medicine inventory)</label>
+    {{ rx.medicine }}
+    {% for error in rx.medicine.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+  </div>
+  <div class="md:col-span-3">
+    <label class="text-[11px] font-bold uppercase tracking-wide text-muted">Quantity</label>
+    {{ rx.quantity }}
+    <p class="text-[11px] text-muted mt-1" data-stock-hint></p>
+    {% for error in rx.quantity.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+  </div>
+  <div class="md:col-span-2 flex md:justify-end items-center md:pt-6">
+    {% if rx.instance.pk and rx.instance.status == 'dispensed' %}
+      <span class="status-badge bg-emerald-100 text-emerald-800">Dispensed</span>
+    {% else %}
+      {{ rx.DELETE }}
+      <button type="button" data-rx-remove class="px-3 py-2 rounded-full border border-line text-xs font-bold text-muted hover:text-red-700 hover:border-red-300">Remove</button>
+    {% endif %}
+  </div>
+  {% if rx.non_field_errors %}<div class="md:col-span-12 text-xs text-red-600">{{ rx.non_field_errors|join:" " }}</div>{% endif %}
+</div>

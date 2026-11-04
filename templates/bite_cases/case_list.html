@@ -1,9 +1,32 @@
 {% extends 'base.html' %}
 {% block title %}Bite Cases - ABTC System{% endblock %}
+{% block extra_head %}
+<style>
+  .btn-danger { border-color:#fca5a5 !important; color:#b91c1c !important; background:#fff; }
+  .btn-danger:hover { background:#fef2f2 !important; }
+  .btn-delete-confirm { background:#b91c1c; color:#fff; }
+  .btn-delete-confirm:hover { background:#991b1b; }
+  .status-archived { background:#eef0ec; color:#4b5563; border-color:#d6d3d1; }
+  {% if request.user.role == 'nurse' %}
+  .findings-view-btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+    min-width:92px; padding:.5rem .95rem; border-radius:9999px;
+    background:#0B4D3B; color:#fff; font-size:.75rem; font-weight:700; line-height:1;
+    box-shadow:0 8px 18px -10px rgba(11,77,59,.65);
+    transition:background-color .15s ease, box-shadow .15s ease;
+  }
+  .findings-view-btn:hover { background:#0E6349; box-shadow:0 10px 22px -10px rgba(11,77,59,.75); }
+  .findings-view-btn svg { width:.95rem; height:.95rem; color:#fff; flex:none; }
+  .row-number { font-variant-numeric:tabular-nums; color:#6b7280; }
+  {% endif %}
+</style>
+{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-xl font-bold text-ink">Animal Bite Cases</h1>
+    {% if request.user.role != 'nurse' %}
     <a href="{% url 'bite_cases:case_create' %}" class="btn-primary btn-sm">+ New Case</a>
+    {% endif %}
 </div>
 <div class="card mb-6">
     <form method="GET" class="flex flex-wrap gap-3">
@@ -15,6 +38,9 @@
             <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
             <option value="missed" {% if selected_status == 'missed' %}selected{% endif %}>Missed</option>
             <option value="referred" {% if selected_status == 'referred' %}selected{% endif %}>Referred</option>
+            {% if request.user.role == 'admin' %}
+            <option value="archived" {% if selected_status == 'archived' %}selected{% endif %}>Archived</option>
+            {% endif %}
         </select>
         <select name="animal" class="form-input w-auto">
             <option value="">All Animals</option>
@@ -33,9 +59,10 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-line">
+                    {% if request.user.role == 'nurse' %}<th class="table-header w-12">No.</th>{% endif %}
                     <th class="table-header">Case #</th>
                     <th class="table-header">Patient</th>
-                    <th class="table-header">Date</th>
+                    <th class="table-header whitespace-nowrap">Date</th>
                     <th class="table-header">Animal</th>
                     <th class="table-header">Exposure</th>
                     <th class="table-header">Status</th>
@@ -45,19 +72,35 @@
             <tbody class="divide-y divide-sage-100">
                 {% for case in cases %}
                 <tr class="hover:bg-sage-50 transition-colors">
+                    {% if request.user.role == 'nurse' %}<td class="table-cell row-number">{{ forloop.counter0|add:start_index }}</td>{% endif %}
                     <td class="table-cell font-medium">{{ case.case_number }}</td>
                     <td class="table-cell">{{ case.patient.full_name }}</td>
-                    <td class="table-cell text-muted">{{ case.date_time_bite|date:'M d, Y' }}</td>
+                    <td class="table-cell text-muted whitespace-nowrap">{{ case.date_time_bite|date:'M d, Y' }}</td>
                     <td class="table-cell capitalize">{{ case.get_animal_type_display }}</td>
                     <td class="table-cell capitalize">{{ case.get_exposure_type_display }}</td>
                     <td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td>
                     <td class="table-cell text-right">
-                        <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary btn-xs">View</a>
-                        {% if not case.is_locked %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-xs">Edit</a>{% endif %}
+                        <div class="inline-flex items-center justify-end gap-1 whitespace-nowrap">
+                            {% if request.user.role == 'nurse' %}
+                            <a href="{% url 'nurse:doctor_finding_detail' case.pk %}" class="findings-view-btn" aria-label="View doctor findings for {{ case.case_number }} - {{ case.patient.full_name }}">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                View
+                            </a>
+                            {% else %}
+                            <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary btn-xs">View</a>
+                            {% endif %}
+                            {% if request.user.role != 'nurse' and not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-xs">Edit</a>{% endif %}
+                            {% if request.user.role == 'admin' and not case.is_archived %}
+                            <button type="button" onclick="openBiteCaseDeleteModal('{% url 'bite_cases:case_delete' case.pk %}', '{{ case.case_number|escapejs }}', '{{ case.patient.full_name|escapejs }}', '{{ case.get_animal_type_display|escapejs }}', '{{ case.date_time_bite|date:"M d, Y"|escapejs }}')" class="btn-secondary btn-xs btn-danger inline-flex items-center gap-1" title="Delete or archive this bite case">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+                                Delete
+                            </button>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center py-8 text-muted">No cases found.</td></tr>
+                <tr><td colspan="{% if request.user.role == 'nurse' %}8{% else %}7{% endif %}" class="text-center py-8 text-muted">No cases found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -69,6 +112,7 @@
         <div class="p-4 space-y-3 hover:bg-sage-50/50">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
+                    {% if request.user.role == 'nurse' %}<p class="text-[11px] font-bold uppercase tracking-widest text-muted row-number">No. {{ forloop.counter0|add:start_index }}</p>{% endif %}
                     <p class="text-sm font-bold text-ink">{{ case.case_number }}</p>
                     <p class="text-sm text-muted truncate">{{ case.patient.full_name }}</p>
                 </div>
@@ -80,8 +124,21 @@
                 <span>{{ case.date_time_bite|date:'M d, Y' }}</span>
             </div>
             <div class="flex gap-2">
+                {% if request.user.role == 'nurse' %}
+                <a href="{% url 'nurse:doctor_finding_detail' case.pk %}" class="findings-view-btn flex-1" aria-label="View doctor findings for {{ case.case_number }} - {{ case.patient.full_name }}">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    View
+                </a>
+                {% else %}
                 <a href="{% url 'bite_cases:case_detail' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">View</a>
-                {% if not case.is_locked %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>{% endif %}
+                {% endif %}
+                {% if request.user.role != 'nurse' and not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>{% endif %}
+                {% if request.user.role == 'admin' and not case.is_archived %}
+                <button type="button" onclick="openBiteCaseDeleteModal('{% url 'bite_cases:case_delete' case.pk %}', '{{ case.case_number|escapejs }}', '{{ case.patient.full_name|escapejs }}', '{{ case.get_animal_type_display|escapejs }}', '{{ case.date_time_bite|date:"M d, Y"|escapejs }}')" class="flex-1 justify-center inline-flex items-center gap-1 px-3 py-2 rounded-full bg-white border border-red-200 text-red-700 text-xs font-bold hover:bg-red-50">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+                    Delete
+                </button>
+                {% endif %}
             </div>
         </div>
         {% empty %}
@@ -102,4 +159,86 @@
     </div>
     {% endif %}
 </div>
+
+{% if request.user.role == 'admin' %}
+<div id="deleteBiteCaseModal" class="fixed inset-0 z-50 hidden no-print" aria-hidden="true">
+  <div class="absolute inset-0 bg-emerald-950/55 backdrop-blur-sm" onclick="closeBiteCaseDeleteModal()" aria-hidden="true"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="deleteBiteCaseTitle" class="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl shadow-emerald-950/20 border border-line">
+      <div class="px-5 py-4 border-b border-line bg-sage-50">
+        <h3 id="deleteBiteCaseTitle" class="text-base font-bold text-ink flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full bg-red-50 border border-red-200 text-red-700 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+          </span>
+          Delete Bite Case Record?
+        </h3>
+      </div>
+      <form id="deleteBiteCaseForm" method="post" action="">
+        {% csrf_token %}
+        <div class="px-5 py-4 space-y-3">
+          <p class="text-sm font-medium text-ink">Are you sure you want to delete this animal bite case record? Please confirm before continuing.</p>
+          <div class="rounded-xl border border-line bg-sage-50 p-3 space-y-2.5">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-widest text-muted">Case Number</p>
+              <p id="deleteCaseNumber" class="text-sm font-mono font-bold text-ink mt-0.5"></p>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-widest text-muted">Patient Name</p>
+              <p id="deleteCasePatient" class="text-sm font-bold text-ink mt-0.5"></p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-widest text-muted">Animal Type</p>
+                <p id="deleteCaseAnimal" class="text-sm font-bold text-ink mt-0.5"></p>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-widest text-muted">Date of Incident</p>
+                <p id="deleteCaseDate" class="text-sm font-bold text-ink mt-0.5"></p>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs font-medium text-muted">Cases with clinical or treatment records are archived so medical and inventory history is preserved.</p>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-line bg-white">
+          <button type="button" id="deleteBiteCaseCancel" onclick="closeBiteCaseDeleteModal()" class="px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Cancel</button>
+          <button type="submit" class="btn-delete-confirm inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+            Confirm Delete
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function openBiteCaseDeleteModal(actionUrl, caseNumber, patientName, animalType, incidentDate){
+    const modal = document.getElementById('deleteBiteCaseModal');
+    const form = document.getElementById('deleteBiteCaseForm');
+    if(!modal || !form) return;
+    form.action = actionUrl;
+    document.getElementById('deleteCaseNumber').textContent = caseNumber || '';
+    document.getElementById('deleteCasePatient').textContent = patientName || '';
+    document.getElementById('deleteCaseAnimal').textContent = animalType || '';
+    document.getElementById('deleteCaseDate').textContent = incidentDate || '';
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    const cancel = document.getElementById('deleteBiteCaseCancel');
+    if(cancel) cancel.focus({ preventScroll: true });
+  }
+  function closeBiteCaseDeleteModal(){
+    const modal = document.getElementById('deleteBiteCaseModal');
+    if(!modal) return;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function(event){
+    if(event.key === 'Escape') closeBiteCaseDeleteModal();
+  });
+</script>
 {% endblock %}

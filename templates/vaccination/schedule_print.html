@@ -1,0 +1,342 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Vaccination Schedule — {{ patient.full_name }}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 14mm;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #FFFFFF;
+      color: #14231D;
+    }
+
+    body {
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .slip {
+      width: 182mm;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .slip-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .slip-logo {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+
+    .slip-heading {
+      min-width: 0;
+    }
+
+    .slip-org {
+      margin: 0;
+      font-size: 15pt;
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: #08291F;
+      text-transform: uppercase;
+    }
+
+    .slip-office {
+      margin: 1px 0 0;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #3F5A4F;
+    }
+
+    .slip-title {
+      margin: 7px 0 0;
+      font-size: 12pt;
+      font-weight: 800;
+      letter-spacing: .08em;
+      color: #08291F;
+      text-transform: uppercase;
+    }
+
+    .slip-divider {
+      height: 2px;
+      margin: 12px 0 16px;
+      background: #08291F;
+    }
+
+    .slip-section {
+      margin: 0 0 15px;
+      page-break-inside: avoid;
+    }
+
+    .slip-section h2 {
+      margin: 0 0 8px;
+      padding-left: 8px;
+      border-left: 3px solid #08291F;
+      font-size: 10pt;
+      font-weight: 800;
+      letter-spacing: .06em;
+      color: #08291F;
+      text-transform: uppercase;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px 22px;
+    }
+
+    .info-item {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+
+    .info-label {
+      flex: 0 0 42%;
+      font-size: 9pt;
+      font-weight: 600;
+      color: #52665C;
+    }
+
+    .info-value {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 10pt;
+      font-weight: 700;
+      color: #14231D;
+      overflow-wrap: anywhere;
+    }
+
+    table.schedule-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+    }
+
+    table.schedule-table th,
+    table.schedule-table td {
+      border: 1px solid #C9D3CB;
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    table.schedule-table th {
+      background: #F3F0E6;
+      color: #08291F;
+      font-size: 9pt;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    table.schedule-table tr {
+      page-break-inside: avoid;
+    }
+
+    table.schedule-table td.dose-name {
+      font-weight: 700;
+      color: #14231D;
+      white-space: nowrap;
+    }
+
+    table.schedule-table td.date-cell {
+      white-space: nowrap;
+    }
+
+    .status {
+      font-weight: 700;
+    }
+
+    .status--completed { color: #0F5132; }
+    .status--scheduled { color: #0B4F6C; }
+    .status--pending { color: #8A5A00; }
+    .status--missed,
+    .status--cancelled { color: #8B1E1E; }
+    .status--rescheduled { color: #5B3A8A; }
+
+    .reminder {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border: 1px solid #E5D9B8;
+      border-radius: 8px;
+      background: #FBF5E6;
+      page-break-inside: avoid;
+    }
+
+    .reminder h3 {
+      margin: 0 0 5px;
+      font-size: 9pt;
+      font-weight: 800;
+      letter-spacing: .06em;
+      color: #08291F;
+      text-transform: uppercase;
+    }
+
+    .reminder p {
+      margin: 0;
+      font-size: 9.5pt;
+      color: #08291F;
+    }
+
+    .slip-footer {
+      margin-top: 16px;
+      padding-top: 7px;
+      border-top: 1px solid #DDE4DE;
+      font-size: 8pt;
+      color: #6B7B71;
+      text-align: center;
+    }
+
+    @media screen {
+      body {
+        background: #EEF1ED;
+        padding: 24px 12px;
+      }
+
+      .slip {
+        max-width: 210mm;
+        padding: 14mm;
+        background: #FFFFFF;
+        box-shadow: 0 10px 30px rgba(8, 41, 31, .12);
+      }
+    }
+
+    @media print {
+      body {
+        background: #FFFFFF;
+      }
+
+      .slip {
+        width: auto;
+        max-width: none;
+        padding: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="slip">
+    <header class="slip-header">
+      <img src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Animal Bite Treatment Center logo" class="slip-logo">
+      <div class="slip-heading">
+        <p class="slip-org">Animal Bite Treatment Center</p>
+        <p class="slip-office">Municipal Health Office</p>
+        <h1 class="slip-title">Patient Vaccination Schedule</h1>
+      </div>
+    </header>
+    <div class="slip-divider"></div>
+
+    <section class="slip-section">
+      <h2>Patient Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Patient Full Name</span>
+          <span class="info-value">{{ patient.full_name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Patient ID</span>
+          <span class="info-value">{{ patient.patient_number }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Case Number</span>
+          <span class="info-value">{{ bite_case.case_number }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Date Printed</span>
+          <span class="info-value">{{ date_printed|date:"F d, Y" }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slip-section">
+      <h2>Vaccination Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Prescribed Vaccine</span>
+          <span class="info-value">{{ prescribed_vaccine }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Total Required Doses</span>
+          <span class="info-value">{% if dose_count %}{{ dose_count }} Dose{{ dose_count|pluralize }}{% else %}Not recorded{% endif %}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">First Dose Date</span>
+          <span class="info-value">{{ first_dose_date|date:"M d, Y"|default:"Not recorded" }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slip-section">
+      <h2>Vaccination Schedule</h2>
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th scope="col">Dose</th>
+            <th scope="col">Scheduled Date</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in dose_rows %}
+          <tr>
+            <td class="dose-name">{{ row.label }}</td>
+            <td class="date-cell">{% if row.date %}{{ row.date|date:"M d, Y" }}{% else %}Not yet set{% endif %}</td>
+            <td class="status status--{{ row.status_key }}">{{ row.status }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3">No vaccination schedule recorded.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="reminder">
+      <h3>Appointment Reminder</h3>
+      <p>Please follow your confirmed vaccination appointments. For doses marked Pending Scheduling, contact the Animal Bite Treatment Center to confirm your next appointment. Bring this schedule slip during your clinic visits.</p>
+    </section>
+
+    <p class="slip-footer">Animal Bite Treatment Center · Patient Vaccination Schedule Slip</p>
+  </main>
+
+  <script>
+    (function () {
+      var printed = false;
+      function openPrintDialog() {
+        if (printed) return;
+        printed = true;
+        window.setTimeout(function () { window.print(); }, 300);
+      }
+      var logo = document.querySelector('.slip-logo');
+      if (logo && !logo.complete) {
+        logo.addEventListener('load', openPrintDialog, { once: true });
+        logo.addEventListener('error', openPrintDialog, { once: true });
+        window.addEventListener('load', openPrintDialog, { once: true });
+      } else {
+        window.addEventListener('load', openPrintDialog, { once: true });
+      }
+    })();
+  </script>
+</body>
+</html>

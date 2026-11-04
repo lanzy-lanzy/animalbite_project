@@ -13,7 +13,11 @@ urlpatterns = [
     path("pre-register/qr/<str:number>.png", views.qr_code, name="qr_code"),
     path("staff/pre-registrations/", views.staff_list, name="staff_list"),
     path("staff/pre-registrations/<int:pk>/", views.staff_detail, name="staff_detail"),
+    path("staff/pre-registrations/<int:pk>/delete/", views.staff_delete, name="staff_delete"),
+    path("staff/pre-registrations/<int:pk>/archive/", views.staff_archive, name="staff_archive"),
+    path("staff/pre-registrations/<int:pk>/retrieve/", views.staff_retrieve, name="staff_retrieve"),
     path("staff/pre-registrations/<int:pk>/edit/", views.staff_edit, name="staff_edit"),
     path("staff/pre-registrations/<int:pk>/convert/", views.convert, name="convert"),
+    path("staff/pre-registrations/<int:pk>/reject/", views.staff_reject, name="staff_reject"),
     path("staff/pre-registrations/<int:pk>/slip/", views.staff_slip, name="staff_slip"),
 ]

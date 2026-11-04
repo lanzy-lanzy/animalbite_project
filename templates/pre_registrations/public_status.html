@@ -20,8 +20,16 @@
         <h2 class="text-2xl font-bold text-ink">{{ record.pre_registration_number }}</h2>
         <p class="mt-3 text-ink">Status: <span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span></p>
         <p class="mt-2 text-ink">Patient: {{ record.full_name }}</p>
+        {% if record.status == 'rejected' %}
+        <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <p class="font-semibold">This registration was rejected</p>
+            <p class="mt-1 whitespace-pre-line">{{ record.rejection_reason|default:"No reason was provided." }}</p>
+            <p class="mt-2 text-red-700">If you believe this is a mistake, please visit the Animal Bite Treatment Center with your registration number.</p>
+        </div>
+        {% else %}
         <p class="mt-4 text-sm text-ink/70">Please proceed to the Animal Bite Treatment Center. This status is not an official treatment record.</p>
         <a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-secondary mt-4">View Slip</a>
+        {% endif %}
     </div>
     {% elif missing %}
     <div class="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">No online registration was found for that number.</div>

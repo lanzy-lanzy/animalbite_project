@@ -2,10 +2,119 @@
 {% block title %}Clinical Assessment — {{ patient.full_name }} {% if bite_case %}· {{ bite_case.case_number }}{% endif %}{% endblock %}
 {% block extra_head %}
 <style>
-  .section-head{background:linear-gradient(150deg,#17614b,#08201a);box-shadow:inset 0 -1px 0 rgba(201,162,39,.55), inset 0 1px 0 rgba(255,255,255,.18);color:white;
-  .section-body { border: 1px solid rgba(255,255,255,.62); border-top:0; border-radius: 0 0 15px 15px; padding: 16px; background: linear-gradient(152deg, rgba(255,255,255,.70) 0%, rgba(253,250,244,.48) 45%, rgba(228,243,236,.50) 100%); backdrop-filter: blur(18px) saturate(175%); -webkit-backdrop-filter: blur(18px) saturate(175%); box-shadow: 18px 18px 40px -22px rgba(146,124,84,.46), -14px -14px 34px -22px rgba(255,255,255,.95); }
   .form-input { width:100%; border:1px solid rgba(255,255,255,.8); border-radius:12px; padding:9px 11px; font-size:13px; background:linear-gradient(145deg,#f4edde,#fefcf6); color:var(--ink); box-shadow:inset 5px 5px 12px -9px rgba(146,124,84,.55), inset -5px -5px 12px -9px rgba(255,255,255,.95), 0 0 0 1px rgba(255,255,255,.5); }
-    .form-input:focus { outline:none; background:#fff; box-shadow:0 0 0 3px rgba(201,162,39,.28), 0 0 0 1px rgba(201,162,39,.55); }
+  .form-input:focus { outline:none; background:#fff; box-shadow:0 0 0 3px rgba(201,162,39,.28), 0 0 0 1px rgba(201,162,39,.55); }
+  #id_assess-category_confirmed {
+    display: block;
+    width: 100%;
+    min-height: 78px;
+    padding: 20px 52px 20px 22px;
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #0f3d2e;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f3d2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"), linear-gradient(145deg, #f4edde, #fefcf6);
+    background-repeat: no-repeat, no-repeat;
+    background-position: right 20px center, 0 0;
+    background-size: 18px 18px, 100% 100%;
+  }
+  #id_assess-category_confirmed:focus {
+    outline: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f3d2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"), linear-gradient(145deg, #f4edde, #fefcf6);
+    box-shadow: 0 0 0 3px rgba(201,162,39,.28), 0 0 0 1px rgba(201,162,39,.55), inset 0 1px 2px rgba(146,124,84,.12);
+  }
+  #id_assess-dose_schedule,
+  #id_assess-dose_protocol,
+  #id_assess-vaccine_inventory {
+    min-height: 54px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  #id_assess-dose_schedule_date,
+  #id_assess-first_dose_date,
+  #id_assess-vaccine_dose_ml,
+  #id_assess-vaccine_quantity {
+    min-height: 50px;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .vitals-readonly { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#f3e4b3; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.28); }
+
+  /* Minimal patient hero — initials + full name only */
+  .patient-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 138px;
+    padding: 26px 32px;
+    margin-bottom: 1rem;
+    border-radius: 22px;
+    background:
+      radial-gradient(130% 180% at 100% 0%, rgba(45,212,168,.22) 0%, rgba(45,212,168,0) 58%),
+      linear-gradient(118deg, #063d2e 0%, #074836 52%, #052f24 100%);
+    box-shadow: 0 22px 42px -26px rgba(3,40,30,.85), 0 4px 14px rgba(6,61,46,.16), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .patient-hero__waves {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(58%, 480px);
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .patient-hero__avatar {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 90px;
+    height: 90px;
+    border-radius: 20px;
+    background: linear-gradient(150deg, #fffdf7 0%, #f2edde 100%);
+    border: 1.5px solid #a7f3d0;
+    box-shadow: 0 0 0 5px rgba(110,231,183,.10), 0 14px 28px -14px rgba(0,0,0,.6);
+  }
+  .patient-hero__initials {
+    color: #063d2e;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: .04em;
+    user-select: none;
+  }
+  .patient-hero__divider {
+    flex: 0 0 auto;
+    width: 2px;
+    height: 70px;
+    margin: 0 26px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(167,243,208,0), #a7f3d0 18%, #a7f3d0 82%, rgba(167,243,208,0));
+    opacity: .9;
+  }
+  .patient-hero__name {
+    min-width: 0;
+    margin: 0;
+    font-size: clamp(28px, 3.4vw, 36px);
+    font-weight: 700;
+    line-height: 1.16;
+    color: #fff;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+  @media (max-width: 640px) {
+    .patient-hero { min-height: 0; padding: 20px; border-radius: 20px; }
+    .patient-hero__avatar { width: 68px; height: 68px; border-radius: 16px; }
+    .patient-hero__initials { font-size: 25px; }
+    .patient-hero__divider { height: 50px; margin: 0 16px; }
+    .patient-hero__name { font-size: clamp(22px, 6vw, 28px); }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -17,358 +126,434 @@
       <h1 class="text-lg font-bold text-ink">Clinical Encounter</h1>
       {% if assessment.is_finalized %}<span class="px-2 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold">Finalized</span>{% elif assessment.pk %}<span class="px-2 py-1 rounded-full bg-amber-500 text-white text-xs font-bold">Draft</span>{% else %}<span class="px-2 py-1 rounded-full bg-sage-100 border border-line text-xs font-bold text-muted">New</span>{% endif %}
     </div>
-    <div class="flex items-center gap-2">
-      <a href="{% url 'doctor:dashboard' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-        Overview / Dashboard
-      </a>
-      <a href="{% url 'patients:patient_detail' patient.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Patient File →</a>
-      {% if bite_case %}
-      <a href="{% url 'bite_cases:case_detail' bite_case.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Case {{ bite_case.case_number }}</a>
-      {% endif %}
-      <a href="{% url 'patients:patient_print' patient.pk %}" target="_blank" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Print Sheet ↗</a>
-    </div>
   </div>
 
-  <!-- Patient banner (read-only summary, click to edit below) -->
-  <div class="rounded-2xl bg-emerald-950 text-white p-4 flex flex-wrap items-center gap-4 mb-4 shadow-sm">
-    <div class="w-14 h-14 rounded-xl bg-white text-emerald-950 flex items-center justify-center font-bold text-lg shrink-0">{{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}</div>
-    <div class="min-w-0 flex-1">
-      <p class="font-bold text-white leading-tight">{{ patient.full_name }} <span class="font-mono text-sm bg-white/15 px-2 py-0.5 rounded-full ml-2">{{ patient.patient_number }}</span></p>
-      <p class="text-sm text-emerald-100 mt-1">{{ patient.get_sex_display }} · {{ patient.age }}y · {{ patient.get_civil_status_display }} · {{ patient.barangay|default:"—" }} · {{ patient.contact_display }}</p>
-      <p class="text-xs text-emerald-200 mt-0.5">Registered {{ patient.created_at|date:"M d, Y" }} · ID {{ patient.pk|stringformat:"05d" }}</p>
+  <!-- PATIENT HEADER — initials + full name only -->
+  <header class="patient-hero" aria-label="Patient">
+    <svg class="patient-hero__waves" viewBox="0 0 460 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false">
+      <path d="M460 -20C392 22 356 78 326 200H460Z" fill="#0e7a58" opacity=".22"/>
+      <path d="M460 36C420 76 400 132 384 200H460Z" fill="#1aa37a" opacity=".16"/>
+      <path d="M460 84C440 118 432 160 426 200H460Z" fill="#6ee7b7" opacity=".10"/>
+      <path d="M196 200C262 118 330 66 460 36" fill="none" stroke="#34d399" stroke-opacity=".16" stroke-width="2"/>
+      <path d="M268 200C322 142 376 104 460 82" fill="none" stroke="#6ee7b7" stroke-opacity=".12" stroke-width="1.5"/>
+    </svg>
+    <div class="patient-hero__avatar" aria-hidden="true">
+      <span class="patient-hero__initials">{{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}</span>
     </div>
-    {% if bite_case %}
-    <div class="text-right shrink-0 bg-white/10 rounded-xl px-3 py-2 border border-white/15">
-      <p class="text-sm font-bold text-white">{{ bite_case.case_number }}</p>
-      <p class="text-xs text-emerald-100">{{ bite_case.get_animal_type_display }} · {{ bite_case.get_exposure_type_display }}</p>
-      <p class="text-xs text-emerald-200">{{ bite_case.date_time_bite|date:"M d, Y h:i A" }} · {{ bite_case.body_part_affected }}</p>
-    </div>
-    {% else %}
-    <div class="text-right shrink-0 bg-amber-500 text-white rounded-xl px-3 py-2">
-      <p class="text-xs font-bold uppercase">No bite case yet</p>
-      <p class="text-xs">General assessment</p>
-    </div>
-    {% endif %}
-  </div>
+    <span class="patient-hero__divider" aria-hidden="true"></span>
+    <h2 class="patient-hero__name">{{ patient.full_name }}</h2>
+  </header>
 
-  {% if bite_case %}
-  <!-- Case summary strip -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-    <div class="rounded-xl bg-white border border-line p-3">
-      <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Incident</p>
-      <p class="text-sm font-medium text-ink mt-1">{{ bite_case.place_of_incident }} · {{ bite_case.incident_barangay }}</p>
-      <p class="text-xs text-muted">{{ bite_case.date_time_bite|date:"M d, Y h:i A" }}</p>
-    </div>
-    <div class="rounded-xl bg-white border border-line p-3">
-      <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Animal</p>
-      <p class="text-sm font-medium text-ink capitalize">{{ bite_case.get_animal_type_display }} {% if bite_case.animal_other %}({{ bite_case.animal_other }}){% endif %}</p>
-      <p class="text-xs text-muted capitalize">{{ bite_case.get_animal_ownership_display }} · {{ bite_case.get_animal_vax_status_display }} · {{ bite_case.get_animal_condition_display }}</p>
-    </div>
-    <div class="rounded-xl bg-white border border-line p-3">
-      <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Exposure</p>
-      <p class="text-sm font-medium text-ink capitalize">{{ bite_case.get_exposure_type_display }} · {{ bite_case.number_of_wounds }} wound(s)</p>
-      <p class="text-xs text-muted">{{ bite_case.body_part_affected }} {% if bite_case.wound_washed_immediately %}· Wound washed{% endif %}</p>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Vitals quick view -->
-  <div class="card mb-4 border-l-4 border-l-emerald-800">
-    <div class="flex items-center justify-between">
-      <h3 class="text-sm font-bold text-ink flex items-center gap-2">
-        <span class="w-7 h-7 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-xs">♥</span>
-        Vital Signs
-        {% if latest_vitals %}<span class="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">{{ latest_vitals.taken_at|date:"M d, h:i A" }}</span>{% else %}<span class="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">No vitals</span>{% endif %}
-      </h3>
-      <div class="flex gap-1.5">
-        <a href="{% url 'patients:patient_vital_create' patient.pk %}?next={{ request.path }}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold hover:bg-sage-50">+ Add Vitals</a>
-        {% if latest_vitals %}<a href="{% url 'patients:patient_vital_edit' latest_vitals.pk %}?next={{ request.path }}" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Edit</a>{% endif %}
-      </div>
-    </div>
-    {% if latest_vitals %}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-      <div class="rounded-lg bg-sage-50 border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">BP</p><p class="text-sm font-bold">{{ latest_vitals.bp_display|default:"—"}} <span class="text-xs font-normal text-muted">mmHg</span></p></div>
-      <div class="rounded-lg bg-white border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">Temp</p><p class="text-sm font-bold">{% if latest_vitals.temperature %}{{ latest_vitals.temperature }}°C{% else %}—{% endif %}</p></div>
-      <div class="rounded-lg bg-sage-50 border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">Pulse</p><p class="text-sm font-bold">{% if latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }} bpm{% else %}—{% endif %}</p></div>
-      <div class="rounded-lg bg-white border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">SpO₂</p><p class="text-sm font-bold">{% if latest_vitals.spo2 %}{{ latest_vitals.spo2 }}%{% else %}—{% endif %}</p></div>
-      <div class="rounded-lg bg-white border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">Weight</p><p class="text-sm font-bold">{% if latest_vitals.weight %}{{ latest_vitals.weight }}kg{% else %}—{% endif %}</p></div>
-      <div class="rounded-lg bg-sage-50 border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">Height</p><p class="text-sm font-bold">{% if latest_vitals.height %}{{ latest_vitals.height }}cm{% else %}—{% endif %}</p></div>
-      <div class="rounded-lg bg-white border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">BMI</p><p class="text-sm font-bold">{{ latest_vitals.bmi|default:"—" }}</p></div>
-      <div class="rounded-lg bg-sage-50 border border-line p-2 text-center"><p class="text-[10px] font-bold uppercase text-muted">Pain</p><p class="text-sm font-bold">{% if latest_vitals.pain_score is not None %}{{ latest_vitals.pain_score }}/10{% else %}—{% endif %}</p></div>
-    </div>
-    {% if latest_vitals.notes %}<p class="text-xs font-medium text-ink mt-2 bg-amber-50 border border-amber-200 rounded-lg p-2"><b>Notes:</b> {{ latest_vitals.notes }}</p>{% endif %}
-    {% else %}
-    <p class="text-sm text-muted mt-2">No vitals recorded — fill on-site with ballpen or click + Add Vitals to input digitally (appears on print sheet & PDF).</p>
-    {% endif %}
-  </div>
-
-  <!-- MAIN FORM: Patient + Assessment unified -->
   <form method="POST" class="space-y-4">
     {% csrf_token %}
-
-    {% if patient_form.non_field_errors %}
-      <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ patient_form.non_field_errors }}</div>
-    {% endif %}
     {% if form.non_field_errors %}
       <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-800">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <!-- SECTION 1: Patient Information (editable) -->
-    <div class="rounded-xl overflow-hidden shadow-sm">
-      <div class="section-head">
-        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-800 flex items-center justify-center text-xs font-bold">1</span> Patient Information <span class="text-xs font-medium opacity-80">— editable by doctor (single sheet)</span></h3>
-        <span class="text-xs font-bold tracking-widest uppercase opacity-80">System-filled · doctor can correct</span>
+    <!-- 1 · PATIENT INFORMATION (read-only) -->
+    <section class="card p-0 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-950 flex items-center justify-center text-xs font-bold">1</span> Patient Information</h3>
+        <span class="text-xs font-bold uppercase tracking-widest text-emerald-200">Registered record · view only</span>
       </div>
-      <div class="section-body">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">First Name *</label>
-            {{ patient_form.first_name }}
-            {% if patient_form.first_name.errors %}<p class="text-xs text-red-600 mt-1">{{ patient_form.first_name.errors|join:", " }}</p>{% endif %}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Middle Name</label>
-            {{ patient_form.middle_name }}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Last Name *</label>
-            {{ patient_form.last_name }}
-            {% if patient_form.last_name.errors %}<p class="text-xs text-red-600 mt-1">{{ patient_form.last_name.errors|join:", " }}</p>{% endif %}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Suffix</label>
-            {{ patient_form.suffix }}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Birthdate *</label>
-            {{ patient_form.birthdate }}
-            {% if patient_form.birthdate.errors %}<p class="text-xs text-red-600 mt-1">{{ patient_form.birthdate.errors|join:", " }}</p>{% endif %}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Sex *</label>
-            {{ patient_form.sex }}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Civil Status</label>
-            {{ patient_form.civil_status }}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Barangay</label>
-            {{ patient_form.barangay }}
-          </div>
-          <div class="md:col-span-2">
-            <label class="text-xs font-bold uppercase text-muted">Contact # *</label>
-            {{ patient_form.contact_number }}
-            {% if patient_form.contact_number.errors %}<p class="text-xs text-red-600 mt-1">{{ patient_form.contact_number.errors|join:", " }}</p>{% endif %}
-          </div>
-          <div class="md:col-span-2">
-            <label class="text-xs font-bold uppercase text-muted">Address *</label>
-            {{ patient_form.address }}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Parent / Guardian</label>
-            {{ patient_form.parent_guardian }}
-          </div>
-          <div class="md:col-span-3">
-            <label class="text-xs font-bold uppercase text-muted">Emergency Contact (Name · Number)</label>
-            <div class="grid grid-cols-2 gap-2">
-              {{ patient_form.emergency_contact_name }}
-              {{ patient_form.emergency_contact_number }}
-            </div>
-          </div>
-          <div class="md:col-span-4">
-            <label class="text-xs font-bold uppercase text-muted">Medical History</label>
-            {{ patient_form.medical_history }}
-          </div>
-          <div class="md:col-span-4">
-            <label class="text-xs font-bold uppercase text-muted">Allergies ⚠</label>
-            {{ patient_form.allergy_info }}
-            <p class="text-xs text-amber-700 mt-1">Re-check before vaccination — will show highlighted on sheet.</p>
-          </div>
-          <div class="md:col-span-2">
-            <label class="text-xs font-bold uppercase text-muted">Previous Rabies Vax</label>
-            {{ patient_form.previous_rabies_vax }}
-          </div>
-          <div class="md:col-span-2">
-            <label class="text-xs font-bold uppercase text-muted">Remarks</label>
-            {{ patient_form.remarks }}
+      <div class="p-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Patient ID</p><p class="info-value font-mono">{{ patient.patient_number }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Full name</p><p class="info-value">{{ patient.full_name }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Birthdate</p><p class="info-value">{{ patient.birthdate|date:"F d, Y" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Age</p><p class="info-value">{{ patient.age }} years</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Sex</p><p class="info-value">{{ patient.get_sex_display }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Civil status</p><p class="info-value">{{ patient.get_civil_status_display|default:"—" }}</p></div></div>
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Address</p><p class="info-value">{% if patient.address %}{{ patient.address }}{% if patient.barangay and patient.barangay.name|lower not in patient.address|lower %} · {{ patient.barangay.name }}{% endif %}{% elif patient.barangay %}{{ patient.barangay.name }}{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Contact number</p><p class="info-value">{{ patient.contact_display|default:"—" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Parent / Guardian</p><p class="info-value">{{ patient.parent_guardian|default:"—" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Emergency contact</p><p class="info-value">{{ patient.emergency_contact_name|default:"—" }}{% if patient.emergency_contact_number %} · {{ patient.emergency_contact_display }}{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Registered</p><p class="info-value">{{ patient.created_at|date:"M d, Y h:i A" }}{% if patient.created_by %} · {{ patient.created_by.get_full_name|default:patient.created_by.username }}{% endif %}</p></div></div>
+        </div>
+        <p class="text-xs text-muted mt-3">Personal details are maintained by an authorised administrator. To correct any of them, use <b>Patient File →</b> and request an update.</p>
+      </div>
+    </section>
+
+    <!-- 2 · MEDICAL HISTORY (read-only) -->
+    <section class="card p-0 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-950 flex items-center justify-center text-xs font-bold">2</span> Medical History</h3>
+        <span class="text-xs font-bold uppercase tracking-widest text-emerald-200">Re-check allergies before vaccinating</span>
+      </div>
+      <div class="p-4 space-y-2">
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Medical history</p><p class="info-value whitespace-pre-line">{{ patient.medical_history|default:"Not recorded — ask an administrator to complete this." }}</p></div></div>
+        <div class="info-tile info-tile--wide">
+          <div class="min-w-0">
+            <p class="info-label flex items-center gap-2">
+              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+              Allergies
+            </p>
+            <p class="info-value whitespace-pre-line text-red-800">{{ patient.allergy_info|default:"Not recorded — ask an administrator to complete this." }}</p>
           </div>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Previous rabies vaccination</p><p class="info-value whitespace-pre-line">{{ patient.previous_rabies_vax|default:"None on record" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Remarks</p><p class="info-value whitespace-pre-line">{{ patient.remarks|default:"—" }}</p></div></div>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- SECTION 2-4: Clinical Assessment -->
-    <div class="rounded-xl overflow-hidden shadow-sm">
-      <div class="section-head">
-        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-800 flex items-center justify-center text-xs font-bold">2</span> Clinical Assessment</h3>
-        <span class="text-xs font-bold uppercase opacity-80">Doctor to fill — findings, category, treatment</span>
+    <!-- 3 · BITE INCIDENT DETAILS (read-only) -->
+    <section class="card p-0 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-950 flex items-center justify-center text-xs font-bold">3</span> Bite Incident Details</h3>
+        <span class="text-xs font-bold uppercase tracking-widest text-emerald-200">Reported by patient · verify below</span>
       </div>
-      <div class="section-body space-y-6">
-        <!-- Chief complaint -->
+      {% if bite_case %}
+      <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Case number</p><p class="info-value font-mono">{{ bite_case.case_number }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Case status</p><p class="info-value">{{ bite_case.get_case_status_display }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Date of incident</p><p class="info-value">{{ bite_case.date_time_bite|date:"F d, Y" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Time of incident</p><p class="info-value">{{ bite_case.date_time_bite|date:"h:i A" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Place of incident</p><p class="info-value">{{ bite_case.place_of_incident|default:"—" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Barangay</p><p class="info-value">{{ bite_case.incident_barangay|default:"—" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Animal type</p><p class="info-value capitalize">{{ bite_case.get_animal_type_display }}{% if bite_case.animal_other %} ({{ bite_case.animal_other }}){% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Ownership</p><p class="info-value capitalize">{{ bite_case.get_animal_ownership_display }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Animal condition</p><p class="info-value capitalize">{{ bite_case.get_animal_condition_display }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Animal vaccination status</p><p class="info-value capitalize">{{ bite_case.get_animal_vax_status_display }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Exposure type</p><p class="info-value">{{ bite_case.get_exposure_type_display }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Body part · wounds</p><p class="info-value">{{ bite_case.body_part_affected }} · {{ bite_case.number_of_wounds }} wound(s)</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Date of consultation</p><p class="info-value">{{ bite_case.date_time_consultation|date:"F d, Y h:i A"|default:"—" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Wound washed immediately</p><p class="info-value">{{ bite_case.wound_washed_immediately|yesno:"Yes,No" }}</p></div></div>
+        {% if bite_case.wound_description %}
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Wound description</p><p class="info-value whitespace-pre-line">{{ bite_case.wound_description }}</p></div></div>
+        {% endif %}
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">First aid given</p><p class="info-value whitespace-pre-line">{{ bite_case.first_aid_given|default:"Not recorded" }}</p></div></div>
+        {% if bite_case.initial_consultation_notes %}
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Initial consultation notes</p><p class="info-value whitespace-pre-line">{{ bite_case.initial_consultation_notes }}</p></div></div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="p-4"><p class="text-sm text-muted">No bite case linked to this encounter — general assessment.</p></div>
+      {% endif %}
+    </section>
+
+    <!-- 4 · VITAL SIGNS (read-only reference — recorded by clinic staff) -->
+    <section class="card p-0 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-950 flex items-center justify-center text-xs font-bold">4</span> Vital Signs</h3>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-widest text-emerald-200">
+            {% if latest_vitals %}Recorded {{ latest_vitals.taken_at|date:"M d, Y h:i A" }}{% if latest_vitals.taken_by %} · {{ latest_vitals.taken_by.get_full_name|default:latest_vitals.taken_by.username }}{% endif %}{% else %}Not recorded yet{% endif %}
+          </span>
+          <span class="vitals-readonly">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Read-only
+          </span>
+        </div>
+      </div>
+      <div class="p-4">
+        {% if latest_vitals %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Date &amp; time taken</p><p class="info-value">{{ latest_vitals.taken_at|date:"M d, Y h:i A" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">BP systolic</p><p class="info-value">{% if latest_vitals.bp_systolic %}{{ latest_vitals.bp_systolic }} mmHg{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">BP diastolic</p><p class="info-value">{% if latest_vitals.bp_diastolic %}{{ latest_vitals.bp_diastolic }} mmHg{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Temperature</p><p class="info-value">{% if latest_vitals.temperature %}{{ latest_vitals.temperature }} °C{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Pulse rate</p><p class="info-value">{% if latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }} bpm{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">SpO₂</p><p class="info-value">{% if latest_vitals.spo2 %}{{ latest_vitals.spo2 }} %{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Weight</p><p class="info-value">{% if latest_vitals.weight %}{{ latest_vitals.weight }} kg{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Height</p><p class="info-value">{% if latest_vitals.height %}{{ latest_vitals.height }} cm{% else %}—{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">BMI</p><p class="info-value">{{ latest_vitals.bmi|default:"—" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Pain scale</p><p class="info-value">{% if latest_vitals.pain_score is not None %}{{ latest_vitals.pain_score }} / 10{% else %}—{% endif %}</p></div></div>
+        </div>
+        <p class="text-xs text-muted mt-3">Recorded by authorised clinic staff — these readings are shown for reference only and cannot be edited from this page.</p>
+        {% if recent_vitals|length > 1 %}
+        <details class="mt-3">
+          <summary class="text-xs font-bold uppercase text-muted cursor-pointer">Previous vitals entries ({{ recent_vitals|length }})</summary>
+          <div class="mt-2 space-y-1">
+            {% for v in recent_vitals %}
+            <p class="text-xs text-muted">{{ v.taken_at|date:"M d, Y h:i A" }} · BP {{ v.bp_display|default:"—" }} · Temp {% if v.temperature %}{{ v.temperature }}°C{% else %}—{% endif %} · Pulse {{ v.pulse_rate|default:"—" }} · SpO₂ {{ v.spo2|default:"—" }}{% if v.taken_by %} · {{ v.taken_by.get_full_name|default:v.taken_by.username }}{% endif %}</p>
+            {% endfor %}
+          </div>
+        </details>
+        {% endif %}
+        {% else %}
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Vital signs</p><p class="info-value">No vital signs recorded for this patient yet.</p><p class="text-xs text-muted mt-1">Authorised clinic staff record vitals from the patient file.</p></div></div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- 5 · CLINICAL ASSESSMENT -->
+    <section class="card p-0 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-950 flex items-center justify-center text-xs font-bold">5</span> Clinical Assessment</h3>
+        <span class="text-xs font-bold uppercase tracking-widest text-emerald-200">Doctor to fill — findings &amp; category</span>
+      </div>
+      <div class="p-4 space-y-6">
+        <!-- A -->
         <div>
-          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center text-xs">A</span> Chief Complaint / HPI</h4>
-          <div class="grid grid-cols-1 gap-3">
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">Chief Complaint *</label>
-              {{ form.chief_complaint }}
-              {% if form.chief_complaint.errors %}<p class="text-xs text-red-600">{{ form.chief_complaint.errors|join:", " }}</p>{% endif %}
-            </div>
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">History of Present Illness</label>
-              {{ form.history_present_illness }}
-            </div>
+          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center text-xs">A</span> Chief Complaint</h4>
+          <div class="w-full">
+            <label class="text-xs font-bold uppercase text-muted">Chief complaint *</label>
+            {{ form.chief_complaint }}
+            {% if form.chief_complaint.errors %}<p class="text-xs text-red-600">{{ form.chief_complaint.errors|join:", " }}</p>{% endif %}
+            {{ form.history_present_illness.as_hidden }}
           </div>
         </div>
 
         <hr class="border-line">
 
-        <!-- Exposure -->
+        <!-- B -->
         <div>
           <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center text-xs">B</span> Exposure Narrative (verified)</h4>
-          <div class="mb-3">
-            <label class="text-xs font-bold uppercase text-muted">Exposure Narrative</label>
+          <div class="w-full">
+            <label class="text-xs font-bold uppercase text-muted">Narrative as verified by the doctor</label>
             {{ form.exposure_narrative }}
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">Animal (verified)</label>
-              {{ form.animal_type_verified }}
-            </div>
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">Owned / Stray</label>
-              {{ form.animal_owned_verified }}
-            </div>
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">Vax Status</label>
-              {{ form.animal_vax_verified }}
-            </div>
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">Wound washed?</label>
-              {{ form.wound_washed_verified }}
-            </div>
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">Body part</label>
-              {{ form.body_part_verified }}
-            </div>
-            <div>
-              <label class="text-xs font-bold uppercase text-muted">No. of wounds</label>
-              {{ form.number_of_wounds_verified }}
-            </div>
-            <div class="md:col-span-3">
-              <label class="text-xs font-bold uppercase text-muted">Date / Time of bite (verified)</label>
-              {{ form.date_time_bite_verified }}
-            </div>
+            {{ form.animal_type_verified.as_hidden }}
+            {{ form.animal_owned_verified.as_hidden }}
+            {{ form.animal_vax_verified.as_hidden }}
+            {{ form.wound_washed_verified.as_hidden }}
+            {{ form.body_part_verified.as_hidden }}
+            {{ form.number_of_wounds_verified.as_hidden }}
+            {{ form.date_time_bite_verified.as_hidden }}
           </div>
         </div>
 
         <hr class="border-line">
 
-        <!-- Assessment & Plan -->
+        <!-- C -->
         <div>
-          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-emerald-950 text-white flex items-center justify-center text-xs">C</span> Assessment & Plan — Category, PEP, RIG, TT</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="md:col-span-3">
-              <label class="text-xs font-bold uppercase text-muted">WHO Bite Category (confirmed) *</label>
-              {{ form.category_confirmed }}
-              {% if form.category_confirmed.errors %}<p class="text-xs text-red-600">{{ form.category_confirmed.errors|join:", " }}</p>{% endif %}
-              <div class="flex gap-2 mt-2 text-xs">
-                <span class="px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 font-bold">I — Licks intact skin</span>
-                <span class="px-2 py-1 rounded-full bg-amber-50 border border-amber-200 font-bold">II — Minor scratches, no bleeding</span>
-                <span class="px-2 py-1 rounded-full bg-red-50 border border-red-200 font-bold">III — Transdermal / bat</span>
+          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-emerald-950 text-white flex items-center justify-center text-xs">C</span> Bite Category</h4>
+          <div class="w-full">
+            <label class="text-xs font-bold uppercase text-muted">WHO bite category *</label>
+            {{ form.category_confirmed }}
+            {% if form.category_confirmed.errors %}<p class="text-xs text-red-600">{{ form.category_confirmed.errors|join:", " }}</p>{% endif %}
+            {{ form.pep_indicated.as_hidden }}
+            {{ form.rig_indicated.as_hidden }}
+            {{ form.tt_indicated.as_hidden }}
+            {{ form.prc_number.as_hidden }}
+            {{ form.status.as_hidden }}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · VACCINE & TREATMENT PLAN -->
+    <section class="card p-0 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+        <h3 class="text-sm font-bold flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-white text-emerald-950 flex items-center justify-center text-xs font-bold">6</span> Vaccine &amp; Treatment Plan</h3>
+        <span class="text-xs font-bold uppercase tracking-widest text-emerald-200">Stock is used only when a dose is given</span>
+      </div>
+      <div class="p-4 space-y-6">
+        <!-- A: dose schedule & vaccine -->
+        <div>
+          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center text-xs">A</span> Dose Schedule &amp; Vaccine</h4>
+          <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-bold uppercase text-muted">Dose schedule *</label>
+                {{ form.dose_schedule }}
+                {% if form.dose_schedule.errors %}<p class="text-xs text-red-600">{{ form.dose_schedule.errors|join:", " }}</p>{% endif %}
+              </div>
+              <div>
+                <label class="text-xs font-bold uppercase text-muted">Date (1st dose) *</label>
+                {{ form.dose_schedule_date }}
+                {% if form.dose_schedule_date.errors %}<p class="text-xs text-red-600">{{ form.dose_schedule_date.errors|join:", " }}</p>{% endif %}
               </div>
             </div>
-            <div class="flex items-center gap-2 p-3 rounded-xl bg-sage-50 border border-line">
-              {{ form.pep_indicated }} <label class="text-sm font-bold text-ink">PEP indicated</label>
+            {% if schedule %}
+            <div>
+              <p class="text-xs font-bold uppercase tracking-widest text-gold-700 mb-2">Dose Schedule Records</p>
+              <div class="overflow-x-auto rounded-xl border border-line">
+                <table class="w-full text-sm">
+                  <thead class="bg-sage-50 text-left text-[11px] font-bold uppercase tracking-widest text-muted">
+                    <tr>
+                      <th scope="col" class="px-3 py-2">Dose</th>
+                      <th scope="col" class="px-3 py-2">Date</th>
+                      <th scope="col" class="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for dose in schedule.doses.all %}
+                    <tr class="border-t border-line">
+                      <td class="px-3 py-2 font-semibold text-emerald-950">{{ dose.number_label }}</td>
+                      <td class="px-3 py-2 text-muted">{% if dose.scheduled_date %}{{ dose.scheduled_date|date:"M d, Y" }}{% elif dose.actual_date %}{{ dose.actual_date|date:"M d, Y" }}{% else %}Not yet set{% endif %}</td>
+                      <td class="px-3 py-2">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide {% if dose.dose_status == 'completed' %}bg-emerald-100 text-emerald-800{% elif dose.dose_status == 'scheduled' %}bg-amber-100 text-amber-800{% elif dose.dose_status == 'missed' or dose.dose_status == 'cancelled' %}bg-red-100 text-red-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ dose.get_dose_status_display }}</span>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-[11px] text-muted mt-1">Only the 1st dose is dated here. The nurse schedules the remaining doses within the approved protocol.</p>
             </div>
-            <div class="flex items-center gap-2 p-3 rounded-xl bg-sage-50 border border-line">
-              {{ form.rig_indicated }} <label class="text-sm font-bold text-ink">RIG indicated</label>
-            </div>
-            <div class="flex items-center gap-2 p-3 rounded-xl bg-sage-50 border border-line">
-              {{ form.tt_indicated }} <label class="text-sm font-bold text-ink">TT indicated</label>
+            {% endif %}
+          </div>
+          {# Protocol stays submitted with its saved value; new assessments fall back to the clinic default. #}
+          {{ form.dose_protocol.as_hidden }}
+          {% if form.dose_protocol.errors %}<p class="text-xs text-red-600">{{ form.dose_protocol.errors|join:", " }}</p>{% endif %}
+        </div>
+
+        <hr class="border-line">
+
+        <!-- B: vaccine brand -->
+        <div>
+          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center text-xs">B</span> Vaccine Brand</h4>
+          <div>
+            <label class="text-xs font-bold uppercase text-muted">{{ form.vaccine_inventory.label }} *</label>
+            {{ form.vaccine_inventory }}
+            {% if form.vaccine_inventory.errors %}<p class="text-xs text-red-600">{{ form.vaccine_inventory.errors|join:", " }}</p>{% endif %}
+            <p class="text-xs text-muted mt-1">Only vaccine lots from Vaccine Inventory are listed — scheduling does not reduce stock.</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+            <div>
+              <label class="text-xs font-bold uppercase text-muted">Volume per dose (mL)</label>
+              {{ form.vaccine_dose_ml }}
             </div>
             <div>
-              <label class="text-xs font-bold uppercase text-muted">Vaccine brand / Lot</label>
-              {{ form.vaccine_brand_plan }}
+              <label class="text-xs font-bold uppercase text-muted">Quantity (vials/doses)</label>
+              {{ form.vaccine_quantity }}
             </div>
-            <div class="md:col-span-2">
-              <label class="text-xs font-bold uppercase text-muted">Dose schedule</label>
-              {{ form.dose_schedule_plan }}
-              <p class="text-xs text-muted mt-1">Default Essen: Days 0,3,7,14,28</p>
+            <div>
+              <label class="text-xs font-bold uppercase text-muted">1st dose date</label>
+              {{ form.first_dose_date }}
+              {% if form.first_dose_date.errors %}<p class="text-xs text-red-600">{{ form.first_dose_date.errors|join:", " }}</p>{% endif %}
             </div>
-            <div class="md:col-span-3">
-              <label class="text-xs font-bold uppercase text-muted">Treatment Plan *</label>
+          </div>
+          {{ form.vaccine_brand_plan.as_hidden }}
+          {{ form.vaccine_lot_number.as_hidden }}
+          {{ form.dose_schedule_plan.as_hidden }}
+        </div>
+
+        <hr class="border-line">
+
+        <!-- C: treatment -->
+        <div>
+          <h4 class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center text-xs">C</span> Treatment, Prescription &amp; Follow-up</h4>
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="text-xs font-bold uppercase text-muted">Treatment plan</label>
               {{ form.treatment_plan }}
+              {% if form.treatment_plan.errors %}<p class="text-xs text-red-600">{{ form.treatment_plan.errors|join:", " }}</p>{% endif %}
             </div>
-            <div class="md:col-span-3">
-              <label class="text-xs font-bold uppercase text-muted">Prescription</label>
-              {{ form.prescription }}
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label class="text-xs font-bold uppercase text-muted">Prescription</label>
+                <span class="text-[11px] text-muted">Stock is deducted only when dispensing is confirmed</span>
+              </div>
+              {{ rx_formset.management_form }}
+              {% if rx_formset.non_form_errors %}
+              <div class="mb-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{{ rx_formset.non_form_errors|join:" " }}</div>
+              {% endif %}
+              <div id="rxRows" class="space-y-3">
+                {% for rx in rx_formset %}
+                {% include 'doctor/_prescription_row.html' with rx=rx %}
+                {% endfor %}
+              </div>
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button" id="rxAdd" class="px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-bold hover:bg-emerald-100">+ Add Another Medicine</button>
+                {% if not rx_medicine_meta %}
+                <span class="text-xs text-amber-700">No medicine stock yet — <a class="underline font-bold" href="{% url 'inventory:medicine_create' %}">add medicine inventory</a> first.</span>
+                {% endif %}
+              </div>
+              <template id="rxEmptyRow">
+                {% include 'doctor/_prescription_row.html' with rx=rx_formset.empty_form %}
+              </template>
             </div>
-            <div class="md:col-span-3">
-              <label class="text-xs font-bold uppercase text-muted">Follow-up Instructions</label>
+            <div>
+              <label class="text-xs font-bold uppercase text-muted">Dosage instructions — frequency &amp; duration</label>
+              {{ form.dosage_instructions }}
+              <p class="text-[11px] text-muted mt-1">Inventory strength is not the prescribed dose — record how and how long each medicine is taken.</p>
+              {% if form.dosage_instructions.errors %}<p class="text-xs text-red-600">{{ form.dosage_instructions.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+              <label class="text-xs font-bold uppercase text-muted">Follow-up instructions</label>
               {{ form.follow_up_instructions }}
             </div>
-            <div class="md:col-span-3">
-              <label class="text-xs font-bold uppercase text-muted">Additional notes / Allergy re-check</label>
+            <div>
+              <label class="text-xs font-bold uppercase text-muted">Additional notes / allergy re-check</label>
               {{ form.additional_notes }}
             </div>
           </div>
         </div>
-
-        <hr class="border-line">
-
-        <!-- Doctor attestation -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">PRC License No.</label>
-            {{ form.prc_number }}
-          </div>
-          <div>
-            <label class="text-xs font-bold uppercase text-muted">Status *</label>
-            {{ form.status }}
-            <p class="text-xs text-muted mt-1">Draft = save; Final = sign & lock</p>
-          </div>
-          <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
-            <p class="text-xs font-bold uppercase text-emerald-800">Attending Doctor</p>
-            <p class="text-sm font-bold text-ink">{{ request.user.get_full_name|default:request.user.username }}</p>
-            <p class="text-xs text-muted">{{ request.user.get_role_display }} · {{ request.user.email|default:request.user.username }}</p>
-            <p class="text-xs text-muted mt-1">Date: {% now "M d, Y h:i A" %}</p>
-          </div>
-        </div>
       </div>
-    </div>
+    </section>
 
     <!-- Actions -->
-    <div class="flex flex-wrap items-center justify-between gap-3 bg-white rounded-xl border border-line p-4 shadow-sm">
-      <div class="text-sm text-muted">
-        <p class="font-bold text-ink">Unified sheet — Patient + Assessment saved together</p>
-        <p class="text-xs">Patient demographics, vitals, and doctor findings become one record. Print sheet & PDF will show assessment findings in Section 3/4.</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <a href="{% if bite_case %}{% url 'bite_cases:case_detail' bite_case.pk %}{% else %}{% url 'patients:patient_detail' patient.pk %}{% endif %}" class="px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Cancel</a>
-        <button type="submit" class="px-6 py-2.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">
-          {% if assessment.status == 'final' %}Update Final Assessment{% else %}Save Assessment{% endif %}
-        </button>
-      </div>
+    <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-line p-4 shadow-sm" style="justify-content:flex-start;">
+      <button type="submit" class="px-6 py-2.5 rounded-full bg-emerald-950 text-white text-sm font-semibold hover:bg-emerald-900 shadow-sm">
+        Save Assessment
+      </button>
+      <p class="text-xs font-medium text-muted">Saving validates the assessment and finalizes it for the nurse's administration and dispensing workflow.</p>
+      <a href="{% if bite_case %}{% url 'bite_cases:case_detail' bite_case.pk %}{% else %}{% url 'patients:patient_detail' patient.pk %}{% endif %}" class="px-4 py-2.5 rounded-full bg-white border border-line text-sm font-semibold text-emerald-950 hover:bg-sage-50">Cancel</a>
     </div>
   </form>
 
-  <!-- History -->
-  {% if history %}
-  <div class="card mt-6">
-    <h3 class="text-sm font-bold text-muted uppercase tracking-wider mb-3">Recent Clinical Assessments — {{ patient.full_name }}</h3>
-    <div class="space-y-2">
-      {% for h in history %}
-      <div class="flex items-center justify-between p-3 rounded-xl border {% if h.pk == assessment.pk %}border-emerald-300 bg-emerald-50{% else %}border-line bg-white{% endif %}">
-        <div>
-          <p class="text-sm font-bold text-ink">{{ h.get_category_confirmed_display|default:"Draft" }} {% if h.bite_case %}· {{ h.bite_case.case_number }}{% else %}· General{% endif %} <span class="text-xs font-normal text-muted">({{ h.get_status_display }})</span></p>
-          <p class="text-xs text-muted">{{ h.encounter_date|date:"M d, Y h:i A" }} · by {{ h.assessed_by|default:"—" }}</p>
-        </div>
-        <div class="text-xs text-muted">{{ h.updated_at|date:"M d" }}</div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
+  {{ rx_medicine_meta|json_script:"rxMedicineMeta" }}
+  <script>
+    (function () {
+      // Section A's date is the confirmed 1st dose date shown in Section B.
+      var firstDate = document.getElementById('id_assess-first_dose_date');
+      var doseDate = document.getElementById('id_assess-dose_schedule_date');
+      if (firstDate && doseDate) {
+        firstDate.addEventListener('change', function () { doseDate.value = firstDate.value; });
+        doseDate.addEventListener('change', function () { firstDate.value = doseDate.value; });
+      }
+
+      // Prescription rows: each medicine is its own record; the quantity unit
+      // and available stock follow the selected inventory item.
+      var meta = JSON.parse(document.getElementById('rxMedicineMeta').textContent || '{}');
+      var rows = document.getElementById('rxRows');
+      var addButton = document.getElementById('rxAdd');
+      var totalForms = document.getElementById('id_rx-TOTAL_FORMS');
+      if (!rows || !addButton || !totalForms) return;
+
+      function refreshRow(row) {
+        var select = row.querySelector('.rx-medicine');
+        var quantity = row.querySelector('.rx-quantity');
+        var stockHint = row.querySelector('[data-stock-hint]');
+        var medicine = select ? meta[select.value] : null;
+        if (stockHint) {
+          stockHint.textContent = medicine
+            ? medicine.available + ' ' + medicine.stock_unit + ' available · ' + medicine.form
+            : '';
+        }
+        if (quantity) {
+          if (medicine) {
+            quantity.max = medicine.available;
+            quantity.placeholder = 'Qty (' + medicine.stock_unit + ')';
+          } else {
+            quantity.removeAttribute('max');
+            quantity.placeholder = 'Qty';
+          }
+        }
+      }
+
+      function bindRow(row) {
+        var select = row.querySelector('.rx-medicine');
+        if (select) {
+          select.addEventListener('change', function () { refreshRow(row); });
+        }
+        var remove = row.querySelector('[data-rx-remove]');
+        if (remove) {
+          remove.addEventListener('click', function () {
+            var del = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            if (del) del.checked = true;
+            row.classList.add('hidden');
+          });
+        }
+        refreshRow(row);
+      }
+
+      Array.prototype.forEach.call(rows.querySelectorAll('[data-rx-row]'), bindRow);
+
+      addButton.addEventListener('click', function () {
+        var index = parseInt(totalForms.value, 10) || 0;
+        var template = document.getElementById('rxEmptyRow');
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = template.innerHTML.replace(/__prefix__/g, index).trim();
+        var row = wrapper.firstElementChild;
+        rows.appendChild(row);
+        totalForms.value = index + 1;
+        bindRow(row);
+      });
+    })();
+  </script>
 </div>
 {% endblock %}

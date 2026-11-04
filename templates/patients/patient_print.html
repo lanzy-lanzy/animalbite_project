@@ -86,6 +86,35 @@
   .line-blank{height:16px; border-bottom:1.2px solid #b9ccb8; margin:4px 0}
   .line-blank.dotted{border-bottom:1.2px dotted #9bb5a0}
   .inline-blank{border-bottom:1.2px solid #8aa589; min-width:86px; display:inline-block; height:12px; vertical-align:middle; margin:0 4px}
+  /* Clinical assessment A–F */
+  .cs-block{border:1.5px solid var(--line); border-radius:12px; background:white; margin-bottom:10px; overflow:hidden}
+  .cs-head{display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--sage-50); border-bottom:1px solid var(--line)}
+  .cs-letter{width:22px; height:22px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; border-radius:7px; background:var(--emerald-950); color:#f5ebc9; font-size:10px; font-weight:800}
+  .cs-title{margin:0; font-size:10.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--emerald-950)}
+  .cs-body{padding:10px 12px}
+  .cs-field{padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:var(--sage-50); min-width:0}
+  .cs-field.white{background:white}
+  .cs-field.accent{background:#f7efd8; border-color:#d8be74}
+  .cs-label{display:block; font-size:9px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#8a6a1c; margin-bottom:3px}
+  .cs-value{font-size:11px; font-weight:600; line-height:1.55; color:var(--emerald-950); white-space:pre-line; overflow-wrap:anywhere}
+  .cs-value.muted{color:#7b8f85; font-weight:500}
+  .cs-category{font-size:15px; font-weight:800; color:var(--emerald-950); margin:2px 0}
+  .cs-desc{font-size:10.5px; font-weight:600; color:#33554a; line-height:1.55}
+  .cs-grid-2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .cs-grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .cs-sub{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line)}
+  .cs-table{width:100%; border-collapse:collapse; font-size:10px}
+  .cs-table th{background:var(--emerald-950); color:white; font-size:8.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:6px 8px; text-align:left; border:1px solid var(--emerald-950)}
+  .cs-table td{padding:6px 8px; border:1px solid var(--line); font-weight:600; color:var(--emerald-950)}
+  .cs-table tbody tr:nth-child(even) td{background:var(--sage-50)}
+  .cs-table thead{display:table-header-group}
+  .cs-table tr{break-inside:avoid}
+  .cs-flags{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+  .cs-empty{padding:14px; text-align:center; border:1px dashed var(--line); border-radius:10px; background:var(--sage-50)}
+  .cs-empty-title{margin:0; font-size:12px; font-weight:800; letter-spacing:.08em; color:var(--emerald-950)}
+  .cs-empty-text{margin:4px 0 0; font-size:10.5px; color:var(--muted2)}
+  .section--clinical{break-inside:auto}
+  .cs-block--long, .cs-block--table{break-inside:auto}
   /* tables */
   .mini-table{width:100%; border-collapse:collapse; font-size:12px}
   .mini-table th{background:var(--emerald-950); color:white; font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; padding:7px 8px; text-align:left; border:1px solid var(--emerald-950)}
@@ -99,6 +128,7 @@
   .status-pill{display:inline-flex; padding:2px 6px; border-radius:999px; font-size:9px; font-weight:800; border:1px solid var(--line); background:white}
   .status-completed{background:#ecfdf5; color:#065f46; border-color:#a7f3d0}
   .status-scheduled{background:white; color:#6b7280}
+  .status-pending{background:#fffbeb; color:#92400e; border-color:#fde68a}
   .status-missed{background:#fef2f2; color:#991b1b; border-color:#fecaca}
   .empty{padding:14px; text-align:center; font-size:12px; color:var(--muted2); font-style:italic; background:var(--sage-50); border:1px dashed var(--line); border-radius:10px}
   .sign-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; margin-top:10px; text-align:center}
@@ -123,6 +153,8 @@
     .mini-table, .vac-table{ font-size:10.5px; }
     .mini-table th, .vac-table th{ padding:6px 5px; letter-spacing:.02em; }
     .mini-table td, .vac-table td{ padding:6px 5px; }
+    .cs-grid-2, .cs-grid-3{ grid-template-columns:1fr; }
+    .cs-value{ font-size:10.5px; }
     .brand{ flex-direction:column; align-items:flex-start; }
     .meta{ text-align:left; }
   }
@@ -133,6 +165,10 @@
     .sheet{padding:10px 12px}
     @page{size:A4; margin:10mm 10mm 12mm 10mm}
     .section{break-inside:avoid}
+    .section--clinical{break-inside:auto}
+    .cs-block{break-inside:avoid}
+    .cs-block--long, .cs-block--table{break-inside:auto}
+    .cs-table tr{break-inside:avoid}
     .vitals-grid{break-inside:avoid}
     .sign-grid{break-inside:avoid}
   }
@@ -362,66 +398,212 @@
       </div>
     </div>
 
-    <!-- Section 3: Clinical Assessment — doctor-filled or blank -->
-    <div class="section">
+    <!-- Section 3: Clinical Assessment — A–F sequence -->
+    <div class="section section--clinical">
       <div class="section-head"><h3><span style="width:22px; height:22px; background:white; color:var(--emerald-800); border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">3</span> Clinical Assessment</h3>
         {% if latest_assessment %}
-          <span class="hint" style="color:#c8d8c6">Dr. {{ latest_assessment.assessed_by|default:"—" }} · {{ latest_assessment.encounter_date|date:"M d, Y h:i A" }} · {{ latest_assessment.get_category_confirmed_display|default:"Draft" }} · {{ latest_assessment.get_status_display }}</span>
+          <span class="hint" style="color:#c8d8c6">Dr. {{ latest_assessment.assessed_by|default:"—" }} · {{ latest_assessment.encounter_date|date:"M d, Y h:i A" }} · {{ latest_assessment.get_category_confirmed_display|default:"Unclassified" }} · {{ latest_assessment.get_status_display }}</span>
         {% else %}
-          <span class="hint">Blank for clinician — filled via Doctor Portal</span>
+          <span class="hint">No assessment recorded</span>
         {% endif %}
       </div>
       <div class="section-body">
         {% if latest_assessment %}
-        <div class="assessment-box">
-          <div class="as-title">Chief Complaint / History of Present Illness
-            {% if latest_assessment.is_finalized %}<span style="font-size:10px; background:#0a1f1a; color:white; padding:2px 6px; border-radius:999px; margin-left:8px;">Signed</span>{% else %}<span style="font-size:10px; background:#f59e0b; color:white; padding:2px 6px; border-radius:999px; margin-left:8px;">Draft</span>{% endif %}
+        <div class="cs-block cs-block--long">
+          <div class="cs-head"><span class="cs-letter">A</span><h3 class="cs-title">Chief Complaint</h3></div>
+          <div class="cs-body">
+            <div class="cs-field white">
+              <span class="cs-label">Chief Complaint</span>
+              <div class="cs-value {% if not latest_assessment.chief_complaint %}muted{% endif %}">{{ latest_assessment.chief_complaint|default:"Not recorded" }}</div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">History of Present Illness</span>
+              <div class="cs-value {% if not latest_assessment.history_present_illness %}muted{% endif %}">{{ latest_assessment.history_present_illness|default:"Not recorded" }}</div>
+            </div>
           </div>
-          <div style="font-size:11px; color:var(--muted); margin-top:6px;">
-            <b>CC:</b> {{ latest_assessment.chief_complaint|default:"—" }}<br>
-            <b>HPI:</b> {{ latest_assessment.history_present_illness|default:"—" }}
-          </div>
-          {% if latest_assessment.exposure_narrative %}<div style="font-size:11px; color:var(--muted); margin-top:6px; background:var(--sage-50); border:1px solid var(--line); border-radius:6px; padding:6px 8px;"><b>Exposure Narrative:</b> {{ latest_assessment.exposure_narrative }}</div>{% endif %}
         </div>
-        <div class="assessment-box white">
-          <div class="as-title">Exposure Narrative (verified)
-            <span style="font-weight:500; color:var(--muted2); font-size:10px;">— Animal: <b>{{ latest_assessment.animal_type_verified|default:"—" }}</b> &nbsp; Owned/Stray: <b>{{ latest_assessment.animal_owned_verified|default:"—" }}</b> &nbsp; Vax: <b>{{ latest_assessment.animal_vax_verified|default:"—" }}</b> &nbsp; Wound wash: <b>{% if latest_assessment.wound_washed_verified %}Yes{% elif latest_assessment.wound_washed_verified == False %}No{% else %}—{% endif %}</b></span>
+
+        <div class="cs-block cs-block--long">
+          <div class="cs-head"><span class="cs-letter">B</span><h3 class="cs-title">Exposure Narrative (Verified)</h3></div>
+          <div class="cs-body">
+            <div class="cs-field white">
+              <span class="cs-label">Narrative as Verified by the Doctor</span>
+              <div class="cs-value {% if not latest_assessment.exposure_narrative %}muted{% endif %}">{{ latest_assessment.exposure_narrative|default:"Not recorded" }}</div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Verified Incident Details</span>
+              <div class="cs-grid-3" style="margin-top:6px">
+                <div class="cs-field white"><span class="cs-label">Verified Animal Type</span><div class="cs-value {% if not latest_assessment.animal_type_verified %}muted{% endif %}">{{ latest_assessment.animal_type_verified|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Ownership (Verified)</span><div class="cs-value {% if not latest_assessment.animal_owned_verified %}muted{% endif %}">{{ latest_assessment.get_animal_owned_verified_display|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Animal Vaccination (Verified)</span><div class="cs-value {% if not latest_assessment.animal_vax_verified %}muted{% endif %}">{{ latest_assessment.get_animal_vax_verified_display|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Wound Washed Immediately</span><div class="cs-value {% if latest_assessment.wound_washed_verified is None %}muted{% endif %}">{% if latest_assessment.wound_washed_verified %}Yes{% elif latest_assessment.wound_washed_verified is False %}No{% else %}Not recorded{% endif %}</div></div>
+                <div class="cs-field white"><span class="cs-label">Body Part</span><div class="cs-value {% if not latest_assessment.body_part_verified %}muted{% endif %}">{{ latest_assessment.body_part_verified|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Number of Wounds</span><div class="cs-value {% if latest_assessment.number_of_wounds_verified is None %}muted{% endif %}">{{ latest_assessment.number_of_wounds_verified|default_if_none:"Not recorded" }}</div></div>
+              </div>
+              <div class="cs-field white" style="margin-top:8px"><span class="cs-label">Date &amp; Time of Bite</span><div class="cs-value {% if not latest_assessment.date_time_bite_verified %}muted{% endif %}">{{ latest_assessment.date_time_bite_verified|date:"F j, Y · g:i A"|default:"Not recorded" }}</div></div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Examination Findings</span>
+              <div class="cs-grid-3" style="margin-top:6px">
+                <div class="cs-field white"><span class="cs-label">HEENT</span><div class="cs-value {% if not latest_assessment.exam_heent %}muted{% endif %}">{{ latest_assessment.exam_heent|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Chest / Lungs</span><div class="cs-value {% if not latest_assessment.exam_chest_lungs %}muted{% endif %}">{{ latest_assessment.exam_chest_lungs|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Cardiac</span><div class="cs-value {% if not latest_assessment.exam_cardiac %}muted{% endif %}">{{ latest_assessment.exam_cardiac|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Abdomen</span><div class="cs-value {% if not latest_assessment.exam_abdomen %}muted{% endif %}">{{ latest_assessment.exam_abdomen|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Skin / Wound Description</span><div class="cs-value {% if not latest_assessment.skin_wound_description %}muted{% endif %}">{{ latest_assessment.skin_wound_description|default:"Not recorded" }}</div></div>
+                <div class="cs-field white"><span class="cs-label">Systemic Review</span><div class="cs-value {% if not latest_assessment.systemic_review %}muted{% endif %}">{{ latest_assessment.systemic_review|default:"Not recorded" }}</div></div>
+              </div>
+            </div>
           </div>
-          <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">
-            Body part: <b>{{ latest_assessment.body_part_verified|default:"—" }}</b> &nbsp; No. of wounds: <b>{{ latest_assessment.number_of_wounds_verified|default:"—" }}</b> &nbsp; Date/time of bite: <b>{{ latest_assessment.date_time_bite_verified|date:"M d, Y h:i A"|default:"—" }}</b>
-          </div>
-          {% if latest_assessment.bite_case %}
-          <div style="font-size:10px; color:var(--muted2);">Linked case: {{ latest_assessment.bite_case.case_number }} · {{ latest_assessment.bite_case.get_animal_type_display }} · {{ latest_assessment.bite_case.get_exposure_type_display }}</div>
-          {% endif %}
         </div>
-        <div class="assessment-box white" style="border-color:var(--emerald-800)">
-          <div class="as-title">Assessment & Plan
-            <span style="font-weight:700; font-size:11px; margin-left:8px;">
-              {% if latest_assessment.category_confirmed == 'category_i' %}● Category I ○ II ○ III{% elif latest_assessment.category_confirmed == 'category_ii' %}○ I ● Category II ○ III{% elif latest_assessment.category_confirmed == 'category_iii' %}○ I ○ II ● Category III{% else %}○ I ○ II ○ III{% endif %}
-              &nbsp;|&nbsp; PEP: {% if latest_assessment.pep_indicated %}● Yes{% else %}○ Yes{% endif %} &nbsp; RIG: {% if latest_assessment.rig_indicated %}● Yes{% else %}○ Yes{% endif %} &nbsp; TT: {% if latest_assessment.tt_indicated %}● Yes{% else %}○ Yes{% endif %}
-            </span>
+
+        <div class="cs-block">
+          <div class="cs-head"><span class="cs-letter">C</span><h3 class="cs-title">Bite Category</h3></div>
+          <div class="cs-body">
+            <div class="cs-field accent">
+              <span class="cs-label">WHO Bite Category</span>
+              <div class="cs-category {% if not latest_assessment.category_confirmed %}muted{% endif %}">{{ latest_assessment.category_label|default:"Not recorded" }}</div>
+              {% if latest_assessment.category_confirmed %}
+              <div class="cs-desc">{{ latest_assessment.category_description|default:"No category description recorded." }}</div>
+              {% else %}
+              <div class="cs-desc muted">No WHO category has been confirmed for this assessment.</div>
+              {% endif %}
+            </div>
           </div>
-          <div style="font-size:11px; margin-top:6px;">
-            <b>Plan / Vaccine brand / Dose schedule:</b> {{ latest_assessment.vaccine_brand_plan|default:"—" }} {% if latest_assessment.dose_schedule_plan %}· {{ latest_assessment.dose_schedule_plan }}{% endif %}<br>
-            <b>Treatment plan:</b> {{ latest_assessment.treatment_plan|default:"—" }}<br>
-            {% if latest_assessment.prescription %}<b>Prescription:</b> {{ latest_assessment.prescription }}<br>{% endif %}
-            {% if latest_assessment.follow_up_instructions %}<b>Follow-up:</b> {{ latest_assessment.follow_up_instructions }}<br>{% endif %}
-            {% if latest_assessment.additional_notes %}<div style="margin-top:6px; background:var(--sage-50); border:1px dashed var(--line); border-radius:6px; padding:6px 8px;"><b>Notes:</b> {{ latest_assessment.additional_notes }}</div>{% endif %}
+        </div>
+
+        <div class="cs-block cs-block--table">
+          <div class="cs-head"><span class="cs-letter">D</span><h3 class="cs-title">Dose Schedule &amp; Vaccine</h3></div>
+          <div class="cs-body">
+            <div class="cs-grid-2">
+              <div class="cs-field white">
+                <span class="cs-label">Dose Schedule</span>
+                <div class="cs-value {% if not latest_assessment.dose_schedule_plan and not latest_assessment.dose_protocol %}muted{% endif %}">
+                  {% if latest_assessment.dose_protocol %}{{ latest_assessment.get_dose_protocol_display }}{% endif %}
+                  {% if latest_assessment.dose_schedule_plan %}{% if latest_assessment.dose_protocol %}<br>{% endif %}{{ latest_assessment.dose_schedule_plan }}{% endif %}
+                  {% if not latest_assessment.dose_schedule_plan and not latest_assessment.dose_protocol %}Not recorded{% endif %}
+                </div>
+              </div>
+              <div class="cs-field white">
+                <span class="cs-label">Date (1st Dose)</span>
+                <div class="cs-value {% if not latest_assessment.first_dose_date %}muted{% endif %}">{{ latest_assessment.first_dose_date|date:"F j, Y"|default:"Not recorded" }}</div>
+              </div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Dose Schedule Records</span>
+              {% if display_schedule %}
+              <div style="font-size:10px; color:var(--muted2); margin:2px 0 6px;">{{ display_schedule.doses.count }} dose{{ display_schedule.doses.count|pluralize }} on this schedule.</div>
+              <table class="cs-table">
+                <thead><tr><th style="width:30%">Dose</th><th style="width:35%">Date</th><th>Status</th></tr></thead>
+                <tbody>
+                  {% for dose in display_schedule.doses.all %}
+                  <tr>
+                    <td><strong>{{ dose.dose_label }}</strong>{% if dose.protocol_day is not None %} · Day {{ dose.protocol_day }}{% endif %}</td>
+                    <td>{% if dose.clinical_date %}{{ dose.clinical_date|date:"F j, Y" }}{% else %}<span style="color:var(--muted2)">Not yet set</span>{% endif %}</td>
+                    <td>
+                      <span class="status-pill {% if dose.dose_status == 'completed' %}status-completed{% elif dose.clinical_status == 'Pending Scheduling' %}status-pending{% elif dose.dose_status == 'missed' or dose.dose_status == 'cancelled' %}status-missed{% endif %}">{{ dose.clinical_status }}</span>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="3" style="text-align:center; color:var(--muted2)">No doses recorded for this schedule.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% if display_schedule.rig_given or display_schedule.tetanus_toxoid_given or display_schedule.antibiotics_given or display_schedule.doctor_notes %}
+              <div style="margin-top:6px; font-size:10px; color:var(--muted2); line-height:1.5;">
+                {% if display_schedule.rig_given %}RIG given{% endif %}
+                {% if display_schedule.tetanus_toxoid_given %}{% if display_schedule.rig_given %} · {% endif %}Tetanus toxoid given{% endif %}
+                {% if display_schedule.antibiotics_given %}{% if display_schedule.rig_given or display_schedule.tetanus_toxoid_given %} · {% endif %}Antibiotics given{% endif %}
+                {% if display_schedule.doctor_notes %}<br>{{ display_schedule.doctor_notes }}{% endif %}
+              </div>
+              {% endif %}
+              {% else %}
+              <div class="cs-value muted" style="margin-top:4px">No vaccination schedule has been generated for this case.</div>
+              {% endif %}
+            </div>
           </div>
-          <div style="margin-top:8px; font-size:10px; color:var(--muted2); border-top:1px solid var(--line); padding-top:6px;">
-            Assessed by <b>{{ latest_assessment.assessed_by.get_full_name|default:latest_assessment.assessed_by.username|default:"—" }}</b> {% if latest_assessment.prc_number %}· PRC {{ latest_assessment.prc_number }}{% endif %} · {{ latest_assessment.encounter_date|date:"M d, Y h:i A" }} · {{ latest_assessment.get_status_display }}
+        </div>
+
+        <div class="cs-block">
+          <div class="cs-head"><span class="cs-letter">E</span><h3 class="cs-title">Vaccine Brand</h3></div>
+          <div class="cs-body">
+            <div class="cs-field white">
+              <span class="cs-label">Vaccine Brand (from Stock)</span>
+              <div class="cs-value {% if not latest_assessment.vaccine_inventory and not latest_assessment.vaccine_brand_plan and not latest_assessment.vaccine_lot_number %}muted{% endif %}">
+                {% if latest_assessment.vaccine_inventory %}
+                  {{ latest_assessment.vaccine_inventory.brand }}
+                  {% if latest_assessment.vaccine_inventory.vaccine_name %}<br>{{ latest_assessment.vaccine_inventory.vaccine_name }}{% endif %}
+                  {% if latest_assessment.vaccine_lot_number %} · Lot / batch: {{ latest_assessment.vaccine_lot_number }}
+                  {% elif latest_assessment.vaccine_inventory.batch_number %} · Batch: {{ latest_assessment.vaccine_inventory.batch_number }}{% endif %}
+                {% elif latest_assessment.vaccine_brand_plan %}
+                  {{ latest_assessment.vaccine_brand_plan }}
+                  {% if latest_assessment.vaccine_lot_number %}<br>Lot / batch: {{ latest_assessment.vaccine_lot_number }}{% endif %}
+                {% else %}
+                  Not recorded
+                {% endif %}
+              </div>
+            </div>
+            <div class="cs-grid-3" style="margin-top:8px">
+              <div class="cs-field white"><span class="cs-label">Volume per Dose (mL)</span><div class="cs-value {% if not latest_assessment.vaccine_dose_ml %}muted{% endif %}">{{ latest_assessment.vaccine_dose_ml|default:"Not recorded" }}</div></div>
+              <div class="cs-field white"><span class="cs-label">Quantity (Vials/Doses)</span><div class="cs-value {% if latest_assessment.vaccine_quantity is None %}muted{% endif %}">{% if latest_assessment.vaccine_quantity is not None %}{{ latest_assessment.vaccine_quantity }}{% else %}Not recorded{% endif %}</div></div>
+              <div class="cs-field white"><span class="cs-label">1st Dose Date</span><div class="cs-value {% if not latest_assessment.first_dose_date %}muted{% endif %}">{{ latest_assessment.first_dose_date|date:"F j, Y"|default:"Not recorded" }}</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cs-block cs-block--long">
+          <div class="cs-head"><span class="cs-letter">F</span><h3 class="cs-title">Treatment &amp; Prescription</h3></div>
+          <div class="cs-body">
+            <div class="cs-flags">
+              <span class="status-pill">PEP Indicated: {% if latest_assessment.pep_indicated %}Yes{% else %}No{% endif %}</span>
+              <span class="status-pill">RIG Indicated: {% if latest_assessment.rig_indicated %}Yes{% else %}No{% endif %}</span>
+              <span class="status-pill">Tetanus Toxoid Indicated: {% if latest_assessment.tt_indicated %}Yes{% else %}No{% endif %}</span>
+            </div>
+            <div class="cs-field white">
+              <span class="cs-label">Treatment Plan</span>
+              <div class="cs-value {% if not latest_assessment.treatment_plan %}muted{% endif %}">{{ latest_assessment.treatment_plan|default:"Not recorded" }}</div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Prescription</span>
+              {% if latest_assessment.prescriptions.all %}
+              <table class="cs-table" style="margin-top:4px">
+                <thead><tr><th style="width:65%">Medicine</th><th>Quantity</th></tr></thead>
+                <tbody>
+                  {% for rx in latest_assessment.prescriptions.all %}
+                  <tr>
+                    <td><strong>{{ rx.medicine.medicine_name }}</strong>{% if rx.medicine.strength %} · {{ rx.medicine.strength }}{% endif %}<div style="font-size:9px; color:var(--muted2); font-weight:500">{{ rx.get_status_display }}</div></td>
+                    <td>{{ rx.quantity_display }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% if latest_assessment.prescription %}<div class="cs-value muted" style="margin-top:6px">Prescription note: {{ latest_assessment.prescription }}</div>{% endif %}
+              {% elif latest_assessment.prescription %}
+              <div class="cs-value" style="margin-top:4px">{{ latest_assessment.prescription }}</div>
+              {% else %}
+              <div class="cs-value muted" style="margin-top:4px">Not recorded</div>
+              {% endif %}
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Dosage Instructions — Frequency &amp; Duration</span>
+              <div class="cs-value {% if not latest_assessment.dosage_instructions %}muted{% endif %}">{{ latest_assessment.dosage_instructions|default:"Not recorded" }}</div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Follow-up Instructions</span>
+              <div class="cs-value {% if not latest_assessment.follow_up_instructions %}muted{% endif %}">{{ latest_assessment.follow_up_instructions|default:"Not recorded" }}</div>
+            </div>
+            <div class="cs-sub">
+              <span class="cs-label">Additional Notes / Allergy Re-check</span>
+              <div class="cs-value {% if not latest_assessment.additional_notes %}muted{% endif %}">{{ latest_assessment.additional_notes|default:"Not recorded" }}</div>
+            </div>
+            <div style="margin-top:8px; font-size:9.5px; color:var(--muted2); border-top:1px solid var(--line); padding-top:6px;">
+              Assessed by <b>{{ latest_assessment.assessed_by.get_full_name|default:latest_assessment.assessed_by.username|default:"—" }}</b> {% if latest_assessment.prc_number %}· PRC {{ latest_assessment.prc_number }}{% endif %} · {{ latest_assessment.encounter_date|date:"M d, Y h:i A" }} · {{ latest_assessment.get_status_display }}
+            </div>
           </div>
         </div>
         {% else %}
-        <div class="assessment-box"><div class="as-title">Chief Complaint / History of Present Illness</div><div class="line-blank"></div><div class="line-blank"></div><div class="line-blank dotted"></div></div>
-        <div class="assessment-box white"><div class="as-title">Exposure Narrative (if animal bite) <span style="font-weight:500; color:var(--muted2); font-size:10px;">— Animal: <span class="inline-blank"></span> &nbsp; Owned / Stray &nbsp; Vax: <span class="inline-blank" style="min-width:60px"></span> &nbsp; Wound wash: ○ Yes ○ No</span></div>
-          <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">Body part: <span class="inline-blank"></span> &nbsp; No. of wounds: <span class="inline-blank" style="min-width:40px"></span> &nbsp; Date/time of bite: <span class="inline-blank" style="min-width:110px"></span></div>
-          <div class="line-blank"></div><div class="line-blank dotted"></div>
-        </div>
-        <div class="assessment-box white" style="border-color:var(--emerald-800)"><div class="as-title">Assessment & Plan <span style="font-weight:500; color:var(--muted2); font-size:10px;">— ○ Category I &nbsp; ○ Category II &nbsp; ○ Category III &nbsp;&nbsp;|&nbsp;&nbsp; PEP: ○ Yes ○ No &nbsp; RIG: ○ Yes ○ No &nbsp; TT: ○ Yes ○ No</span></div>
-          <div style="font-size:11px; margin-top:4px;">Plan / Vaccine brand / Dose schedule: <span class="inline-blank" style="min-width:260px"></span></div>
-          <div class="line-blank"></div><div class="line-blank dotted"></div>
-          <div style="margin-top:6px; font-size:10px; color:var(--muted2); text-align:center;">No doctor assessment yet — open Doctor Portal → Clinical Queue → Assess to fill digitally. Blank sheet for handwriting in the meantime.</div>
+        <div class="cs-empty">
+          <p class="cs-empty-title">NO ASSESSMENT YET</p>
+          <p class="cs-empty-text">No doctor assessment has been recorded for this case.</p>
         </div>
         {% endif %}
       </div>
@@ -458,12 +640,13 @@
                       <tr>
                         <td>{{ forloop.counter }}</td>
                         <td style="font-weight:700" class="left">{{ dose.dose_label }}</td>
-                        <td>{{ dose.scheduled_date|date:"M d, Y" }}</td>
+                        <td>{% if dose.scheduled_date %}{{ dose.scheduled_date|date:"M d, Y" }}{% else %}Pending{% endif %}</td>
                         <td>{% if dose.actual_date %}{{ dose.actual_date|date:"M d, Y" }}{% else %}—{% endif %}</td>
                         <td class="left">{{ dose.vaccine_brand|default:"—" }}{% if dose.batch_number %} · {{ dose.batch_number }}{% endif %}</td>
                         <td>
                           {% if dose.dose_status == 'completed' %}<span class="status-pill status-completed">Completed</span>
                           {% elif dose.dose_status == 'scheduled' %}<span class="status-pill status-scheduled">Scheduled</span>
+                          {% elif dose.dose_status == 'pending' %}<span class="status-pill status-pending">Pending Scheduling</span>
                           {% elif dose.dose_status == 'missed' %}<span class="status-pill status-missed">Missed</span>
                           {% else %}<span class="status-pill">{{ dose.get_dose_status_display }}</span>{% endif %}
                         </td>

@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Registration Slip - ABTC System{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pre_registration_detail.css' %}">
+{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto">
+<div class="pr-wrap">
     <div class="no-print mb-5 flex flex-wrap gap-3">
         {% if public %}
         <a href="{% url 'pre_registrations:public_success' record.pre_registration_number %}" class="btn-secondary">&larr; Back</a>
@@ -10,16 +14,22 @@
         {% endif %}
         <button type="button" onclick="window.print()" class="btn-primary">Print Slip</button>
     </div>
-    <div class="card bg-white">
-        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 border-b border-line pb-5">
+
+    <div class="pr-slip card bg-white">
+        <div class="pr-slip-header">
             <div>
-                <p class="text-sm font-semibold text-muted">Municipal Health Office / Animal Bite Treatment Center</p>
-                <h1 class="text-2xl font-bold text-ink">Registration Slip</h1>
-                <p class="mt-2 text-xl font-bold text-emerald-800">{{ record.pre_registration_number }}</p>
+                <p class="pr-slip-eyebrow">Municipal Health Office / Animal Bite Treatment Center</p>
+                <h1 class="pr-slip-title">Registration Slip</h1>
+                <p class="pr-slip-number">{{ record.pre_registration_number }}</p>
+                <p class="mt-1 text-sm font-semibold text-ink/70">Status: {{ record.get_status_display }}</p>
             </div>
-            <img class="h-36 w-36" src="{% url 'pre_registrations:qr_code' record.pre_registration_number %}" alt="QR code">
+            <div class="pr-slip-qr">
+                <img src="{% url 'pre_registrations:qr_code' record.pre_registration_number %}" alt="QR code for {{ record.pre_registration_number }}">
+                <span>Scan to verify</span>
+            </div>
         </div>
 
+        {% if public %}
         <dl class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div><dt class="font-semibold text-muted">Patient full name</dt><dd>{{ record.full_name }}</dd></div>
             <div><dt class="font-semibold text-muted">Age / Sex</dt><dd>{{ record.age }} / {{ record.get_sex_display }}</dd></div>
@@ -31,16 +41,215 @@
             <div><dt class="font-semibold text-muted">Submitted at</dt><dd>{{ record.submitted_at|date:"M d, Y g:i A" }}</dd></div>
         </dl>
 
-        <div class="mt-6 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
-            <svg class="h-5 w-5 shrink-0 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-            <div class="text-sm text-amber-900">
-                <p class="font-semibold">Reminder</p>
-                <p class="mt-1">This online registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.</p>
-            </div>
+        <div class="pr-slip-reminder">
+            <p class="font-semibold">Reminder</p>
+            <p class="mt-1">This online registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.</p>
         </div>
-        <p class="mt-4 text-xs text-muted">Online registration is only for faster encoding and initial information gathering. It is not yet an official treatment record until verified by authorized staff.</p>
+        <p class="pr-slip-footer">Online registration is only for faster encoding and initial information gathering. It is not yet an official treatment record until verified by authorized staff.</p>
+
+        {% else %}
+        <section class="pr-section">
+            <div class="pr-section-head">
+                <span class="pr-section-num">1</span>
+                <h2>Patient Information</h2>
+            </div>
+            <div class="pr-section-body">
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Registration Reference Number</p>
+                        <p class="pr-value pr-value--number">{{ record.pre_registration_number|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Full Name</p>
+                        <p class="pr-value">{{ record.full_name|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-3">
+                    <div class="pr-tile">
+                        <p class="pr-label">Birthdate</p>
+                        <p class="pr-value">{{ record.birthdate|date:"F j, Y"|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Age</p>
+                        <p class="pr-value">{{ record.age }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Sex</p>
+                        <p class="pr-value">{{ record.get_sex_display|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Civil Status</p>
+                        <p class="pr-value">{{ record.get_civil_status_display|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Contact Number</p>
+                        <p class="pr-value">{{ record.contact_number|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid">
+                    <div class="pr-tile pr-tile--wide">
+                        <p class="pr-label">Complete Address</p>
+                        <p class="pr-value">{{ record.formatted_address|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Barangay</p>
+                        <p class="pr-value">{{ record.barangay|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Parent / Guardian</p>
+                        <p class="pr-value">{{ record.guardian_display|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Emergency Contact</p>
+                        <p class="pr-value">{{ record.emergency_contact_display|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Registration Date and Time</p>
+                        <p class="pr-value">{{ record.submitted_at|date:"F j, Y" }} · {{ record.submitted_at|time:"g:i A" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Registration Status</p>
+                        <p class="pr-value">{{ record.get_status_display }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Consent to Data Use</p>
+                        <p class="pr-value">{{ record.consent_given|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pr-section">
+            <div class="pr-section-head">
+                <span class="pr-section-num">2</span>
+                <h2>Medical History</h2>
+            </div>
+            <div class="pr-section-body">
+                <div class="pr-grid">
+                    <div class="pr-tile pr-tile--wide">
+                        <p class="pr-label">Medical History</p>
+                        <p class="pr-value">{{ record.medical_history|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile pr-tile--wide{% if record.allergy_info and record.allergy_info|lower != 'none' and record.allergy_info|lower != 'none known' and record.allergy_info|lower != 'n/a' %} pr-tile--alert{% endif %}">
+                        <p class="pr-label">Allergies</p>
+                        <p class="pr-value">{{ record.allergy_info|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Previous Rabies Vaccination</p>
+                        <p class="pr-value">{{ record.previous_rabies_vax|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Remarks</p>
+                        <p class="pr-value">{{ record.remarks|default:"Not provided" }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pr-section">
+            <div class="pr-section-head">
+                <span class="pr-section-num">3</span>
+                <h2>Bite Incident Details</h2>
+            </div>
+            <div class="pr-section-body">
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Date of Incident</p>
+                        <p class="pr-value">{{ record.bite_datetime|date:"F j, Y" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Time of Incident</p>
+                        <p class="pr-value">{{ record.bite_datetime|time:"g:i A" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Place of Incident</p>
+                        <p class="pr-value">{{ record.incident_place|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Barangay</p>
+                        <p class="pr-value">{{ record.incident_barangay|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Animal Type</p>
+                        <p class="pr-value">{{ record.get_animal_type_display|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Ownership</p>
+                        <p class="pr-value">{{ record.get_animal_ownership_display|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Animal Condition</p>
+                        <p class="pr-value">{{ record.get_animal_condition_display|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Animal Vaccination Status</p>
+                        <p class="pr-value">{{ record.get_animal_vaccination_status_display|default:"Not provided" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Exposure Type</p>
+                        <p class="pr-value">{{ record.get_exposure_type_display|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Number of Wounds</p>
+                        <p class="pr-value">{{ record.number_of_wounds }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid pr-grid-2">
+                    <div class="pr-tile">
+                        <p class="pr-label">Body Part / Wounds</p>
+                        <p class="pr-value">{{ record.body_part_affected|default:"Not provided" }}</p>
+                    </div>
+                    <div class="pr-tile">
+                        <p class="pr-label">Wound Washed Immediately</p>
+                        <p class="pr-value">{{ record.wound_washed|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+
+                <div class="pr-grid">
+                    <div class="pr-tile pr-tile--wide">
+                        <p class="pr-label">First Aid Given</p>
+                        <p class="pr-value">{{ record.first_aid_given|default:"Not provided" }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="pr-slip-reminder">
+            <p class="font-semibold">Reminder</p>
+            <p class="mt-1">This online registration does not replace medical consultation. Please proceed immediately to the Animal Bite Treatment Center for proper assessment, treatment, and vaccination.</p>
+        </div>
+        <p class="pr-slip-footer">Online registration is only for faster encoding and initial information gathering. It is not yet an official treatment record until verified by authorized staff.</p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

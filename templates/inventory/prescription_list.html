@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Dispensing Queue - ABTC System{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+        <h1 class="text-xl font-bold text-ink">Prescription Dispensing</h1>
+        <p class="text-sm text-muted mt-1">Stock leaves the shelf only when authorized staff confirms actual dispensing.</p>
+    </div>
+    <a href="{% url 'inventory:medicine_list' %}" class="btn-secondary btn-sm">Medicine Inventory</a>
+</div>
+<div class="card mb-6">
+    <form method="GET" class="flex flex-wrap gap-3">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search patient, case, medicine..." class="form-input flex-1 min-w-[200px]">
+        <select name="status" class="form-input max-w-[180px]">
+            <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending dispensing{% if pending_count %} ({{ pending_count }}){% endif %}</option>
+            <option value="dispensed" {% if status == 'dispensed' %}selected{% endif %}>Dispensed</option>
+            <option value="all" {% if status == 'all' %}selected{% endif %}>All prescriptions</option>
+        </select>
+        <button type="submit" class="btn-primary btn-sm">Search</button>
+        <a href="{% url 'inventory:prescription_list' %}" class="btn-secondary btn-sm">Reset</a>
+    </form>
+</div>
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-line">
+                    <th class="table-header">Prescribed</th>
+                    <th class="table-header">Patient / Case</th>
+                    <th class="table-header">Medicine</th>
+                    <th class="table-header">Dosage</th>
+                    <th class="table-header">Qty</th>
+                    <th class="table-header">Status</th>
+                    <th class="table-header text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-sage-100">
+                {% for rx in items %}
+                <tr class="hover:bg-sage-50 transition-colors align-top">
+                    <td class="table-cell text-muted">
+                        <p>{{ rx.created_at|date:'M d, Y' }}</p>
+                        <p class="text-xs">{{ rx.assessment.assessed_by.get_full_name|default:rx.assessment.assessed_by.username|default:'—' }}</p>
+                    </td>
+                    <td class="table-cell">
+                        <p class="font-medium">{{ rx.patient.full_name }}</p>
+                        <p class="text-xs text-muted">{{ rx.bite_case.case_number|default:'General encounter' }}</p>
+                    </td>
+                    <td class="table-cell">
+                        <p class="font-medium">{{ rx.medicine.medicine_name }}{% if rx.medicine.strength %} <span class="text-muted">{{ rx.medicine.strength }}</span>{% endif %}</p>
+                        <p class="text-xs text-muted">{{ rx.medicine.get_dosage_form_display }} · batch {{ rx.medicine.batch_number }}</p>
+                    </td>
+                    <td class="table-cell">
+                        {% if rx.dose %}{{ rx.dose }}
+                        {% elif rx.assessment.dosage_instructions %}<span class="text-xs">{{ rx.assessment.dosage_instructions }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="table-cell">{{ rx.quantity }} {{ rx.medicine.unit }}</td>
+                    <td class="table-cell">
+                        {% if rx.status == 'dispensed' %}
+                        <span class="status-badge bg-green-100 text-green-800">Dispensed</span>
+                        <p class="text-xs text-muted mt-1">{{ rx.dispensed_at|date:'M d, Y h:i A' }} · {% if rx.dispensed_by %}{{ rx.dispensed_by.get_full_name|default:rx.dispensed_by.username }}{% else %}—{% endif %}</p>
+                        {% elif rx.status == 'cancelled' %}
+                        <span class="status-badge bg-sage-100 text-ink">Cancelled</span>
+                        {% else %}
+                        <span class="status-badge bg-yellow-100 text-yellow-800">Pending Dispensing</span>
+                        {% endif %}
+                    </td>
+                    <td class="table-cell text-right">
+                        {% if rx.status == 'pending' and can_dispense %}
+                            {% if rx.medicine.is_expired %}
+                            <span class="text-xs text-red-600">Lot expired</span>
+                            {% elif rx.medicine.quantity_available < rx.quantity %}
+                            <span class="text-xs text-red-600">Only {{ rx.medicine.quantity_available }} left</span>
+                            {% else %}
+                            <form method="post" action="{% url 'inventory:prescription_dispense' rx.pk %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-primary btn-xs">Confirm dispensing</button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center py-8 text-muted">No prescriptions found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

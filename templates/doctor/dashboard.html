@@ -1,159 +1,648 @@
 {% extends 'base.html' %}
-{% block title %}Doctor Portal - ABTC{% endblock %}
+{% block title %}Doctor Dashboard - ABTC{% endblock %}
+{% block page_title %}<span class="hidden sm:inline text-sm font-semibold text-emerald-900">Doctor Dashboard</span>{% endblock %}
+
+{% block extra_head %}
+<style>
+    .doctor-dashboard { display: flex; flex-direction: column; gap: 1.25rem; max-width: 1320px; margin: 0 auto; }
+
+    /* ---------- Welcome banner ---------- */
+    .dash-welcome {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.5rem;
+        padding: 1.6rem 1.5rem;
+        color: #fff;
+        background: linear-gradient(135deg, #0d352b 0%, #08201a 58%, #103c30 100%);
+        box-shadow: 0 26px 60px -34px rgba(8,32,26,.75), inset 0 1px 0 rgba(255,255,255,.10);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        align-items: center;
+        gap: 1rem;
+    }
+    .dash-welcome::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(420px 260px at 88% 18%, rgba(201,162,39,.22), transparent 70%),
+            radial-gradient(360px 240px at 8% 104%, rgba(46,153,117,.35), transparent 70%);
+        pointer-events: none;
+    }
+    .dash-welcome-copy { position: relative; z-index: 1; }
+    .dash-welcome-chip {
+        display: inline-flex; align-items: center; gap: .5rem;
+        padding: .32rem .8rem; border-radius: 999px;
+        font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+        color: #f5ebc9; background: rgba(255,255,255,.08); border: 1px solid rgba(201,162,39,.35);
+    }
+    .dash-welcome-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #5cb795; box-shadow: 0 0 0 4px rgba(92,183,149,.18); }
+    .dash-welcome h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(1.5rem, 2.6vw, 2.15rem);
+        line-height: 1.15; letter-spacing: -.02em;
+        margin: .85rem 0 .35rem; color: #fff;
+    }
+    .dash-welcome-tag {
+        font-family: 'Instrument Serif', serif; font-style: italic;
+        font-size: 1.2rem; color: #ebd79b; margin: 0 0 .55rem;
+    }
+    .dash-welcome-sub { color: rgba(255,255,255,.72); font-size: .88rem; line-height: 1.5; max-width: 54ch; margin: 0; }
+    .dash-welcome-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.15rem; }
+    .dash-btn {
+        display: inline-flex; align-items: center; gap: .45rem;
+        padding: .55rem 1rem; border-radius: .8rem;
+        font-size: .8rem; font-weight: 700; text-decoration: none;
+        transition: transform .15s ease, background .15s ease;
+    }
+    .dash-btn-light { background: #f5ebc9; color: #08201a; box-shadow: 0 10px 22px -14px rgba(0,0,0,.6); }
+    .dash-btn-light:hover { transform: translateY(-1px); background: #fff; }
+    .dash-btn-ghost { color: #fff; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.06); }
+    .dash-btn-ghost:hover { background: rgba(255,255,255,.14); }
+    .dash-welcome-art { position: relative; z-index: 1; display: flex; justify-content: center; }
+    .dash-welcome-art svg { width: 100%; max-width: 240px; height: auto; }
+
+    /* ---------- Stat cards ---------- */
+    .dash-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .9rem; }
+    .dash-stat {
+        display: flex; align-items: flex-start; gap: .85rem;
+        padding: 1.05rem 1.1rem;
+        background: #fff; border: 1px solid rgba(227,217,194,.9); border-radius: 1.15rem;
+        box-shadow: 0 14px 34px -26px rgba(8,32,26,.45);
+    }
+    .dash-stat-icon {
+        width: 2.7rem; height: 2.7rem; border-radius: .9rem;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .dash-stat-icon svg { width: 1.35rem; height: 1.35rem; }
+    .dash-stat--emerald .dash-stat-icon { background: #e4f3ec; color: #17614b; }
+    .dash-stat--gold .dash-stat-icon { background: #fbf6e6; color: #8a6a1c; }
+    .dash-stat--sky .dash-stat-icon { background: #e6effb; color: #1e40af; }
+    .dash-stat--amber .dash-stat-icon { background: #fdf0d8; color: #92400e; }
+    .dash-stat-label { font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #3c5c50; margin: 0; }
+    .dash-stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 1.65rem; font-weight: 700; color: #08201a; line-height: 1.1; margin: .2rem 0 0; }
+    .dash-stat-note { font-size: .7rem; color: #6b7a6f; margin: .2rem 0 0; }
+
+    /* ---------- Cards / section headers ---------- */
+    .dash-card {
+        background: #fff;
+        border: 1px solid rgba(227,217,194,.9);
+        border-radius: 1.35rem;
+        padding: 1.15rem 1.25rem 1.3rem;
+        box-shadow: 0 18px 44px -30px rgba(8,32,26,.45);
+    }
+    .dash-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .dash-card-head h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.02rem; font-weight: 700; color: #08201a; margin: 0; }
+    .dash-card-head p { font-size: .77rem; color: #3c5c50; margin: .18rem 0 0; }
+    .dash-link { font-size: .78rem; font-weight: 700; color: #17614b; text-decoration: none; white-space: nowrap; }
+    .dash-link:hover { text-decoration: underline; }
+    .dash-filter-chip {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .28rem .65rem; border-radius: 999px;
+        background: #fbf6e6; border: 1px solid rgba(201,162,39,.35);
+        font-size: .68rem; font-weight: 700; color: #8a6a1c; white-space: nowrap;
+    }
+    .dash-filter-chip a { color: #8a6a1c; font-weight: 700; text-decoration: none; }
+    .dash-filter-chip a:hover { text-decoration: underline; }
+
+    /* ---------- WHO donuts ---------- */
+    .dash-who { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; }
+    .dash-who-card {
+        display: flex; align-items: center; gap: 1rem;
+        background: #fff; border: 1px solid rgba(227,217,194,.9);
+        border-left: 4px solid var(--accent, #2e9975);
+        border-radius: 1.2rem; padding: 1.05rem 1.1rem;
+        box-shadow: 0 14px 34px -26px rgba(8,32,26,.45);
+    }
+    .dash-donut {
+        width: 86px; height: 86px; border-radius: 50%; flex-shrink: 0;
+        background: conic-gradient(var(--ring, #2e9975) calc(var(--pct, 0) * 1%), #ece4d3 0);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .dash-donut-hole {
+        width: 66px; height: 66px; border-radius: 50%; background: #fff;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        box-shadow: 0 4px 12px -8px rgba(8,32,26,.35);
+    }
+    .dash-donut-count { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; font-weight: 700; color: #08201a; line-height: 1; }
+    .dash-donut-pct { font-size: .64rem; font-weight: 700; color: #6b7a6f; margin-top: .15rem; }
+    .dash-who-label { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0; }
+    .dash-who-desc { font-size: .84rem; font-weight: 600; color: #08201a; margin: .25rem 0 0; line-height: 1.3; }
+    .dash-who-note { font-size: .68rem; color: #6b7a6f; margin: .3rem 0 0; }
+
+    /* ---------- Chart ---------- */
+    .dash-year-form select {
+        appearance: none; -webkit-appearance: none;
+        padding: .45rem .95rem; border-radius: .7rem;
+        border: 1px solid #e3d9c2; background: #fdfaf4;
+        font-size: .8rem; font-weight: 700; color: #08201a; cursor: pointer;
+    }
+    .dash-chart-legend { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: .75rem; color: #3c5c50; margin-bottom: .35rem; }
+    .dash-swatch { display: inline-block; width: 16px; height: 3px; border-radius: 2px; background: #1f7b5e; margin-right: .35rem; vertical-align: middle; }
+    .dash-chart-total { font-weight: 700; color: #08201a; }
+    .dash-chart-wrap { position: relative; }
+    #cases-chart { display: block; width: 100%; height: auto; overflow: visible; }
+    .dash-chart-tip {
+        position: absolute; transform: translate(-50%, -140%);
+        background: #08201a; color: #fff; padding: .45rem .65rem; border-radius: .55rem;
+        font-size: .7rem; line-height: 1.3; display: flex; flex-direction: column; gap: .1rem;
+        pointer-events: none; white-space: nowrap; z-index: 5;
+        box-shadow: 0 12px 24px -12px rgba(8,32,26,.7);
+    }
+    .dash-chart-tip strong { font-size: .72rem; color: #ebd79b; font-weight: 700; }
+    .dash-month-filter { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+    .dash-month {
+        padding: .34rem .7rem; border-radius: 999px;
+        font-size: .69rem; font-weight: 700; color: #3c5c50;
+        text-decoration: none; border: 1px solid #e8dcc0; background: #fdfaf4;
+        transition: all .15s ease;
+    }
+    .dash-month:hover { border-color: #c9a227; color: #08201a; }
+    .dash-month.is-active { background: #0d352b; border-color: #0d352b; color: #fff; }
+    .dash-chart-hint { font-size: .69rem; color: #6b7a6f; margin: .65rem 0 0; }
+
+    /* ---------- Tables ---------- */
+    .dash-table-wrap { overflow-x: auto; }
+    .dash-table { width: 100%; border-collapse: collapse; min-width: 660px; }
+    .dash-table th {
+        text-align: left; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+        color: #3c5c50; padding: .55rem .7rem; border-bottom: 1px solid #e8dcc0;
+        background: #fdfaf4; white-space: nowrap;
+    }
+    .dash-table th.text-right, .dash-table td.text-right { text-align: right; }
+    .dash-table td { padding: .7rem; border-bottom: 1px solid #f2e9d6; font-size: .82rem; color: #08201a; vertical-align: middle; }
+    .dash-table tbody tr:hover { background: #fdfaf4; }
+    .dash-person { display: flex; align-items: center; gap: .6rem; }
+    .dash-avatar {
+        width: 2rem; height: 2rem; border-radius: 999px;
+        background: #e4f3ec; color: #17614b;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .66rem; font-weight: 700; flex-shrink: 0;
+    }
+    .dash-person-name { display: block; font-weight: 700; font-size: .82rem; }
+    .dash-person-meta { display: block; font-size: .67rem; color: #6b7a6f; }
+    .dash-mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: .73rem; font-weight: 600; color: #25443a;
+        background: #f9f3e6; border: 1px solid #f2e9d6;
+        padding: .15rem .45rem; border-radius: .4rem; white-space: nowrap;
+    }
+    .dash-muted { font-size: .73rem; color: #6b7a6f; }
+    .dash-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .22rem .6rem; border-radius: 999px; font-size: .67rem; font-weight: 700; white-space: nowrap; }
+    .dash-badge i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .dash-badge--pending { background: #fdeaea; color: #991b1b; border: 1px solid rgba(220,38,38,.22); }
+    .dash-badge--assessment { background: #fdf0d8; color: #92400e; border: 1px solid rgba(217,119,6,.25); }
+    .dash-badge--completed { background: #e4f3ec; color: #17614b; border: 1px solid rgba(46,153,117,.26); }
+    .dash-badge--draft { background: #fbf6e6; color: #8a6a1c; border: 1px solid rgba(201,162,39,.32); }
+    .dash-badge--final { background: #e4f3ec; color: #17614b; border: 1px solid rgba(46,153,117,.26); }
+    .dash-cat { display: inline-flex; padding: .2rem .55rem; border-radius: 999px; font-size: .65rem; font-weight: 700; white-space: nowrap; }
+    .dash-cat--i { background: #e4f3ec; color: #17614b; }
+    .dash-cat--ii { background: #fdf0d8; color: #92400e; }
+    .dash-cat--iii { background: #fdeaea; color: #991b1b; }
+    .dash-action {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: .42rem .85rem; border-radius: .65rem;
+        background: #0d352b; color: #fff; font-size: .71rem; font-weight: 700;
+        text-decoration: none; white-space: nowrap;
+    }
+    .dash-action:hover { background: #124a3a; }
+    .dash-action--ghost { background: #fff; color: #17614b; border: 1px solid #e3d9c2; }
+    .dash-action--ghost:hover { background: #fdfaf4; border-color: #c9a227; }
+    .dash-empty { text-align: center; padding: 2rem 1rem; }
+    .dash-empty strong { display: block; font-size: .9rem; color: #08201a; }
+    .dash-empty span { display: block; font-size: .75rem; color: #6b7a6f; margin-top: .25rem; }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 1100px) {
+        .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+        .dash-welcome { grid-template-columns: 1fr; }
+        .dash-welcome-art { display: none; }
+        .dash-who { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+        .dash-stats { grid-template-columns: 1fr; }
+        .dash-card { padding: 1rem; }
+        .dash-card-head { flex-direction: column; gap: .6rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .dash-btn:hover, .dash-month:hover { transform: none; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto">
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-    <div>
-      <h1 class="text-2xl font-bold text-ink flex items-center gap-3">
-        <span class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center text-sm font-bold">Dr</span>
-        Dashboard
-        <span class="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-widest uppercase">My Work Only</span>
-      </h1>
-      <p class="text-sm font-medium text-muted mt-1">Hi Dr. {{ request.user.get_full_name|default:request.user.username }} — your assessments, drafts and queue. Other doctors' work is hidden.</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <a href="{% url 'doctor:queue' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 shadow-sm">Clinical Assessment →</a>
-      <a href="{% url 'doctor:assessment_list' %}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">My Assessments</a>
-    </div>
-  </div>
+<div class="doctor-dashboard">
 
-  <!-- Stats — personal only -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-    <div class="card p-4 border-l-4 border-l-emerald-800">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">My Assessments</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ my_total }}</p>
-      <p class="text-xs text-muted mt-1">Total by me</p>
-    </div>
-    <div class="card p-4 border-l-4 border-l-amber-500">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">My Drafts</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ draft_assess }}</p>
-      <p class="text-xs text-muted mt-1">Need my sign-off</p>
-    </div>
-    <div class="card p-4 border-l-4 border-l-emerald-500">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">My Finals Today</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ final_today }}</p>
-      <p class="text-xs text-muted mt-1">Signed by me today</p>
-    </div>
-    <div class="card p-4 border-l-4 border-l-amber-400">
-      <p class="text-xs font-bold tracking-widest uppercase text-muted">Waiting in Queue</p>
-      <p class="text-2xl font-bold text-ink mt-1">{{ pending_assess }}</p>
-      <p class="text-xs text-muted mt-1">Unclaimed — pick up</p>
-    </div>
-  </div>
-
-  <!-- My category breakdown -->
-  <div class="card mb-6">
-    <h3 class="text-sm font-bold text-ink mb-1">My WHO Categories</h3>
-    <p class="text-xs text-muted mb-3">Only cases you confirmed.</p>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="rounded-xl bg-sage-50 border border-line p-3 flex items-center justify-between">
-        <div>
-          <p class="text-xs font-bold tracking-widest uppercase text-muted">Category I</p>
-          <p class="text-sm font-medium text-muted">Licks intact skin</p>
-        </div>
-        <span class="text-2xl font-bold text-emerald-900">{{ cat_map.category_i|default:0 }}</span>
-      </div>
-      <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center justify-between">
-        <div>
-          <p class="text-xs font-bold tracking-widest uppercase text-amber-800">Category II</p>
-          <p class="text-sm font-medium text-amber-700">Minor scratches, no bleeding</p>
-        </div>
-        <span class="text-2xl font-bold text-amber-800">{{ cat_map.category_ii|default:0 }}</span>
-      </div>
-      <div class="rounded-xl bg-red-50 border border-red-200 p-3 flex items-center justify-between">
-        <div>
-          <p class="text-xs font-bold tracking-widest uppercase text-red-800">Category III</p>
-          <p class="text-sm font-medium text-red-700">Transdermal / bat</p>
-        </div>
-        <span class="text-2xl font-bold text-red-800">{{ cat_map.category_iii|default:0 }}</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-    <!-- Queue -->
-    <div class="lg:col-span-3 card">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">Clinical Assessment — Pending + My Work</h3>
-        <a href="{% url 'doctor:queue' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
-      </div>
-      <div class="space-y-2">
-        {% for c in queue %}
-        <div class="flex items-center justify-between p-3 rounded-xl border {% if c.needs_assess %}border-amber-200 bg-amber-50{% else %}border-line bg-white{% endif %} hover:shadow-sm transition">
-          <div class="min-w-0">
-            <p class="text-sm font-bold text-ink truncate">{{ c.case_number }} · {{ c.patient.full_name }} <span class="text-xs font-medium text-muted">({{ c.patient.patient_number }})</span></p>
-            <p class="text-xs font-medium text-muted mt-0.5">{{ c.get_animal_type_display }} · {{ c.get_exposure_type_display }} · {{ c.body_part_affected }} · {{ c.created_at|date:"M d, Y" }}</p>
-            <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {% if c.clinical_assessment %}
-                {% if c.clinical_assessment.status == 'draft' %}<span class="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">Draft</span>
-                {% elif c.clinical_assessment.status == 'final' %}<span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">Final</span>{% endif %}
-                {% if c.clinical_assessment.category_confirmed %}
-                  <span class="px-2 py-0.5 rounded-full text-xs font-bold border
-                    {% if c.clinical_assessment.category_confirmed == 'category_iii' %}bg-red-50 text-red-700 border-red-200
-                    {% elif c.clinical_assessment.category_confirmed == 'category_ii' %}bg-amber-50 text-amber-800 border-amber-200
-                    {% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
-                    {% if c.clinical_assessment.category_confirmed == 'category_i' %}Category I
-                    {% elif c.clinical_assessment.category_confirmed == 'category_ii' %}Category II
-                    {% elif c.clinical_assessment.category_confirmed == 'category_iii' %}Category III{% endif %}
-                  </span>
-                {% else %}
-                  <span class="text-xs font-medium text-muted">Unclassified</span>
-                {% endif %}
-              {% else %}
-                <span class="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">Pending</span>
-                <span class="text-xs font-medium text-muted">No assessment</span>
-              {% endif %}
+    <!-- Welcome banner -->
+    <section class="dash-welcome">
+        <div class="dash-welcome-copy">
+            <span class="dash-welcome-chip"><span class="dot"></span> Doctor Portal · {{ today|date:"l, F j, Y" }}</span>
+            <h1>Welcome back, Dr. {{ request.user.get_full_name|default:request.user.username }}!</h1>
+            <p class="dash-welcome-tag">Together for a Rabies-Free Community.</p>
+            <p class="dash-welcome-sub">Your clinical assessments, drafts and queue are ready. You only see and manage your own clinical work.</p>
+            <div class="dash-welcome-actions">
+                <a href="{% url 'doctor:queue' %}" class="dash-btn dash-btn-light">
+                    Open Clinical Queue
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                <a href="{% url 'doctor:assessment_list' %}" class="dash-btn dash-btn-ghost">My Assessments</a>
             </div>
-          </div>
-          <div class="flex flex-col gap-1.5 shrink-0 ml-3">
-            <a href="{% url 'doctor:assess_case' c.pk %}" class="inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm whitespace-nowrap min-w-[96px]">
-              {% if c.needs_assess %}Assess{% else %}Review{% endif %}
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </a>
-            <a href="{% url 'patients:patient_detail' c.patient.pk %}" class="text-xs font-bold text-muted hover:text-emerald-800 text-center">Patient</a>
-          </div>
         </div>
-        {% empty %}
-        <div class="text-center py-8 rounded-xl border border-dashed border-line bg-sage-50">
-          <p class="text-sm font-bold text-muted">Nothing waiting</p>
-          <p class="text-xs text-muted mt-1">No pending cases and no drafts of yours.</p>
+        <div class="dash-welcome-art" aria-hidden="true">
+            <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="dashShield" x1="58" y1="22" x2="162" y2="152" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#1f7b5e"/><stop offset="1" stop-color="#0d352b"/>
+                    </linearGradient>
+                    <linearGradient id="dashGold" x1="99" y1="58" x2="143" y2="124" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#f5ebc9"/><stop offset="1" stop-color="#c9a227"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="110" cy="90" r="82" fill="rgba(255,255,255,.05)"/>
+                <circle cx="110" cy="90" r="64" fill="none" stroke="rgba(201,162,39,.35)" stroke-width="1.5" stroke-dasharray="4 6"/>
+                <path d="M110 22l52 20v42c0 31-21 56-52 68-31-12-52-37-52-68V42l52-20z" fill="url(#dashShield)" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+                <path d="M99 58h22v22h22v22h-22v22H99v-22H77V80h22V58z" fill="url(#dashGold)"/>
+                <path d="M40 132h34l10-18 12 30 12-22 8 10h34" stroke="#93d2b7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <g fill="rgba(255,255,255,.85)">
+                    <ellipse cx="171" cy="52" rx="7" ry="9"/>
+                    <circle cx="158" cy="44" r="4.5"/><circle cx="170" cy="39" r="4.5"/><circle cx="182" cy="44" r="4.5"/>
+                </g>
+            </svg>
         </div>
-        {% endfor %}
-      </div>
-    </div>
+    </section>
+
+    <!-- Statistics -->
+    <section class="dash-stats" aria-label="My statistics">
+        <article class="dash-stat dash-stat--emerald">
+            <div class="dash-stat-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            </div>
+            <div>
+                <p class="dash-stat-label">My Assessments</p>
+                <p class="dash-stat-value">{{ my_total }}</p>
+                <p class="dash-stat-note">Total assessments by me</p>
+            </div>
+        </article>
+        <article class="dash-stat dash-stat--gold">
+            <div class="dash-stat-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </div>
+            <div>
+                <p class="dash-stat-label">My Drafts</p>
+                <p class="dash-stat-value">{{ draft_assess }}</p>
+                <p class="dash-stat-note">Awaiting my sign-off</p>
+            </div>
+        </article>
+        <article class="dash-stat dash-stat--sky">
+            <div class="dash-stat-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+                <p class="dash-stat-label">My Finals Today</p>
+                <p class="dash-stat-value">{{ final_today }}</p>
+                <p class="dash-stat-note">Signed by me today</p>
+            </div>
+        </article>
+        <article class="dash-stat dash-stat--amber">
+            <div class="dash-stat-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <p class="dash-stat-label">Waiting in Queue</p>
+                <p class="dash-stat-value">{{ pending_assess }}</p>
+                <p class="dash-stat-note">Unclaimed cases to pick up</p>
+            </div>
+        </article>
+    </section>
+
+    <!-- WHO categories -->
+    <section aria-label="WHO category breakdown">
+        <div class="dash-card-head" style="margin-bottom:.75rem;">
+            <div>
+                <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.02rem;font-weight:700;color:#08201a;margin:0;">WHO Category Breakdown</h2>
+                <p style="font-size:.77rem;color:#3c5c50;margin:.18rem 0 0;">{{ categorized_total }} confirmed case{{ categorized_total|pluralize }} classified by me</p>
+            </div>
+        </div>
+        <div class="dash-who">
+            {% for cat in who_categories %}
+            <article class="dash-who-card" style="--accent: {{ cat.color }};">
+                <div class="dash-donut" style="--pct: {{ cat.pct }}; --ring: {{ cat.color }};" role="img" aria-label="{{ cat.label }}: {{ cat.count }} case{{ cat.count|pluralize }}, {{ cat.pct }} percent">
+                    <div class="dash-donut-hole">
+                        <span class="dash-donut-count">{{ cat.count }}</span>
+                        <span class="dash-donut-pct">{{ cat.pct }}%</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="dash-who-label" style="color: {{ cat.color }};">{{ cat.label }}</p>
+                    <p class="dash-who-desc">{{ cat.description }}</p>
+                    <p class="dash-who-note">{{ cat.count }} case{{ cat.count|pluralize }} confirmed</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Monthly chart -->
+    <section class="dash-card">
+        <div class="dash-card-head">
+            <div>
+                <h2>Monthly Bite Cases</h2>
+                <p>Bite cases recorded in {{ selected_year }}{% if selected_month_label %} · showing {{ selected_month_label }} in the queue{% endif %}</p>
+            </div>
+            <form method="get" class="dash-year-form">
+                <label for="dash-year" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Year</label>
+                <select id="dash-year" name="year" onchange="this.form.submit()" aria-label="Select year">
+                    {% for y in year_options %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="dash-chart-legend">
+            <span><i class="dash-swatch"></i> Bite cases recorded</span>
+            <span class="dash-chart-total">{{ monthly_total }} case{{ monthly_total|pluralize }} in {{ selected_year }}</span>
+        </div>
+        <div class="dash-chart-wrap" id="chart-wrap">
+            <svg id="cases-chart" viewBox="0 0 760 280" role="img" aria-label="Monthly bite cases for {{ selected_year }}"></svg>
+            <div id="chart-tooltip" class="dash-chart-tip" hidden></div>
+        </div>
+        <div class="dash-month-filter" role="group" aria-label="Filter the clinical queue by month">
+            <a href="?year={{ selected_year }}" class="dash-month {% if not selected_month %}is-active{% endif %}">All months</a>
+            {% for m in monthly_series %}
+            <a href="?year={{ selected_year }}&month={{ m.month }}" class="dash-month {% if selected_month == m.month %}is-active{% endif %}">{{ m.label }}</a>
+            {% endfor %}
+        </div>
+        <p class="dash-chart-hint">Select a month to filter the clinical queue below — or click a point on the chart.</p>
+    </section>
+
+    <!-- Clinical queue -->
+    <section class="dash-card">
+        <div class="dash-card-head">
+            <div>
+                <h2>Clinical Assessment Queue</h2>
+                <p>
+                    {% if selected_month %}Cases recorded in {{ selected_month_label }} {{ selected_year }}
+                    {% else %}Unclaimed cases plus your own assessments{% endif %}
+                </p>
+            </div>
+            <div class="flex items-center gap-2" style="display:flex;align-items:center;gap:.5rem;">
+                {% if selected_month %}
+                <span class="dash-filter-chip">{{ selected_month_label }} {{ selected_year }} <a href="?year={{ selected_year }}">Clear</a></span>
+                {% endif %}
+                <a class="dash-link" href="{% url 'doctor:queue' %}">View all &rarr;</a>
+            </div>
+        </div>
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Patient Name</th>
+                        <th scope="col">Case ID</th>
+                        <th scope="col">WHO Category</th>
+                        <th scope="col">Assessment Status</th>
+                        <th scope="col" class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in queue %}
+                    <tr>
+                        <td>
+                            <div class="dash-person">
+                                <span class="dash-avatar">{{ c.patient.first_name|first|upper }}{{ c.patient.last_name|first|upper }}</span>
+                                <span>
+                                    <span class="dash-person-name">{{ c.patient.full_name }}</span>
+                                    <span class="dash-person-meta">{{ c.patient.patient_number }}</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td><span class="dash-mono">{{ c.case_number }}</span></td>
+                        <td>
+                            {% if c.who_category == 'category_i' %}<span class="dash-cat dash-cat--i">Category I</span>
+                            {% elif c.who_category == 'category_ii' %}<span class="dash-cat dash-cat--ii">Category II</span>
+                            {% elif c.who_category == 'category_iii' %}<span class="dash-cat dash-cat--iii">Category III</span>
+                            {% else %}<span class="dash-muted">Unclassified</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if c.assessment_status == 'pending' %}
+                            <span class="dash-badge dash-badge--pending"><i></i>Pending</span>
+                            {% elif c.assessment_status == 'for_assessment' %}
+                            <span class="dash-badge dash-badge--assessment"><i></i>For Assessment</span>
+                            {% else %}
+                            <span class="dash-badge dash-badge--completed"><i></i>Completed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <a href="{% url 'doctor:assess_case' c.pk %}" class="dash-action">{% if c.assessment_status == 'pending' %}Assess{% elif c.assessment_status == 'for_assessment' %}Continue{% else %}Review{% endif %}</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="dash-empty">
+                                <strong>Nothing waiting</strong>
+                                <span>{% if selected_month %}No queue cases recorded in {{ selected_month_label }} {{ selected_year }}.{% else %}No unclaimed cases and no drafts of yours.{% endif %}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 
     <!-- Recent assessments -->
-    <div class="lg:col-span-2 card">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-ink uppercase tracking-wider">My Recent Assessments</h3>
-        <a href="{% url 'doctor:assessment_list' %}" class="text-xs font-bold text-emerald-700 hover:underline">View all →</a>
-      </div>
-      <div class="space-y-3">
-        {% for a in recent_assessments %}
-        <div class="p-3 rounded-xl border border-line bg-white hover:bg-sage-50 transition">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-ink truncate">{{ a.patient.full_name }} <span class="text-xs font-medium text-muted">{{ a.patient.patient_number }}</span></p>
-              <p class="text-xs font-bold text-emerald-800">{{ a.get_category_confirmed_display|default:"Draft" }} {% if a.bite_case %}· {{ a.bite_case.case_number }}{% endif %}</p>
-              <p class="text-xs text-muted mt-1">by {{ a.assessed_by|default:"—" }} · {{ a.updated_at|date:"M d, h:i A" }}</p>
+    <section class="dash-card">
+        <div class="dash-card-head">
+            <div>
+                <h2>Recent Assessments</h2>
+                <p>Your latest clinical assessments</p>
             </div>
-            <span class="shrink-0 px-2 py-1 rounded-full text-xs font-bold {% if a.status == 'final' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">{{ a.get_status_display }}</span>
-          </div>
-          {% if a.bite_case %}
-          <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Open →</a>
-          {% endif %}
+            <a class="dash-link" href="{% url 'doctor:assessment_list' %}">View all &rarr;</a>
         </div>
-        {% empty %}
-        <p class="text-sm text-muted text-center py-6">You have no assessments yet. Pick a pending case to start.</p>
-        {% endfor %}
-      </div>
-      <div class="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-        <p class="text-xs font-bold text-emerald-800">My Workflow</p>
-        <p class="text-xs font-medium text-muted mt-1">Pick a pending case → Assess → Save draft or Finalize. You only see your own work.</p>
-        <a href="{% url 'doctor:queue' %}" class="mt-2 inline-flex text-xs font-bold text-emerald-700 hover:underline">Go to Clinical Assessment →</a>
-      </div>
-    </div>
-  </div>
+        <div class="dash-table-wrap">
+            <table class="dash-table" style="min-width:820px;">
+                <thead>
+                    <tr>
+                        <th scope="col">Patient Name</th>
+                        <th scope="col">Patient ID</th>
+                        <th scope="col">Case ID</th>
+                        <th scope="col">WHO Category</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Date &amp; Time</th>
+                        <th scope="col" class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in recent_assessments %}
+                    <tr>
+                        <td>
+                            <div class="dash-person">
+                                <span class="dash-avatar">{{ a.patient.first_name|first|upper }}{{ a.patient.last_name|first|upper }}</span>
+                                <span class="dash-person-name">{{ a.patient.full_name }}</span>
+                            </div>
+                        </td>
+                        <td><span class="dash-mono">{{ a.patient.patient_number }}</span></td>
+                        <td>{% if a.bite_case %}<span class="dash-mono">{{ a.bite_case.case_number }}</span>{% else %}<span class="dash-muted">General</span>{% endif %}</td>
+                        <td>
+                            {% if a.category_confirmed == 'category_i' %}<span class="dash-cat dash-cat--i">Category I</span>
+                            {% elif a.category_confirmed == 'category_ii' %}<span class="dash-cat dash-cat--ii">Category II</span>
+                            {% elif a.category_confirmed == 'category_iii' %}<span class="dash-cat dash-cat--iii">Category III</span>
+                            {% else %}<span class="dash-muted">Unclassified</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if a.status == 'final' %}
+                            <span class="dash-badge dash-badge--final"><i></i>Final</span>
+                            {% else %}
+                            <span class="dash-badge dash-badge--draft"><i></i>Draft</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="dash-person-name" style="font-weight:600;">{{ a.updated_at|date:"M d, Y" }}</span>
+                            <span class="dash-person-meta">{{ a.updated_at|date:"h:i A" }}</span>
+                        </td>
+                        <td class="text-right">
+                            {% if a.bite_case %}
+                            <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="dash-action dash-action--ghost">Open</a>
+                            {% else %}
+                            <a href="{% url 'patients:patient_detail' a.patient.pk %}" class="dash-action dash-action--ghost">View</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="dash-empty">
+                                <strong>No assessments yet</strong>
+                                <span>Pick a pending case from the queue to start your first assessment.</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ monthly_series|json_script:"monthly-series" }}
+<script>
+(function () {
+    var dataEl = document.getElementById('monthly-series');
+    var svg = document.getElementById('cases-chart');
+    if (!dataEl || !svg) return;
+
+    var data = JSON.parse(dataEl.textContent);
+    var selectedMonth = {{ selected_month|default:"null" }};
+    var year = {{ selected_year }};
+    var W = 760, H = 280, L = 46, R = 18, T = 20, B = 38;
+    var plotW = W - L - R, plotH = H - T - B;
+    var counts = data.map(function (d) { return d.count; });
+    var rawMax = Math.max.apply(null, counts.concat([0]));
+    var step = Math.max(1, Math.ceil(rawMax / 4));
+    var top = step * 4;
+    var ns = 'http://www.w3.org/2000/svg';
+
+    function x(i) { return L + (plotW / (data.length - 1)) * i; }
+    function y(v) { return T + plotH - (v / top) * plotH; }
+    function make(tag, attrs) {
+        var node = document.createElementNS(ns, tag);
+        for (var key in attrs) node.setAttribute(key, attrs[key]);
+        return node;
+    }
+
+    // Grid lines and y-axis labels
+    var grid = make('g', {});
+    for (var t = 0; t <= 4; t++) {
+        var value = t * step;
+        var gy = y(value);
+        grid.appendChild(make('line', {
+            x1: L, y1: gy, x2: W - R, y2: gy,
+            stroke: '#e8dcc0', 'stroke-width': 1,
+            'stroke-dasharray': t === 0 ? '0' : '3 5'
+        }));
+        var tick = make('text', {
+            x: L - 10, y: gy + 4, 'text-anchor': 'end',
+            fill: '#3c5c50', 'font-size': 11, 'font-family': 'Figtree, sans-serif'
+        });
+        tick.textContent = value;
+        grid.appendChild(tick);
+    }
+
+    // Line + area
+    var lineD = '';
+    data.forEach(function (d, i) {
+        lineD += (i === 0 ? 'M' : 'L') + x(i) + ' ' + y(d.count) + ' ';
+    });
+    var areaD = lineD + 'L' + x(data.length - 1) + ' ' + y(0) + ' L' + x(0) + ' ' + y(0) + ' Z';
+
+    var defs = make('defs', {});
+    var grad = make('linearGradient', { id: 'chartFill', x1: '0', y1: '0', x2: '0', y2: '1' });
+    grad.appendChild(make('stop', { offset: '0%', 'stop-color': '#2e9975', 'stop-opacity': '.28' }));
+    grad.appendChild(make('stop', { offset: '100%', 'stop-color': '#2e9975', 'stop-opacity': '0' }));
+    defs.appendChild(grad);
+    svg.appendChild(defs);
+
+    svg.appendChild(make('path', { d: areaD, fill: 'url(#chartFill)' }));
+    svg.appendChild(make('path', {
+        d: lineD, fill: 'none', stroke: '#1f7b5e', 'stroke-width': 3,
+        'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+    }));
+    svg.appendChild(grid);
+
+    // Month labels + points
+    data.forEach(function (d, i) {
+        var selected = (i + 1) === selectedMonth;
+        var label = make('text', {
+            x: x(i), y: H - 12, 'text-anchor': 'middle',
+            fill: selected ? '#0d352b' : '#3c5c50',
+            'font-size': 11, 'font-weight': selected ? '700' : '500',
+            'font-family': 'Figtree, sans-serif'
+        });
+        label.textContent = d.label;
+        svg.appendChild(label);
+
+        if (selected) {
+            svg.appendChild(make('line', {
+                x1: x(i), y1: T, x2: x(i), y2: T + plotH,
+                stroke: '#c9a227', 'stroke-width': 1.5, 'stroke-dasharray': '4 5'
+            }));
+        }
+        svg.appendChild(make('circle', {
+            cx: x(i), cy: y(d.count), r: selected ? 8 : 5.5,
+            fill: '#fff', stroke: selected ? '#c9a227' : '#1f7b5e',
+            'stroke-width': selected ? 3 : 2.5, style: 'cursor:pointer'
+        }));
+        svg.appendChild(make('circle', {
+            cx: x(i), cy: y(d.count), r: selected ? 3.2 : 2,
+            fill: selected ? '#c9a227' : '#1f7b5e'
+        }));
+    });
+
+    // Tooltip + click-to-filter
+    var tip = document.getElementById('chart-tooltip');
+    function pointFromEvent(e) {
+        var rect = svg.getBoundingClientRect();
+        var px = (e.clientX - rect.left) / rect.width * W;
+        var idx = Math.round((px - L) / (plotW / (data.length - 1)));
+        return Math.max(0, Math.min(data.length - 1, idx));
+    }
+    svg.addEventListener('pointermove', function (e) {
+        var i = pointFromEvent(e);
+        var d = data[i];
+        tip.hidden = false;
+        tip.innerHTML = '<strong>' + d.label + ' ' + year + '</strong><span>' + d.count + ' bite case' + (d.count === 1 ? '' : 's') + '</span>';
+        tip.style.left = (x(i) / W * 100) + '%';
+        tip.style.top = (y(d.count) / H * 100) + '%';
+    });
+    svg.addEventListener('pointerleave', function () { tip.hidden = true; });
+    svg.addEventListener('click', function (e) {
+        var i = pointFromEvent(e);
+        window.location.href = '?year=' + year + '&month=' + (i + 1);
+    });
+})();
+</script>
 {% endblock %}

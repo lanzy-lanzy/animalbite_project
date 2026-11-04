@@ -3,6 +3,10 @@
 {% block extra_head %}
 <style>
   @media print { .no-print { display:none !important } }
+  .btn-danger { border-color:#fca5a5 !important; color:#b91c1c !important; background:#fff; }
+  .btn-danger:hover { background:#fef2f2 !important; }
+  .btn-delete-confirm { background:#b91c1c; color:#fff; }
+  .btn-delete-confirm:hover { background:#991b1b; }
 </style>
 {% endblock %}
 {% block content %}
@@ -81,7 +85,12 @@
                                 Vitals
                             </a>
                             {% endif %}
-                            <a href="{% url 'patients:patient_edit' p.pk %}" class="btn-secondary btn-xs">Edit</a>
+                            <div class="inline-flex shrink-0 items-center gap-1">
+                                <a href="{% url 'patients:patient_edit' p.pk %}" class="btn-secondary btn-xs">Edit</a>
+                                {% if request.user.role == 'admin' %}
+                                <button type="button" onclick="openDeletePatientModal('{% url 'patients:patient_delete' p.pk %}', '{% url 'patients:patient_archive' p.pk %}', '{{ p.full_name|escapejs }}', '{{ p.patient_number|escapejs }}', {{ p.bite_case_count }}, {{ p.assessment_count }}, {{ p.vaccination_count }}, {% if p.has_dispensed_prescription or p.has_administered_dose or p.has_signed_assessment %}1{% else %}0{% endif %})" class="btn-secondary btn-xs btn-danger" title="Delete this patient record">Delete</button>
+                                {% endif %}
+                            </div>
                             {% endif %}
                         </div>
                     </td>
@@ -119,7 +128,12 @@
                 {% if request.user.role != 'doctor' %}
                 <a href="{% url 'vaccination:patient_schedule_list' %}?q={{ p.patient_number }}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Schedules</a>
                 <button type="button" onclick="openPatientPreview('{% url 'patients:patient_print' p.pk %}', '{% url 'patients:patient_print_pdf' p.pk %}', '{{ p.full_name|escapejs }} — {{ p.patient_number }}')" class="px-3 py-1.5 rounded-full bg-white border border-emerald-800 text-emerald-900 text-xs font-bold">Print</button>
-                <a href="{% url 'patients:patient_edit' p.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>
+                <div class="inline-flex items-center gap-1.5">
+                    <a href="{% url 'patients:patient_edit' p.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>
+                    {% if request.user.role == 'admin' %}
+                    <button type="button" onclick="openDeletePatientModal('{% url 'patients:patient_delete' p.pk %}', '{% url 'patients:patient_archive' p.pk %}', '{{ p.full_name|escapejs }}', '{{ p.patient_number|escapejs }}', {{ p.bite_case_count }}, {{ p.assessment_count }}, {{ p.vaccination_count }}, {% if p.has_dispensed_prescription or p.has_administered_dose or p.has_signed_assessment %}1{% else %}0{% endif %})" class="px-3 py-1.5 rounded-full bg-white border border-red-200 text-red-700 text-xs font-bold hover:bg-red-50">Delete</button>
+                    {% endif %}
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -216,6 +230,77 @@
     </div>
   </div>
 </div>
+
+<!-- Delete Patient Modal — admin only -->
+{% if request.user.role == 'admin' %}
+<div id="deletePatientModal" class="fixed inset-0 z-50 hidden no-print" aria-hidden="true">
+  <div class="absolute inset-0 bg-emerald-950/55 backdrop-blur-sm" aria-hidden="true"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="deletePatientTitle" class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-emerald-950/20 border border-line overflow-hidden">
+      <div class="px-5 py-4 border-b border-line bg-sage-50">
+        <h3 id="deletePatientTitle" class="text-base font-bold text-ink flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full bg-red-50 border border-red-200 text-red-700 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+          </span>
+          Delete Patient and All Related Records?
+        </h3>
+      </div>
+      <form id="deletePatientForm" method="post" action="">
+        {% csrf_token %}
+        <div class="px-5 py-4 space-y-3 overflow-y-auto" style="max-height:70vh">
+          <p class="text-sm font-medium text-ink">Are you sure you want to permanently delete this patient and all eligible associated records? This action cannot be undone.</p>
+          <div class="rounded-xl border border-line bg-sage-50 p-3">
+            <p class="text-[11px] font-bold uppercase tracking-widest text-muted">Patient name</p>
+            <p id="deletePatientName" class="text-sm font-bold text-ink mt-0.5"></p>
+            <p class="text-[11px] font-bold uppercase tracking-widest text-muted mt-2">Patient ID</p>
+            <p id="deletePatientNumber" class="text-sm font-mono font-bold text-ink mt-0.5"></p>
+            <div class="grid gap-2 mt-3" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+              <div class="rounded-lg bg-white border border-line px-2 py-2 text-center">
+                <p id="deleteBiteCaseCount" class="text-lg font-bold leading-tight text-ink">0</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest leading-tight text-muted">Bite cases</p>
+              </div>
+              <div class="rounded-lg bg-white border border-line px-2 py-2 text-center">
+                <p id="deleteAssessmentCount" class="text-lg font-bold leading-tight text-ink">0</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest leading-tight text-muted">Assessments</p>
+              </div>
+              <div class="rounded-lg bg-white border border-line px-2 py-2 text-center">
+                <p id="deleteVaccinationCount" class="text-lg font-bold leading-tight text-ink">0</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest leading-tight text-muted">Vaccination records</p>
+              </div>
+            </div>
+          </div>
+          <div id="deletePatientRetention" class="hidden rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-1.5">
+            <p class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+              Permanent deletion is not permitted for this patient
+            </p>
+            <p class="text-xs font-medium text-amber-900">Protected clinical records (dispensed prescriptions, administered vaccine doses, or signed assessments) must be retained. Archive the patient instead to remove them from active lists while keeping those records.</p>
+          </div>
+          <div id="deletePatientConfirmWrap" class="space-y-1.5">
+            <label for="deletePatientConfirmInput" class="block text-xs font-semibold text-ink">
+              Type the Patient ID <span id="deletePatientConfirmTarget" class="font-mono font-bold text-red-700"></span> to confirm
+            </label>
+            <input id="deletePatientConfirmInput" name="confirm_patient_number" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter the Patient ID" class="form-input">
+            <p class="text-[11px] font-medium text-muted">Permanently Delete unlocks only when the Patient ID matches exactly.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-end gap-2 px-5 py-3 border-t border-line bg-white">
+          <button type="button" id="deletePatientCancel" onclick="closeDeletePatientModal()" class="px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Cancel</button>
+          <button type="button" id="deletePatientArchive" onclick="submitPatientArchive()" style="display:none" class="items-center gap-1.5 px-4 py-2 rounded-full bg-amber-100 border border-amber-300 text-sm font-bold text-amber-900 hover:bg-amber-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            Archive Patient Instead
+          </button>
+          <button type="submit" id="deletePatientSubmit" disabled class="btn-delete-confirm inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+            Permanently Delete
+          </button>
+        </div>
+      </form>
+      <form id="archivePatientForm" method="post" action="" class="hidden">{% csrf_token %}</form>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% endblock %}
 
@@ -451,11 +536,80 @@
       window.open(fallbackUrl, '_blank');
     }
   }
+  // Delete patient modal — admin only
+  let _deletePatientNumber = '';
+  function openDeletePatientModal(actionUrl, archiveUrl, name, number, biteCount, assessmentCount, vaccinationCount, protectedFlag){
+    const modal = document.getElementById('deletePatientModal');
+    const form = document.getElementById('deletePatientForm');
+    if(!modal || !form) return;
+    _deletePatientNumber = number || '';
+    form.action = actionUrl;
+    const archiveForm = document.getElementById('archivePatientForm');
+    if(archiveForm) archiveForm.action = archiveUrl || '';
+    document.getElementById('deletePatientName').textContent = name || '';
+    document.getElementById('deletePatientNumber').textContent = number || '';
+    document.getElementById('deletePatientConfirmTarget').textContent = number || '';
+    document.getElementById('deleteBiteCaseCount').textContent = biteCount ?? 0;
+    document.getElementById('deleteAssessmentCount').textContent = assessmentCount ?? 0;
+    document.getElementById('deleteVaccinationCount').textContent = vaccinationCount ?? 0;
+    const isProtected = String(protectedFlag) === '1';
+    const retention = document.getElementById('deletePatientRetention');
+    const confirmWrap = document.getElementById('deletePatientConfirmWrap');
+    const archiveBtn = document.getElementById('deletePatientArchive');
+    const submitBtn = document.getElementById('deletePatientSubmit');
+    const input = document.getElementById('deletePatientConfirmInput');
+    retention.classList.toggle('hidden', !isProtected);
+    confirmWrap.classList.toggle('hidden', isProtected);
+    archiveBtn.style.display = isProtected ? 'inline-flex' : 'none';
+    submitBtn.disabled = true;
+    submitBtn.title = isProtected ? 'Blocked by the medical record-retention policy' : '';
+    if(input){
+      input.value = '';
+      input.disabled = isProtected;
+    }
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function(){
+      const target = isProtected ? archiveBtn : input;
+      if(target && !target.classList.contains('hidden')){
+        target.focus({ preventScroll: true });
+      } else {
+        const cancel = document.getElementById('deletePatientCancel');
+        if(cancel) cancel.focus({ preventScroll: true });
+      }
+    }, 50);
+  }
+  function updateDeletePatientSubmit(){
+    const input = document.getElementById('deletePatientConfirmInput');
+    const submit = document.getElementById('deletePatientSubmit');
+    if(!input || !submit) return;
+    submit.disabled = !_deletePatientNumber || input.value.trim() !== _deletePatientNumber;
+  }
+  function submitPatientArchive(){
+    const archiveForm = document.getElementById('archivePatientForm');
+    if(archiveForm) archiveForm.requestSubmit();
+  }
+  function closeDeletePatientModal(){
+    const modal = document.getElementById('deletePatientModal');
+    if(!modal) return;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    const input = document.getElementById('deletePatientConfirmInput');
+    if(input){ input.value = ''; input.disabled = false; }
+  }
+  (function(){
+    const input = document.getElementById('deletePatientConfirmInput');
+    if(input) input.addEventListener('input', updateDeletePatientSubmit);
+  })();
   // Close on ESC
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape'){
       const modal = document.getElementById('patientPreviewModal');
       if(modal && !modal.classList.contains('hidden')) closePatientPreview();
+      const deleteModal = document.getElementById('deletePatientModal');
+      if(deleteModal && !deleteModal.classList.contains('hidden')) closeDeletePatientModal();
     }
   });
 </script>

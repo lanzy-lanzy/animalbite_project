@@ -26,10 +26,11 @@ def normalize_ph_number(raw: str) -> str | None:
     return res
 
 
-def build_reminder_message(patient, case, dose, reminder_type: str) -> str:
+def build_reminder_message(patient, case, dose, reminder_type: str, custom_note: str = "") -> str:
     """
     Build Filipino/English friendly SMS for vaccination.
-    reminder_type: '3days_before' or 'on_day'
+    reminder_type: automatic ('3days_before', 'on_day', 'schedule_set') or
+    manual ('manual_2days_before', 'manual_1day_before', 'manual_custom').
     Keep under 160 chars per segment if possible, but Semaphore auto-splits.
     """
     patient_name = getattr(patient, "full_name", lambda: str(patient))()
@@ -43,24 +44,51 @@ def build_reminder_message(patient, case, dose, reminder_type: str) -> str:
             patient_name = f"{patient.first_name} {patient.last_name}"
 
     dose_label = dose.dose_label
+    display_dose = getattr(dose, "number_label", None) or dose_label
     sched_date = dose.scheduled_date.strftime("%b %d, %Y (%a)")
     case_no = case.case_number
 
     # Short, not starting with TEST (Semaphore ignores)
-    if reminder_type == "3days_before":
+    if reminder_type == "schedule_set":
+        return (
+            f"ABTC Dumingag: {patient_name} ({case_no}), naitala ang vaccine schedule mo sa "
+            f"{sched_date} ({dose_label}). Pumunta sa RHU sa araw na ito. Dalhin ang card. Salamat! -ABTC Dumingag"
+        ).strip()
+    elif reminder_type == "3days_before":
         return (
             f"ABTC Dumingag: Paalala, {patient_name} ({case_no}) may vaccine schedule sa {sched_date} "
-            f"({dose_label}). Mangyaring pumunta sa RHU 3 araw mula ngayon. Dalhin ang card. Salamat! -RHUDumingag"
+            f"({dose_label}). Mangyaring pumunta sa RHU 3 araw mula ngayon. Dalhin ang card. Salamat! -ABTC Dumingag"
         ).strip()
     elif reminder_type == "on_day":
         return (
             f"ABTC Dumingag: Ngayon na ang vaccine schedule ni {patient_name} ({case_no}) - {dose_label} "
-            f"ngayong {sched_date}. Pumunta sa RHU ngayong araw. Dalhin ang vaccination card. -RHUDumingag"
+            f"ngayong {sched_date}. Pumunta sa RHU ngayong araw. Dalhin ang vaccination card. -ABTC Dumingag"
+        ).strip()
+    elif reminder_type == "manual_immediate":
+        return (
+            f"ABTC Dumingag: Paalala, {patient_name} ({case_no}) - {display_dose} sa {sched_date}. "
+            f"Pumunta sa RHU sa nakatakdang petsa. Dalhin ang card. -ABTC Dumingag"
+        ).strip()
+    elif reminder_type == "manual_2days_before":
+        return (
+            f"ABTC Dumingag: Paalala, {patient_name} ({case_no}) - {display_dose} sa {sched_date}. "
+            f"Pumunta sa RHU sa loob ng 2 araw. Dalhin ang card. -ABTC Dumingag"
+        ).strip()
+    elif reminder_type == "manual_1day_before":
+        return (
+            f"ABTC Dumingag: Paalala, {patient_name} ({case_no}) - {display_dose} ay bukas na, {sched_date}. "
+            f"Pumunta sa RHU sa nakatakdang oras. Dalhin ang card. -ABTC Dumingag"
+        ).strip()
+    elif reminder_type == "manual_custom":
+        note = (custom_note or "").strip() or "Pumunta sa RHU sa nakatakdang petsa."
+        return (
+            f"ABTC Dumingag: Paalala para kay {patient_name} ({case_no}) - {display_dose} sa {sched_date}. "
+            f"{note} -ABTC Dumingag"
         ).strip()
     else:
         return (
             f"ABTC Dumingag: Paalala para kay {patient_name} ({case_no}) - {dose_label} sa {sched_date}. "
-            f"Pumunta sa RHU. -RHUDumingag"
+            f"Pumunta sa RHU. -ABTC Dumingag"
         ).strip()
 
 
@@ -125,7 +153,7 @@ def send_semaphore_sms(number: str, message: str, sendername: str | None = None)
         return {"success": False, "error": str(e), "response": None}
 
 
-def send_dose_reminder(dose, reminder_type: str = "3days_before", dry_run: bool = False, force: bool = False):
+def send_dose_reminder(dose, reminder_type: str = "3days_before", dry_run: bool = False, force: bool = False, custom_note: str = ""):
     """
     High-level helper to send SMS for a specific dose.
     Handles logging via SMSLog and duplicate guard.
@@ -153,7 +181,7 @@ def send_dose_reminder(dose, reminder_type: str = "3days_before", dry_run: bool 
     if not number:
         # Fallback to primary even if invalid (will fail gracefully)
         number = patient.contact_number or (candidates[1] if len(candidates) > 1 else "")
-    message = build_reminder_message(patient, case, dose, reminder_type)
+    message = build_reminder_message(patient, case, dose, reminder_type, custom_note=custom_note)
 
     # Duplicate guard: don't re-send same dose + reminder_type + scheduled_date on same day unless force
     from django.utils import timezone

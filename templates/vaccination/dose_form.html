@@ -20,7 +20,7 @@
         <div class="w-8 h-8 rounded-full bg-emerald-950 text-white flex items-center justify-center shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
-        <p class="text-sm font-medium text-ink"><span class="font-bold">Workflow:</span> Set <span class="text-emerald-700 font-bold">Status</span> first. If <span class="font-bold">Completed</span>, fill <span class="font-bold">Actual Date</span> + <span class="font-bold">Vaccine / Batch</span> → stock auto-deducts. If <span class="font-bold">Missed</span>, create a Follow-up.</p>
+        <p class="text-sm font-medium text-ink"><span class="font-bold">Workflow:</span> Assign the protocol date to move <span class="font-bold">Pending Scheduling</span> → <span class="text-emerald-700 font-bold">Scheduled</span>. On the visit day, set <span class="font-bold">Completed</span>, fill <span class="font-bold">Actual Date</span> + <span class="font-bold">Vaccine / Batch</span> → stock deducts once. If not given, mark <span class="font-bold">Missed</span>.</p>
     </div>
 
     <div class="card">
@@ -29,10 +29,21 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div>
-                <h2 class="font-display text-sm font-bold text-ink">{{ dose.dose_label }} · {{ dose.scheduled_date|date:'M d, Y' }}</h2>
-                <p class="text-xs font-medium text-muted">Scheduled {{ dose.scheduled_date|date:'l' }} · Update to reflect reality</p>
+                <h2 class="font-display text-sm font-bold text-ink">{{ dose.dose_label }} · {% if dose.scheduled_date %}{{ dose.scheduled_date|date:'M d, Y' }}{% else %}Pending Scheduling{% endif %}</h2>
+                <p class="text-xs font-medium text-muted">
+                    {% if dose.scheduled_date %}Scheduled {{ dose.scheduled_date|date:'l' }} · {% endif %}Update to reflect reality
+                </p>
             </div>
         </div>
+
+        {% if dose.expected_date %}
+        <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 mb-4">
+            <p class="text-sm font-bold text-amber-900">Protocol date: {{ dose.expected_date|date:'M d, Y' }}</p>
+            <p class="text-xs font-medium text-amber-800 mt-0.5">
+                {% if dose.protocol_day is not None %}Day {{ dose.protocol_day }} from the 1st dose{% else %}Follow the doctor's protocol{% endif %} — an earlier date is rejected.
+            </p>
+        </div>
+        {% endif %}
 
         <form method="POST" class="space-y-4">
             {% csrf_token %}

@@ -9,10 +9,11 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <span class="status-badge status-{{ case.case_status }} text-sm">{{ case.get_case_status_display }}</span>
-            {% if not case.is_locked and request.user.role != 'nurse' %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-sm">Edit</a>{% endif %}
+            {% if not case.is_locked and not case.is_archived and request.user.role != 'nurse' %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-sm">Edit</a>{% endif %}
         </div>
     </div>
 
+    {% if can_manage_portal %}
     {% if temp_creds %}
     <div class="card mb-6 border-emerald-300 bg-emerald-50">
         <div class="flex items-start gap-3">
@@ -36,7 +37,7 @@
                         <p class="text-xs font-mono text-ink mt-1 break-all">{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:login' %}</p>
                     </div>
                 </div>
-                <p class="text-xs font-medium text-emerald-700 mt-3">SMS also sent to {{ case.patient.contact_display }} via RHUDumingag if enabled.</p>
+                <p class="text-xs font-medium text-emerald-700 mt-3">SMS reminders are also sent to {{ case.patient.contact_display }} if enabled.</p>
             </div>
         </div>
     </div>
@@ -81,6 +82,7 @@
         </div>
         {% endif %}
     </div>
+    {% endif %}
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">

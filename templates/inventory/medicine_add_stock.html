@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% block title %}Add New Stock - ABTC System{% endblock %}
+{% block extra_head %}
+<style>
+    .stock-page { max-width: 900px; margin: 0 auto; }
+    .stock-back {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-emerald-900);
+        text-decoration: none;
+    }
+    .stock-back:hover { text-decoration: underline; }
+    .stock-title {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--color-ink);
+        line-height: 1.2;
+    }
+    .stock-subtitle {
+        margin: 4px 0 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-muted-2);
+    }
+    .stock-section-head {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: var(--color-emerald-950);
+        color: #FFFFFF;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+    .stock-readonly-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+    }
+    .stock-readonly-card {
+        min-width: 0;
+        padding: 12px 15px;
+        border-radius: 14px;
+        border: 1px solid rgba(201, 162, 39, .22);
+        background: linear-gradient(145deg, #FDFAF2, #F6EEDC);
+    }
+    .stock-readonly-note {
+        margin: 10px 2px 0;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-muted-2);
+    }
+    .stock-field-label {
+        margin: 0 0 4px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: var(--color-gold-700);
+    }
+    .stock-field-value {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-emerald-900);
+        overflow-wrap: anywhere;
+    }
+    .stock-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px 20px;
+        margin-top: 16px;
+    }
+    .stock-field--full { grid-column: 1 / -1; }
+    .stock-form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        color: var(--color-muted-2);
+    }
+    .stock-required { color: #B91C1C; }
+    .stock-field-error {
+        margin: 5px 0 0;
+        font-size: 12px;
+        color: #B91C1C;
+    }
+    .stock-error-box {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid #FCA5A5;
+        background: #FEF2F2;
+        color: #991B1B;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .stock-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+    }
+    .stock-actions button:disabled { opacity: .7; cursor: not-allowed; }
+    @media (max-width: 640px) {
+        .stock-readonly-grid,
+        .stock-form-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="stock-page">
+    <a href="{% url 'inventory:medicine_list' %}" class="stock-back">&larr; Back to Medicine Inventory</a>
+    <div class="mb-5">
+        <h1 class="stock-title">Add New Stock</h1>
+        <p class="stock-subtitle">Record newly received medicine stock.</p>
+    </div>
+
+    <div class="card">
+        <div class="stock-section-head">Selected Medicine Information</div>
+        <div class="stock-readonly-grid">
+            <div class="stock-readonly-card">
+                <p class="stock-field-label">Medicine Name</p>
+                <p class="stock-field-value">{{ medicine.medicine_name }}{% if medicine.strength %} {{ medicine.strength }}{% endif %}</p>
+            </div>
+            <div class="stock-readonly-card">
+                <p class="stock-field-label">Generic Name</p>
+                <p class="stock-field-value">{{ medicine.generic_name|default:'—' }}</p>
+            </div>
+        </div>
+        <p class="stock-readonly-note">{{ medicine.get_dosage_form_display }} · Unit: {{ medicine.unit }}</p>
+    </div>
+
+    <div class="card mt-6">
+        <div class="stock-section-head">New Stock Information</div>
+        <form method="POST" class="mt-4" id="add-stock-form">
+            {% csrf_token %}
+            {{ form.submission_token }}
+            {% if form.non_field_errors %}
+            <div class="stock-error-box">
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+            <div class="stock-form-grid">
+                <div>
+                    <label class="stock-form-label" for="{{ form.batch_number.id_for_label }}">Batch Number <span class="stock-required">*</span></label>
+                    {{ form.batch_number }}
+                    {% for error in form.batch_number.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="stock-form-label" for="{{ form.quantity_received.id_for_label }}">Quantity Received <span class="stock-required">*</span></label>
+                    {{ form.quantity_received }}
+                    {% for error in form.quantity_received.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="stock-form-label" for="{{ form.source_supplier.id_for_label }}">Supplier <span class="stock-required">*</span></label>
+                    {{ form.source_supplier }}
+                    {% for error in form.source_supplier.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="stock-form-label" for="{{ form.date_received.id_for_label }}">Date Received <span class="stock-required">*</span></label>
+                    {{ form.date_received }}
+                    {% for error in form.date_received.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="stock-form-label" for="{{ form.time_received.id_for_label }}">Time Received <span class="stock-required">*</span></label>
+                    {{ form.time_received }}
+                    {% for error in form.time_received.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="stock-form-label" for="{{ form.expiration_date.id_for_label }}">Expiration Date <span class="stock-required">*</span></label>
+                    {{ form.expiration_date }}
+                    {% for error in form.expiration_date.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="stock-field--full">
+                    <label class="stock-form-label" for="{{ form.remarks.id_for_label }}">Notes / Remarks</label>
+                    {{ form.remarks }}
+                    {% for error in form.remarks.errors %}<p class="stock-field-error">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+            <div class="stock-actions">
+                <a href="{% url 'inventory:medicine_list' %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary" id="save-stock-button">Save Stock</button>
+            </div>
+        </form>
+        <script>
+            (function () {
+                var form = document.getElementById('add-stock-form');
+                var button = document.getElementById('save-stock-button');
+                if (!form || !button) return;
+                form.addEventListener('submit', function (event) {
+                    if (form.dataset.submitting === 'true') {
+                        event.preventDefault();
+                        return;
+                    }
+                    form.dataset.submitting = 'true';
+                    button.disabled = true;
+                    button.textContent = 'Saving...';
+                });
+            })();
+        </script>
+    </div>
+</div>
+{% endblock %}

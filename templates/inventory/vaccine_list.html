@@ -1,5 +1,69 @@
 {% extends 'base.html' %}
 {% block title %}Vaccine Inventory - ABTC System{% endblock %}
+{% block extra_head %}
+{% if request.user.role == 'nurse' %}
+<style>
+    .btn-view-vaccine {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 42px;
+        padding: 10px 22px;
+        border-radius: 25px;
+        background-color: #157A61;
+        color: #FFFFFF;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        text-decoration: none;
+        box-shadow: 0 2px 6px rgba(8, 41, 31, .18);
+        transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .btn-view-vaccine:hover {
+        background-color: #0D5B48;
+        color: #FFFFFF;
+        box-shadow: 0 4px 10px rgba(8, 41, 31, .24);
+    }
+    .btn-view-vaccine:active { transform: translateY(1px); }
+    .btn-view-vaccine svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+    .vaccine-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .btn-add-stock-vaccine {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 42px;
+        padding: 10px 20px;
+        border-radius: 25px;
+        border: 1.5px solid #157A61;
+        background-color: #FFFDF7;
+        color: #0D5B48;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        text-decoration: none;
+        transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .btn-add-stock-vaccine:hover {
+        background-color: #EAF4EF;
+        color: #0D5B48;
+        box-shadow: 0 4px 10px rgba(8, 41, 31, .16);
+    }
+    .btn-add-stock-vaccine:active { transform: translateY(1px); }
+    .btn-add-stock-vaccine svg { width: 15px; height: 15px; flex: 0 0 auto; }
+    .table-cell.table-cell--actions { vertical-align: middle; }
+</style>
+{% endif %}
+{% endblock %}
 {% block content %}
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-xl font-bold text-ink">Vaccine Inventory</h1>
@@ -19,7 +83,11 @@
                 <tr class="border-b border-line">
                     <th class="table-header">Vaccine</th>
                     <th class="table-header">Brand</th>
+                    {% if request.user.role == 'nurse' %}
+                    <th class="table-header">Batches</th>
+                    {% else %}
                     <th class="table-header">Batch</th>
+                    {% endif %}
                     <th class="table-header">Available</th>
                     <th class="table-header">Used</th>
                     <th class="table-header">Expiry</th>
@@ -32,6 +100,13 @@
                 <tr class="hover:bg-sage-50 transition-colors">
                     <td class="table-cell font-medium">{{ item.vaccine_name }}</td>
                     <td class="table-cell">{{ item.brand }}</td>
+                    {% if request.user.role == 'nurse' %}
+                    <td class="table-cell text-muted">{{ item.batch_label }}</td>
+                    <td class="table-cell"><span class="font-semibold {% if item.quantity_available <= 0 %}text-red-600{% elif item.status_label == 'Low Stock' %}text-orange-600{% else %}text-emerald-700{% endif %}">{{ item.quantity_available }}</span></td>
+                    <td class="table-cell text-muted">{{ item.quantity_used }}</td>
+                    <td class="table-cell text-muted" title="{{ item.expiry_title }}">{{ item.expiry_label }}</td>
+                    <td class="table-cell"><span class="status-badge {{ item.status_class }}">{{ item.status_label }}</span></td>
+                    {% else %}
                     <td class="table-cell text-xs font-mono">{{ item.batch_number }}</td>
                     <td class="table-cell"><span class="font-semibold {% if item.quantity_available <= 0 %}text-red-600{% elif item.is_low_stock %}text-orange-600{% else %}text-emerald-700{% endif %}">{{ item.quantity_available }}</span></td>
                     <td class="table-cell text-muted">{{ item.quantity_used }}</td>
@@ -41,7 +116,17 @@
                         {% elif item.is_low_stock %}<span class="status-badge bg-yellow-100 text-yellow-800">Low Stock</span>
                         {% else %}<span class="status-badge bg-green-100 text-green-800">Available</span>{% endif %}
                     </td>
+                    {% endif %}
+                    {% if request.user.role == 'nurse' %}
+                    <td class="table-cell table-cell--actions text-right">
+                        <div class="vaccine-actions">
+                            <a href="{% url 'inventory:vaccine_detail' item.pk %}" class="btn-view-vaccine">View <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+                            <a href="{% url 'inventory:vaccine_add_stock' item.pk %}" class="btn-add-stock-vaccine"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg> Add Stock</a>
+                        </div>
+                    </td>
+                    {% else %}
                     <td class="table-cell text-right"><a href="{% url 'inventory:vaccine_detail' item.pk %}" class="btn-secondary btn-xs">View</a></td>
+                    {% endif %}
                 </tr>
                 {% empty %}
                 <tr><td colspan="8" class="text-center py-8 text-muted">No vaccine inventory found.</td></tr>

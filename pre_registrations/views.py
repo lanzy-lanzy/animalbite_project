@@ -7,13 +7,28 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from audit.models import AuditLog
 from utils.qr import qr_png_bytes, build_pre_registration_payload
+from utils.redirects import redirect_back
 
-from .forms import PatientSignupPreRegistrationForm, StaffPreRegistrationForm, StatusLookupForm
+from .forms import (
+    PatientSignupPreRegistrationForm,
+    RejectPreRegistrationForm,
+    StaffPreRegistrationForm,
+    StatusLookupForm,
+)
 from .models import PreRegistration
-from .services import convert_to_official_case
+from .services import (
+    RegistrationDeletionBlocked,
+    archive_pre_registration,
+    convert_to_official_case,
+    delete_pre_registration,
+    registration_retention_blockers,
+    retrieve_pre_registration,
+)
 
 
 def is_authorized_staff(user):
@@ -146,7 +161,7 @@ def staff_list(request):
     status = request.GET.get("status", "")
     barangay = request.GET.get("barangay", "")
     submitted_date = request.GET.get("date", "")
-    records = PreRegistration.objects.all()
+    records = PreRegistration.objects.filter(is_archived=False)
     if query:
         records = records.filter(
             Q(pre_registration_number__icontains=query)
@@ -163,6 +178,8 @@ def staff_list(request):
 
     paginator = Paginator(records, 20)
     page = paginator.get_page(request.GET.get("page"))
+    for record in page:
+        record.retention_blocked = bool(registration_retention_blockers(record))
     return render(
         request,
         "pre_registrations/staff_list.html",
@@ -177,6 +194,84 @@ def staff_list(request):
     )
 
 
+def _retention_block_message(number, blockers):
+    return (
+        f"Permanent deletion of online registration {number} is blocked by the medical "
+        f"record-retention policy: {', '.join(blockers)}. Nothing was deleted. "
+        "Archive it instead to remove it from active lists while keeping the record."
+    )
+
+
+@login_required
+@require_POST
+def staff_delete(request, pk):
+    if getattr(request.user, "role", "") != "admin":
+        messages.error(request, "Only the System Administrator can delete online registrations.")
+        return redirect("pre_registrations:staff_list")
+
+    record = get_object_or_404(PreRegistration, pk=pk)
+    number = record.pre_registration_number
+    blockers = registration_retention_blockers(record)
+    if blockers:
+        messages.error(request, _retention_block_message(number, blockers))
+        return redirect("pre_registrations:staff_list")
+
+    try:
+        delete_pre_registration(record, request.user)
+    except RegistrationDeletionBlocked as exc:
+        messages.error(request, _retention_block_message(number, exc.labels))
+        return redirect("pre_registrations:staff_list")
+
+    messages.success(request, f"Online registration {number} was permanently deleted.")
+    return redirect("pre_registrations:staff_list")
+
+
+@login_required
+@require_POST
+def staff_archive(request, pk):
+    if getattr(request.user, "role", "") != "admin":
+        messages.error(request, "Only the System Administrator can archive online registrations.")
+        return redirect("pre_registrations:staff_list")
+
+    record = get_object_or_404(PreRegistration, pk=pk)
+    already_archived = archive_pre_registration(record, request.user)
+    if already_archived:
+        messages.info(
+            request,
+            f"Online registration {record.pre_registration_number} is already archived.",
+        )
+    else:
+        messages.success(
+            request,
+            f"Online registration {record.pre_registration_number} was archived and removed "
+            "from the active list. The registration and any linked patient records were preserved.",
+        )
+    return redirect("pre_registrations:staff_list")
+
+
+@login_required
+@require_POST
+def staff_retrieve(request, pk):
+    if getattr(request.user, "role", "") != "admin":
+        messages.error(request, "Only the System Administrator can retrieve online registrations.")
+        return redirect_back(request, "audit:audit_list")
+
+    record = get_object_or_404(PreRegistration, pk=pk)
+    was_archived = retrieve_pre_registration(record, request.user)
+    if not was_archived:
+        messages.info(
+            request,
+            f"Online registration {record.pre_registration_number} is not archived.",
+        )
+    else:
+        messages.success(
+            request,
+            f"Online registration {record.pre_registration_number} was retrieved and restored "
+            "to the active list.",
+        )
+    return redirect_back(request, "audit:audit_list")
+
+
 @login_required
 @user_passes_test(is_authorized_staff)
 def staff_detail(request, pk):
@@ -184,7 +279,11 @@ def staff_detail(request, pk):
     return render(
         request,
         "pre_registrations/staff_detail.html",
-        {"record": record, "duplicates": record.possible_duplicates()},
+        {
+            "record": record,
+            "duplicates": record.possible_duplicates(),
+            "reject_form": RejectPreRegistrationForm(),
+        },
     )
 
 
@@ -196,6 +295,15 @@ def staff_edit(request, pk):
         form = StaffPreRegistrationForm(request.POST, instance=record)
         if form.is_valid():
             updated = form.save()
+            if (
+                updated.status == PreRegistration.Status.REJECTED
+                and not updated.rejected_at
+            ):
+                updated.rejected_by = request.user
+                updated.rejected_at = timezone.now()
+                updated.save(
+                    update_fields=["rejected_by", "rejected_at", "updated_at"]
+                )
             AuditLog.objects.create(
                 user=request.user,
                 action="UPDATE_PRE_REGISTRATION",
@@ -210,8 +318,67 @@ def staff_edit(request, pk):
 
 @login_required
 @user_passes_test(is_authorized_staff)
+def staff_reject(request, pk):
+    record = get_object_or_404(PreRegistration, pk=pk)
+    if record.converted_case_id:
+        messages.error(request, "Converted registrations cannot be rejected.")
+        return redirect("pre_registrations:staff_detail", pk=record.pk)
+    if request.method != "POST":
+        return redirect("pre_registrations:staff_detail", pk=record.pk)
+
+    form = RejectPreRegistrationForm(request.POST)
+    if form.is_valid():
+        record.status = PreRegistration.Status.REJECTED
+        record.rejection_reason = form.cleaned_data["reason"]
+        record.rejected_by = request.user
+        record.rejected_at = timezone.now()
+        record.save(
+            update_fields=[
+                "status",
+                "rejection_reason",
+                "rejected_by",
+                "rejected_at",
+                "updated_at",
+            ]
+        )
+        AuditLog.objects.create(
+            user=request.user,
+            action="REJECT_PRE_REGISTRATION",
+            description=(
+                f"Rejected online registration {record.pre_registration_number}: "
+                f"{record.rejection_reason}"
+            ),
+        )
+        messages.success(
+            request,
+            f"Online registration {record.pre_registration_number} rejected. "
+            "The patient will see the reason when checking its status.",
+        )
+        return redirect("pre_registrations:staff_detail", pk=record.pk)
+
+    messages.error(request, "Please provide a reason for rejecting this registration.")
+    return render(
+        request,
+        "pre_registrations/staff_detail.html",
+        {
+            "record": record,
+            "duplicates": record.possible_duplicates(),
+            "reject_form": form,
+        },
+    )
+
+
+@login_required
+@user_passes_test(is_authorized_staff)
 def convert(request, pk):
     record = get_object_or_404(PreRegistration, pk=pk)
+    if record.status == PreRegistration.Status.REJECTED:
+        messages.error(
+            request,
+            "This online registration was rejected. Change its status before "
+            "converting it to an official case.",
+        )
+        return redirect("pre_registrations:staff_detail", pk=record.pk)
     duplicates = record.possible_duplicates()
     if duplicates.exists() and request.POST.get("confirm_duplicates") != "1":
         return render(

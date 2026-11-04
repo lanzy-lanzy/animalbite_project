@@ -71,6 +71,7 @@
                         {% if dose.dose_status == 'completed' %}bg-emerald-600 border-emerald-600 text-white
                         {% elif dose.dose_status == 'missed' %}bg-red-500 border-red-500 text-white
                         {% elif dose.dose_status == 'scheduled' %}bg-white border-emerald-300 text-emerald-700
+                        {% elif dose.dose_status == 'pending' %}bg-amber-50 border-amber-400 text-amber-700
                         {% else %}bg-white border-line text-muted{% endif %}">
                         {% if dose.dose_status == 'completed' %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                         {% elif dose.dose_status == 'missed' %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -84,9 +85,11 @@
                             {% if dose.scheduled_date == today %}<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white">Today</span>{% endif %}
                         </div>
                         <div class="grid grid-cols-2 gap-3 mt-3">
-                            <div class="rounded-xl bg-white border border-line p-3">
-                                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Scheduled</p>
-                                <p class="text-sm font-bold text-ink mt-1">{{ dose.scheduled_date|date:'M d, Y' }}</p>
+                            <div class="rounded-xl {% if dose.scheduled_date %}bg-white border border-line{% else %}bg-amber-50 border border-amber-200{% endif %} p-3">
+                                <p class="text-[11px] font-bold tracking-widest uppercase {% if dose.scheduled_date %}text-muted{% else %}text-amber-700{% endif %}">Scheduled</p>
+                                <p class="text-sm font-bold {% if dose.scheduled_date %}text-ink{% else %}text-amber-700{% endif %} mt-1">
+                                    {% if dose.scheduled_date %}{{ dose.scheduled_date|date:'M d, Y' }}{% else %}Pending Scheduling{% endif %}
+                                </p>
                             </div>
                             <div class="rounded-xl {% if dose.actual_date %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-dashed border-line{% endif %} p-3">
                                 <p class="text-[11px] font-bold tracking-widest uppercase {% if dose.actual_date %}text-emerald-700{% else %}text-muted{% endif %}">Taken on</p>
@@ -94,9 +97,11 @@
                             </div>
                         </div>
                     </div>
+                    {% if dose.scheduled_date %}
                     <div class="shrink-0 self-center">
                         <span class="text-[11px] font-bold text-muted">{{ dose.scheduled_date|date:'D' }}</span>
                     </div>
+                    {% endif %}
                 </div>
                 {% empty %}
                 <div class="text-center py-14">

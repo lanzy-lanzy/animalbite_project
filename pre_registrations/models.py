@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+import re
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -13,11 +14,19 @@ class PreRegistration(models.Model):
         FOR_VERIFICATION = "for_verification", "For Verification"
         VERIFIED = "verified", "Verified"
         CONVERTED = "converted", "Converted to Official Case"
+        REJECTED = "rejected", "Rejected"
         CANCELLED = "cancelled", "Cancelled"
         DUPLICATE = "duplicate", "Duplicate"
         NO_SHOW = "no_show", "No Show"
 
     SEX_CHOICES = [("male", "Male"), ("female", "Female")]
+    CIVIL_STATUS = [
+        ("single", "Single"),
+        ("married", "Married"),
+        ("widowed", "Widowed"),
+        ("separated", "Separated"),
+        ("divorced", "Divorced"),
+    ]
     ANIMAL_TYPES = [
         ("dog", "Dog"),
         ("cat", "Cat"),
@@ -61,6 +70,9 @@ class PreRegistration(models.Model):
     birthdate = models.DateField()
     age = models.PositiveIntegerField(default=0, editable=False)
     sex = models.CharField(max_length=10, choices=SEX_CHOICES)
+    civil_status = models.CharField(
+        max_length=20, choices=CIVIL_STATUS, blank=True, default=""
+    )
     contact_number = models.CharField(max_length=20)
     address = models.TextField()
     barangay = models.CharField(max_length=100)
@@ -68,6 +80,9 @@ class PreRegistration(models.Model):
     guardian_contact_number = models.CharField(max_length=20, blank=True)
     emergency_contact_name = models.CharField(max_length=200, blank=True)
     emergency_contact_number = models.CharField(max_length=20, blank=True)
+    medical_history = models.TextField()
+    allergy_info = models.TextField()
+    previous_rabies_vax = models.TextField()
     bite_datetime = models.DateTimeField()
     incident_place = models.CharField(max_length=255)
     incident_barangay = models.CharField(max_length=100)
@@ -82,6 +97,7 @@ class PreRegistration(models.Model):
     first_aid_given = models.TextField(blank=True)
     remarks = models.TextField(blank=True)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.SUBMITTED)
+    is_archived = models.BooleanField(default=False)
     consent_given = models.BooleanField(default=False)
     submitted_at = models.DateTimeField(default=timezone.now)
     verified_by = models.ForeignKey(
@@ -92,6 +108,15 @@ class PreRegistration(models.Model):
         related_name="verified_pre_registrations",
     )
     verified_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="rejected_pre_registrations",
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
     converted_patient = models.ForeignKey(
         "patients.Patient",
         on_delete=models.SET_NULL,
@@ -146,7 +171,7 @@ class PreRegistration(models.Model):
             self.age = self._calculate_age(self.birthdate, today)
         # Validate (exclude auto fields to avoid false errors during conversion)
         try:
-            self.full_clean(exclude=['pre_registration_number', 'qr_code', 'account', 'verified_by', 'converted_patient', 'converted_case'])
+            self.full_clean(exclude=['pre_registration_number', 'qr_code', 'account', 'verified_by', 'rejected_by', 'converted_patient', 'converted_case'])
         except ValidationError as e:
             if 'contact_number' in e.message_dict:
                 raise
@@ -170,6 +195,72 @@ class PreRegistration(models.Model):
             parts.append(self.suffix)
         return " ".join(parts)
 
+    def initials(self):
+        first = (self.first_name or "").strip()
+        last = (self.last_name or "").strip()
+        if first and last:
+            return f"{first[0]}{last[0]}".upper()
+        return (first[:2] or last[:2]).upper()
+
+    @staticmethod
+    def _contact_display(name, number):
+        name = (name or "").strip()
+        number = (number or "").strip()
+        if name and number:
+            return f"{name} · {number}"
+        return name or number
+
+    def guardian_display(self):
+        return self._contact_display(self.guardian_name, self.guardian_contact_number)
+
+    def emergency_contact_display(self):
+        return self._contact_display(
+            self.emergency_contact_name, self.emergency_contact_number
+        )
+
+    @staticmethod
+    def _collapse_repeated_words(tokens):
+        """Drop an immediately repeated phrase (e.g. a doubled province)."""
+        changed = True
+        while changed:
+            changed = False
+            total = len(tokens)
+            for size in range(total // 2, 0, -1):
+                for start in range(total - 2 * size + 1):
+                    if tokens[start:start + size] == tokens[start + size:start + 2 * size]:
+                        del tokens[start + size:start + 2 * size]
+                        changed = True
+                        break
+                if changed:
+                    break
+        return tokens
+
+    def formatted_address(self):
+        """Display-only address cleanup; the stored value is never changed.
+
+        Repeated phrases inside a segment and repeated comma-separated
+        segments are collapsed while preserving order, capitalization, and
+        every distinct component.
+        """
+        raw = re.sub(r"\s+", " ", (self.address or "").strip())
+        if not raw:
+            return ""
+        raw = re.sub(r"\s*,\s*", ", ", raw).strip(" ,")
+
+        parts = []
+        seen = set()
+        for segment in raw.split(","):
+            tokens = self._collapse_repeated_words(segment.split())
+            cleaned = " ".join(tokens).strip()
+            if not cleaned:
+                continue
+            key = cleaned.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            parts.append(cleaned)
+        return ", ".join(parts)
+
     def possible_duplicates(self):
         local_day = timezone.localtime(self.bite_datetime).date()
         day_start = timezone.make_aware(
@@ -183,6 +274,7 @@ class PreRegistration(models.Model):
             contact_number=self.contact_number,
             bite_datetime__gte=day_start,
             bite_datetime__lt=day_end,
+            is_archived=False,
         ).exclude(pk=self.pk)
 
     @classmethod
@@ -197,7 +289,8 @@ class PreRegistration(models.Model):
     ):
         """Active registrations sharing a full name or contact number.
 
-        Cancelled and duplicate records no longer block a fresh submission.
+        Cancelled, duplicate, and rejected records no longer block a fresh
+        submission.
         A signed-in patient reporting another bite under the same account is
         not a duplicate, so their own records are excluded.
         """
@@ -212,8 +305,12 @@ class PreRegistration(models.Model):
         if not query:
             return cls.objects.none()
 
-        duplicates = cls.objects.filter(query).exclude(
-            status__in=[cls.Status.CANCELLED, cls.Status.DUPLICATE]
+        duplicates = cls.objects.filter(query, is_archived=False).exclude(
+            status__in=[
+                cls.Status.CANCELLED,
+                cls.Status.DUPLICATE,
+                cls.Status.REJECTED,
+            ]
         )
         if exclude_pk:
             duplicates = duplicates.exclude(pk=exclude_pk)

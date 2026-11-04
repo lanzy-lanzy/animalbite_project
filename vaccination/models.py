@@ -17,12 +17,22 @@ class VaccinationSchedule(models.Model):
         return f"Schedule for {self.bite_case.case_number}"
 
 class VaccineDose(models.Model):
-    DOSE_STATUS = [('scheduled', 'Scheduled'), ('completed', 'Completed'), ('missed', 'Missed'), ('rescheduled', 'Rescheduled'), ('cancelled', 'Cancelled')]
+    DOSE_STATUS = [
+        ('pending', 'Pending Scheduling'),
+        ('scheduled', 'Scheduled'),
+        ('completed', 'Completed'),
+        ('missed', 'Missed'),
+        ('rescheduled', 'Rescheduled'),
+        ('cancelled', 'Cancelled'),
+    ]
 
     schedule = models.ForeignKey(VaccinationSchedule, on_delete=models.CASCADE, related_name='doses')
     dose_label = models.CharField(max_length=50)
-    scheduled_date = models.DateField()
+    # Left NULL until the nurse schedules the dose; only the 1st dose is dated by the doctor.
+    scheduled_date = models.DateField(null=True, blank=True)
+    protocol_day = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Day offset prescribed by the doctor's protocol")
     actual_date = models.DateField(null=True, blank=True)
+    actual_time = models.TimeField(null=True, blank=True, help_text="Time the dose was actually administered")
     vaccine_brand = models.CharField(max_length=100, blank=True)
     batch_number = models.CharField(max_length=100, blank=True)
     expiration_date = models.DateField(null=True, blank=True)
@@ -33,10 +43,55 @@ class VaccineDose(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['scheduled_date']
+        # Dose order must survive NULL scheduled dates (pending doses), so order by creation.
+        ordering = ['id']
 
     def __str__(self):
         return f"{self.dose_label} - {self.schedule.bite_case.case_number} ({self.get_dose_status_display()})"
+
+    ORDINALS = ('1st', '2nd', '3rd', '4th', '5th')
+
+    @property
+    def number_label(self):
+        """Ordinal label for the treatment plan table, e.g. '2nd Dose'."""
+        if self.pk is None:
+            return self.dose_label
+        position = self.schedule.doses.filter(pk__lte=self.pk).count()
+        if not position:
+            return self.dose_label
+        ordinal = self.ORDINALS[position - 1] if position <= len(self.ORDINALS) else f'{position}th'
+        return f'{ordinal} Dose'
+
+    @property
+    def clinical_date(self):
+        """Read-only record date: actual administration, else the nurse's appointment."""
+        return self.actual_date or self.scheduled_date
+
+    @property
+    def clinical_status(self):
+        """Read-only status label driven only by saved dose records."""
+        if self.dose_status == 'completed':
+            return 'Completed'
+        if self.dose_status == 'missed':
+            return 'Missed'
+        if self.dose_status == 'cancelled':
+            return 'Cancelled'
+        if self.dose_status == 'rescheduled':
+            return 'Rescheduled'
+        if self.scheduled_date:
+            return 'Scheduled'
+        return 'Pending Scheduling'
+
+    def expected_date(self):
+        """Protocol date for this dose, measured from the 1st dose."""
+        from datetime import timedelta
+
+        if self.protocol_day is None:
+            return None
+        first = self.schedule.doses.order_by('id').first()
+        if not first or first.pk == self.pk or not first.scheduled_date:
+            return None
+        return first.scheduled_date + timedelta(days=self.protocol_day)
 
 class FollowUpRecord(models.Model):
     FOLLOWUP_STATUS = [('pending', 'Pending'), ('completed', 'Completed'), ('missed', 'Missed'), ('rescheduled', 'Rescheduled'), ('contacted', 'Contacted')]
@@ -76,9 +131,15 @@ class AnimalObservation(models.Model):
 
 
 class SMSLog(models.Model):
+    MANUAL_TYPES = ('manual_immediate', 'manual_2days_before', 'manual_1day_before', 'manual_custom')
     REMINDER_CHOICES = [
+        ('schedule_set', 'Schedule Set'),
         ('3days_before', '3 Days Before'),
         ('on_day', 'On Day'),
+        ('manual_immediate', 'Manual – Send Now'),
+        ('manual_2days_before', 'Manual – 2 Days Before'),
+        ('manual_1day_before', 'Manual – 1 Day Before'),
+        ('manual_custom', 'Manual – Custom'),
     ]
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -110,3 +171,7 @@ class SMSLog(models.Model):
 
     def __str__(self):
         return f"SMS {self.get_reminder_type_display()} to {self.recipient} for {self.dose} - {self.status}"
+
+    @property
+    def is_manual(self):
+        return self.reminder_type in self.MANUAL_TYPES

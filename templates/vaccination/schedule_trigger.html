@@ -88,12 +88,17 @@
                 <span class="info-icon info-icon--gold">{{ forloop.counter }}</span>
                 <div class="min-w-0">
                     <p class="info-label">Day {{ d }}</p>
+                    {% if when %}
                     <p class="info-value">{{ when|date:'M d, Y' }}</p>
+                    {% else %}
+                    <p class="info-value text-amber-700">Pending Scheduling</p>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
         </div>
         <p class="text-xs font-medium text-muted mt-3">
+            Only the 1st dose is dated now ({{ base_date|date:'M d, Y' }}); the nurse assigns the remaining dates within the protocol intervals.
             Day offsets come from <b class="text-ink">Settings &rarr; Vaccination Days</b>. For a non-standard protocol, use
             <a href="{% url 'vaccination:schedule_create' case.pk %}" class="font-bold text-emerald-700 hover:underline">Custom schedule</a> instead.
         </p>

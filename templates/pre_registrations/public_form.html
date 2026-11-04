@@ -58,13 +58,15 @@
                 <div><label class="form-label">Suffix</label>
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5v14"/></svg>{{ form.suffix }}</div></div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
                 <div><label class="form-label">Birthdate *</label>
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M9 11h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>{{ form.birthdate }}</div>{% if form.birthdate.errors %}<p class="text-red-600 text-xs mt-1">{{ form.birthdate.errors.0 }}</p>{% endif %}</div>
                 <div><label class="form-label">Sex *</label>
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a4 4 0 100-8 4 4 0 000 8zM8 21v-1a4 4 0 014-4 4 4 0 014 4v1"/></svg>{{ form.sex }}</div></div>
+                <div><label class="form-label">Civil status</label>
+<div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>{{ form.civil_status }}</div></div>
                 <div><label class="form-label">Contact number *</label>
-<div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>{{ form.contact_number }}</div>{% if form.contact_number.help_text %}<p class="text-xs text-muted mt-1">{{ form.contact_number.help_text }}</p>{% endif %}{% if form.contact_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.contact_number.errors.0 }}</p>{% endif %}<p class="text-xs text-emerald-700 mt-1">SMS via RHUDumingag</p></div>
+<div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>{{ form.contact_number }}</div>{% if form.contact_number.help_text %}<p class="text-xs text-muted mt-1">{{ form.contact_number.help_text }}</p>{% endif %}{% if form.contact_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.contact_number.errors.0 }}</p>{% endif %}<p class="text-xs text-emerald-700 mt-1">SMS reminders enabled</p></div>
                 <div><label class="form-label">Barangay *</label>
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>{{ form.barangay }}</div></div>
             </div>
@@ -79,6 +81,19 @@
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>{{ form.emergency_contact_name }}</div></div>
                 <div><label class="form-label">Emergency contact number</label>
 <div class="field-wrap"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>{{ form.emergency_contact_number }}</div>{% if form.emergency_contact_number.help_text %}<p class="text-xs text-muted mt-1">{{ form.emergency_contact_number.help_text }}</p>{% endif %}{% if form.emergency_contact_number.errors %}<p class="text-red-600 text-xs mt-1">{{ form.emergency_contact_number.errors.0 }}</p>{% endif %}</div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="text-lg font-bold text-ink mb-1">Medical History</h2>
+            <p class="text-sm text-ink/70 mb-4">Required — the doctor checks these before giving anti-rabies treatment.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="form-label">Medical history *</label>
+<div class="field-wrap field-wrap--area{% if form.medical_history.errors %} has-error{% endif %}"><svg class="field-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>{{ form.medical_history }}</div>{% if form.medical_history.errors %}<p class="text-red-600 text-xs mt-1">{{ form.medical_history.errors.0 }}</p>{% endif %}</div>
+                <div><label class="form-label">Allergies *</label>
+<div class="field-wrap field-wrap--area{% if form.allergy_info.errors %} has-error{% endif %}"><svg class="field-icon !text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>{{ form.allergy_info }}</div>{% if form.allergy_info.errors %}<p class="text-red-600 text-xs mt-1">{{ form.allergy_info.errors.0 }}</p>{% endif %}</div>
+                <div><label class="form-label">Previous rabies vaccination *</label>
+<div class="field-wrap field-wrap--area{% if form.previous_rabies_vax.errors %} has-error{% endif %}"><svg class="field-icon !text-gold-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>{{ form.previous_rabies_vax }}</div>{% if form.previous_rabies_vax.errors %}<p class="text-red-600 text-xs mt-1">{{ form.previous_rabies_vax.errors.0 }}</p>{% endif %}</div>
             </div>
         </section>
 

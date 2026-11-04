@@ -113,6 +113,9 @@ class Command(BaseCommand):
             "body_part_affected": "right hand",
             "number_of_wounds": 1,
             "wound_washed": True,
+            "medical_history": "None",
+            "allergy_info": "None",
+            "previous_rabies_vax": "None",
             "consent_given": True,
         }
         if converted:

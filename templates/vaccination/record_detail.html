@@ -1,0 +1,728 @@
+{% extends 'base.html' %}
+{% block title %}{% if assessment_only %}Doctor's Assessment{% elif nurse_view %}Doctor Findings{% else %}Vaccination Record{% endif %} — {{ patient.full_name }}{% endblock %}
+{% block extra_head %}
+<style>
+  /* ---------- Record hero — forest-green patient header ---------- */
+  .record-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    width: 100%;
+    padding: 24px 28px;
+    margin-bottom: 1rem;
+    border-radius: 22px;
+    background:
+      radial-gradient(130% 180% at 100% 0%, rgba(45,212,168,.22) 0%, rgba(45,212,168,0) 58%),
+      linear-gradient(118deg, #063d2e 0%, #074836 52%, #052f24 100%);
+    box-shadow: 0 22px 42px -26px rgba(3,40,30,.85), 0 4px 14px rgba(6,61,46,.16), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .record-hero__waves {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(58%, 480px);
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .record-hero__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+  }
+  .record-hero__avatar {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 20px;
+    background: linear-gradient(150deg, #fffdf7 0%, #f2edde 100%);
+    border: 1.5px solid #a7f3d0;
+    box-shadow: 0 0 0 5px rgba(110,231,183,.10), 0 14px 28px -14px rgba(0,0,0,.6);
+  }
+  .record-hero__initials {
+    color: #063d2e;
+    font-size: 31px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: .04em;
+    user-select: none;
+  }
+  .record-hero__divider {
+    flex: 0 0 auto;
+    width: 2px;
+    height: 64px;
+    margin: 0 24px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(167,243,208,0), #a7f3d0 18%, #a7f3d0 82%, rgba(167,243,208,0));
+    opacity: .9;
+  }
+  .record-hero__eyebrow {
+    margin: 0 0 4px;
+    color: #a7f3d0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .record-hero__name {
+    min-width: 0;
+    margin: 0;
+    font-size: clamp(26px, 3.2vw, 34px);
+    font-weight: 700;
+    line-height: 1.16;
+    color: #fff;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+  .record-hero__badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-left: auto;
+  }
+  .badge-hero {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .85rem;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-hero--final { background: #6ee7b7; color: #063d2e; }
+  .badge-hero--draft { background: #fbbf24; color: #3f2606; }
+  .badge-hero--view {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.35);
+    color: #e6fff5;
+  }
+  .record-hero__meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .75rem 1.25rem;
+    width: 100%;
+    padding-top: 16px;
+    border-top: 1px solid rgba(167,243,208,.25);
+  }
+  .hero-meta-label {
+    margin: 0;
+    color: #a7f3d0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .hero-meta-value {
+    margin: .18rem 0 0;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---------- Read-only section chrome ---------- */
+  .section-num {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 auto;
+    border-radius: .5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #052e22;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .record-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .record-step--gold {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+  }
+  .record-step--dark {
+    background: #052e22;
+    border-color: #052e22;
+    color: #fff;
+  }
+  .record-subhead {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .5rem;
+    color: #7a5c14;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .record-group-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .65rem;
+    color: #052e22;
+    font-size: .95rem;
+    font-weight: 700;
+  }
+  .dose-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: .85rem;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid rgba(146,124,84,.22);
+  }
+  .dose-table th {
+    padding: .6rem .8rem;
+    text-align: left;
+    background: rgba(241,233,216,.75);
+    color: #7a5c14;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(146,124,84,.22);
+  }
+  .dose-table td {
+    padding: .65rem .8rem;
+    color: #1a2b24;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(146,124,84,.14);
+  }
+  .dose-table tbody tr:last-child td { border-bottom: 0; }
+  .dose-table tbody tr:nth-child(even) td { background: rgba(250,246,237,.55); }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .6rem;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .status-pill--completed { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+  .status-pill--scheduled { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .status-pill--pending { background: #f1f5f3; color: #52655c; border: 1px solid #d8e0db; }
+  .status-pill--missed { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .status-pill--rescheduled { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+  .status-pill--cancelled { background: #e5e7eb; color: #4b5563; border: 1px solid #d1d5db; }
+  .record-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    padding: 2rem 1rem;
+    border-radius: 16px;
+    border: 1px dashed rgba(146,124,84,.45);
+    background: rgba(250,246,237,.65);
+    text-align: center;
+  }
+  .record-empty__title {
+    margin: 0;
+    color: #52655c;
+    font-size: .8rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .record-empty__text {
+    margin: .2rem 0 0;
+    color: #6b7c73;
+    font-size: .8rem;
+    font-weight: 500;
+  }
+  .rx-line { break-inside: avoid; page-break-inside: avoid; }
+
+  @media (max-width: 900px) {
+    .record-hero__meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .record-hero { padding: 20px; border-radius: 20px; }
+    .record-hero__avatar { width: 68px; height: 68px; border-radius: 16px; }
+    .record-hero__initials { font-size: 25px; }
+    .record-hero__divider { height: 50px; margin: 0 16px; }
+    .record-hero__name { font-size: clamp(22px, 6vw, 28px); }
+    .record-hero__badges { width: 100%; margin-left: 0; }
+    .record-hero__meta { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- A4 portrait print sheet ---------- */
+  @media print {
+    @page { size: A4 portrait; margin: 14mm 12mm; }
+
+    html, body {
+      height: auto !important;
+      overflow: visible !important;
+      background: #fff !important;
+      color: #111 !important;
+    }
+    body * { box-shadow: none !important; text-shadow: none !important; }
+    aside, header.topbar, .no-print, #abtcScanModal { display: none !important; }
+    .flex.h-screen {
+      display: block !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+    .flex-1.flex.flex-col { display: block !important; }
+    main.app-canvas {
+      display: block !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      background: #fff !important;
+    }
+    main.app-canvas > div { position: static !important; }
+    main.app-canvas::before,
+    main.app-canvas::after { display: none !important; }
+    .record-sheet {
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+    }
+
+    .record-hero {
+      display: block !important;
+      min-height: 0 !important;
+      padding: 12px 14px !important;
+      margin-bottom: 8px !important;
+      border: 2px solid #063d2e !important;
+      border-radius: 8px !important;
+      background: #fff !important;
+      color: #063d2e !important;
+    }
+    .record-hero__waves { display: none !important; }
+    .record-hero__top { display: flex !important; gap: 12px !important; }
+    .record-hero__avatar {
+      width: 54px !important;
+      height: 54px !important;
+      border: 1.5px solid #063d2e !important;
+      border-radius: 10px !important;
+      background: #fff !important;
+    }
+    .record-hero__initials { color: #063d2e !important; font-size: 21px !important; }
+    .record-hero__divider { height: 40px !important; margin: 0 14px !important; background: #9bb5a9 !important; }
+    .record-hero__name { color: #063d2e !important; font-size: 22px !important; }
+    .record-hero__eyebrow { color: #5b7266 !important; font-size: 9px !important; }
+    .record-hero__badges { margin-left: auto !important; gap: 4px !important; }
+    .badge-hero {
+      padding: 2px 8px !important;
+      border: 1px solid #063d2e !important;
+      background: #fff !important;
+      color: #063d2e !important;
+      font-size: 9px !important;
+    }
+    .record-hero__meta {
+      padding-top: 8px !important;
+      margin-top: 10px !important;
+      gap: 4px 12px !important;
+      border-top-color: #c9d7d0 !important;
+    }
+    .hero-meta-label { color: #5b7266 !important; font-size: 8.5px !important; }
+    .hero-meta-value { color: #111 !important; font-size: 11px !important; }
+
+    section.card {
+      border: 1px solid #a9b8b0 !important;
+      border-radius: 6px !important;
+      margin-bottom: 8px !important;
+      overflow: visible !important;
+      background: #fff !important;
+    }
+    .section-head {
+      padding: 6px 10px !important;
+      background: #fff !important;
+      color: #063d2e !important;
+      border-bottom: 1.5px solid #063d2e !important;
+    }
+    .section-head h3, .section-head span { color: #063d2e !important; }
+    .section-num { background: #063d2e !important; color: #fff !important; }
+    .record-step { background: #fff !important; border-color: #063d2e !important; color: #063d2e !important; }
+    .section-note { color: #5b7266 !important; font-size: 8.5px !important; }
+    .section-body { padding: 8px 10px !important; }
+    .section-body hr { border-color: #d8d1c1 !important; }
+
+    .info-tile {
+      padding: 6px 8px !important;
+      border: 1px solid #d8d1c1 !important;
+      border-radius: 6px !important;
+      background: #fff !important;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .info-label { color: #7a5c14 !important; font-size: 8.5px !important; }
+    .info-value { color: #111 !important; font-size: 10.5px !important; }
+
+    .record-subhead { color: #063d2e !important; font-size: 9px !important; }
+    .record-group-title { color: #063d2e !important; font-size: 10.5px !important; }
+    .dose-table { border-color: #a9b8b0 !important; border-radius: 4px !important; font-size: 10px !important; }
+    .dose-table th {
+      padding: 4px 6px !important;
+      background: #f2eee4 !important;
+      color: #063d2e !important;
+      font-size: 8.5px !important;
+    }
+    .dose-table td { padding: 4px 6px !important; font-size: 10px !important; }
+    .dose-table tr, .rx-line {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    thead { display: table-header-group; }
+    .record-empty {
+      padding: 10px !important;
+      border: 1px dashed #a9b8b0 !important;
+      background: #fff !important;
+    }
+    a { color: inherit !important; text-decoration: none !important; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="max-w-[1000px] mx-auto record-sheet">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4 no-print">
+    <div class="flex items-center gap-2">
+      <a href="{% if nurse_view %}{% url 'bite_cases:case_list' %}{% else %}{% url 'vaccination:patient_schedule_list' %}{% endif %}" class="p-2 rounded-lg hover:bg-white border border-transparent hover:border-line">← Back</a>
+      <div>
+        <h1 class="text-lg font-bold text-ink leading-none">{% if assessment_only %}Doctor's Assessment{% elif nurse_view %}Doctor Findings{% else %}Vaccination Record{% endif %}</h1>
+        <p class="text-xs font-medium text-muted mt-1">{% if assessment_only %}Read-only clinical assessment · no treatment edits{% elif nurse_view %}Read-only doctor assessment · patient record{% else %}Read-only patient record · view or print{% endif %}</p>
+      </div>
+    </div>
+    {% if not nurse_view and not assessment_only %}
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{% url 'patients:patient_detail' patient.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Patient File</a>
+      {% if case_schedule %}
+      <a href="{% url 'vaccination:schedule_detail' case_schedule.pk %}" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Manage Doses</a>
+      {% else %}
+      <a href="{% url 'bite_cases:case_detail' bite_case.pk %}" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Manage Case</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- PATIENT HEADER -->
+  <header class="record-hero" aria-label="Patient record summary">
+    <svg class="record-hero__waves" viewBox="0 0 460 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false">
+      <path d="M460 -20C392 22 356 78 326 200H460Z" fill="#0e7a58" opacity=".22"/>
+      <path d="M460 36C420 76 400 132 384 200H460Z" fill="#1aa37a" opacity=".16"/>
+      <path d="M460 84C440 118 432 160 426 200H460Z" fill="#6ee7b7" opacity=".10"/>
+      <path d="M196 200C262 118 330 66 460 36" fill="none" stroke="#34d399" stroke-opacity=".16" stroke-width="2"/>
+      <path d="M268 200C322 142 376 104 460 82" fill="none" stroke="#6ee7b7" stroke-opacity=".12" stroke-width="1.5"/>
+    </svg>
+    <div class="record-hero__top">
+      <div class="flex items-center min-w-0">
+        <div class="record-hero__avatar" aria-hidden="true">
+          <span class="record-hero__initials">{{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}</span>
+        </div>
+        <span class="record-hero__divider" aria-hidden="true"></span>
+        <div class="min-w-0">
+          <p class="record-hero__eyebrow">{% if assessment_only %}Doctor's Assessment{% elif nurse_view %}Doctor Findings{% else %}Vaccination Record{% endif %}</p>
+          <h2 class="record-hero__name">{{ patient.full_name }}</h2>
+        </div>
+      </div>
+      <div class="record-hero__badges">
+        {% if assessment and assessment.is_finalized %}
+        <span class="badge-hero badge-hero--final">ASSESSMENT FINALIZED</span>
+        {% elif assessment and assessment_only %}
+        <span class="badge-hero badge-hero--draft">Assessment Draft</span>
+        {% elif assessment %}
+        <span class="badge-hero badge-hero--draft">Draft</span>
+        {% else %}
+        <span class="badge-hero badge-hero--draft">No Assessment</span>
+        {% endif %}
+        <span class="badge-hero badge-hero--view">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Read Only
+        </span>
+      </div>
+    </div>
+    <div class="record-hero__meta">
+      <div>
+        <p class="hero-meta-label">Patient ID</p>
+        <p class="hero-meta-value font-mono">{{ patient.patient_number }}</p>
+      </div>
+      <div>
+        <p class="hero-meta-label">Case number</p>
+        <p class="hero-meta-value font-mono">{{ bite_case.case_number|default:"—" }}</p>
+      </div>
+      <div>
+        <p class="hero-meta-label">Vaccination started</p>
+        <p class="hero-meta-value">{{ first_dose_date|date:"F d, Y"|default:"Not yet set" }}</p>
+      </div>
+      <div>
+        <p class="hero-meta-label">Dose schedule</p>
+        <p class="hero-meta-value">{{ dose_schedule_label|default:"Not recorded" }}</p>
+      </div>
+    </div>
+  </header>
+
+  {% if assessment_only and assessment and not assessment.is_finalized %}
+  <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3" role="alert">
+    <p class="text-sm font-bold text-amber-900">ASSESSMENT DRAFT</p>
+    <p class="text-xs font-medium text-amber-800 mt-1">This assessment has not been finalized and signed. It is not an approved medication or vaccination order.</p>
+  </div>
+  {% endif %}
+
+  {% if not assessment_only %}
+  <!-- 1 · PATIENT INFORMATION -->
+  <section id="section-patient" class="card p-0 overflow-hidden mb-4">
+    <div class="section-head flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+      <h3 class="text-sm font-bold flex items-center gap-2"><span class="section-num">1</span> Patient Information</h3>
+      <span class="section-note text-xs font-bold uppercase tracking-widest text-emerald-200">Registered record · view only</span>
+    </div>
+    <div class="section-body p-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Patient ID</p><p class="info-value font-mono">{{ patient.patient_number }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Full name</p><p class="info-value">{{ patient.full_name }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Birthdate</p><p class="info-value">{{ patient.birthdate|date:"F d, Y"|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Age</p><p class="info-value">{{ patient.age }} years</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Sex</p><p class="info-value">{{ patient.get_sex_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Civil status</p><p class="info-value">{{ patient.get_civil_status_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Contact number</p><p class="info-value">{{ patient.contact_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Parent / guardian</p><p class="info-value">{{ patient.parent_guardian|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Emergency contact</p><p class="info-value">{% if patient.emergency_contact_name or patient.emergency_contact_number %}{% if patient.emergency_contact_name %}{{ patient.emergency_contact_name }}{% endif %}{% if patient.emergency_contact_number %}{% if patient.emergency_contact_name %} · {% endif %}{{ patient.emergency_contact_display }}{% endif %}{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Registered date</p><p class="info-value">{{ patient.created_at|date:"F d, Y · h:i A"|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Registered by</p><p class="info-value">{% if patient.created_by %}{{ patient.created_by.get_full_name|default:patient.created_by.username }}{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Complete address</p><p class="info-value">{% if patient.address %}{{ patient.address }}{% if patient.barangay and patient.barangay.name|lower not in patient.address|lower %} · {{ patient.barangay.name }}{% endif %}{% elif patient.barangay %}{{ patient.barangay.name }}{% else %}Not recorded{% endif %}</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · ANIMAL BITE CASE -->
+  <section id="section-case" class="card p-0 overflow-hidden mb-4">
+    <div class="section-head flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+      <h3 class="text-sm font-bold flex items-center gap-2"><span class="section-num">2</span> Animal Bite Case</h3>
+      <span class="section-note text-xs font-bold uppercase tracking-widest text-emerald-200">Reported case record</span>
+    </div>
+    <div class="section-body p-4">
+      {% if cases|length > 1 and not nurse_view and not assessment_only %}
+      <form method="get" class="no-print mb-3 flex flex-wrap items-end gap-2">
+        <div class="min-w-[220px]">
+          <label class="form-label" for="case-select">Viewing case</label>
+          <select id="case-select" name="case" class="form-input" onchange="this.form.submit()">
+            {% for c in cases %}
+            <option value="{{ c.pk }}" {% if c.pk == bite_case.pk %}selected{% endif %}>{{ c.case_number }} · {{ c.get_animal_type_display }} · {{ c.date_time_bite|date:"M d, Y" }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn-secondary">Show case</button>
+      </form>
+      {% endif %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Case number</p><p class="info-value font-mono">{{ bite_case.case_number }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Case status</p><p class="info-value">{{ bite_case.get_case_status_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Date of incident</p><p class="info-value">{{ bite_case.date_time_bite|date:"F d, Y"|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Time of incident</p><p class="info-value">{{ bite_case.date_time_bite|date:"h:i A"|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Place of incident</p><p class="info-value">{{ bite_case.place_of_incident|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Barangay</p><p class="info-value">{{ bite_case.incident_barangay|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Animal type</p><p class="info-value">{{ bite_case.get_animal_type_display|default:"Not recorded" }}{% if bite_case.animal_other %} ({{ bite_case.animal_other }}){% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Ownership</p><p class="info-value">{{ bite_case.get_animal_ownership_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Animal condition</p><p class="info-value">{{ bite_case.get_animal_condition_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Animal vaccination status</p><p class="info-value">{{ bite_case.get_animal_vax_status_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Exposure type</p><p class="info-value">{{ bite_case.get_exposure_type_display|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Number of wounds</p><p class="info-value">{% if bite_case.number_of_wounds is not None %}{{ bite_case.number_of_wounds }}{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Body part / wounds</p><p class="info-value">{{ bite_case.body_part_affected|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Wound washed immediately</p><p class="info-value">{% if bite_case.wound_washed_immediately is None %}Not recorded{% else %}{{ bite_case.wound_washed_immediately|yesno:"Yes,No" }}{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Date of consultation</p><p class="info-value">{{ bite_case.date_time_consultation|date:"F d, Y · h:i A"|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">First aid given</p><p class="info-value whitespace-pre-line">{{ bite_case.first_aid_given|default:"Not recorded" }}</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · VITAL SIGNS -->
+  <section id="section-vitals" class="card p-0 overflow-hidden mb-4">
+    <div class="section-head flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+      <h3 class="text-sm font-bold flex items-center gap-2"><span class="section-num">3</span> Vital Signs</h3>
+      <span class="section-note text-xs font-bold uppercase tracking-widest text-emerald-200">
+        {% if latest_vitals %}Recorded {{ latest_vitals.taken_at|date:"M d, Y h:i A" }}{% else %}Not recorded yet{% endif %}
+      </span>
+    </div>
+    <div class="section-body p-4">
+      {% if latest_vitals %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Date &amp; time taken</p><p class="info-value">{{ latest_vitals.taken_at|date:"F d, Y · h:i A" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Blood pressure (systolic / diastolic)</p><p class="info-value">{% if latest_vitals.bp_systolic or latest_vitals.bp_diastolic %}{{ latest_vitals.bp_display }} mmHg{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Temperature</p><p class="info-value">{% if latest_vitals.temperature %}{{ latest_vitals.temperature }} °C{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Pulse rate</p><p class="info-value">{% if latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }} bpm{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">SpO₂</p><p class="info-value">{% if latest_vitals.spo2 %}{{ latest_vitals.spo2 }} %{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Weight</p><p class="info-value">{% if latest_vitals.weight %}{{ latest_vitals.weight }} kg{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Height</p><p class="info-value">{% if latest_vitals.height %}{{ latest_vitals.height }} cm{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">BMI</p><p class="info-value">{{ latest_vitals.bmi|default:"Not recorded" }}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Pain scale</p><p class="info-value">{% if latest_vitals.pain_score is not None %}{{ latest_vitals.pain_score }} / 10{% else %}Not recorded{% endif %}</p></div></div>
+        <div class="info-tile"><div class="min-w-0"><p class="info-label">Recorded by</p><p class="info-value">{% if latest_vitals.taken_by %}{{ latest_vitals.taken_by.get_full_name|default:latest_vitals.taken_by.username }}{% else %}Not recorded{% endif %}</p></div></div>
+      </div>
+      {% else %}
+      <div class="record-empty">
+        <svg class="w-7 h-7 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        <p class="record-empty__title">NO VITALS YET</p>
+        <p class="record-empty__text">No vital signs recorded for this patient.</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% endif %}
+
+  <!-- 4 · CLINICAL ASSESSMENT -->
+  <section id="section-assessment" class="card p-0 overflow-hidden mb-4">
+    <div class="section-head flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-emerald-950 text-white">
+      <h3 class="text-sm font-bold flex items-center gap-2">{% if assessment_only %}Doctor's Clinical Assessment{% else %}<span class="section-num">4</span> Clinical Assessment{% endif %}</h3>
+      <span class="section-note text-xs font-bold uppercase tracking-widest text-emerald-200">Doctor findings · read-only</span>
+    </div>
+    <div class="section-body p-4">
+      {% if not assessment %}
+      <div class="record-empty">
+        <svg class="w-7 h-7 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <p class="record-empty__title">NO ASSESSMENT YET</p>
+        <p class="record-empty__text">No doctor assessment has been recorded for this case.</p>
+      </div>
+      {% else %}
+      <div class="space-y-4">
+        <div>
+          <h4 class="record-group-title"><span class="record-step">A</span> Chief Complaint</h4>
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Chief complaint</p><p class="info-value whitespace-pre-line">{{ assessment.chief_complaint|default:"Not recorded" }}</p></div></div>
+        </div>
+        <hr class="border-line">
+        <div>
+          <h4 class="record-group-title"><span class="record-step record-step--gold">B</span> Exposure Narrative (Verified)</h4>
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Narrative as verified by the doctor</p><p class="info-value whitespace-pre-line">{{ assessment.exposure_narrative|default:"Not recorded" }}</p></div></div>
+        </div>
+        <hr class="border-line">
+        <div>
+          <h4 class="record-group-title"><span class="record-step record-step--dark">C</span> Bite Category</h4>
+          <div class="info-tile info-tile--wide">
+            <div class="min-w-0">
+              <p class="info-label">WHO bite category</p>
+              {% if category_label %}
+              <p class="info-value">{{ category_label }}</p>
+              {% if category_description %}<p class="text-xs font-medium text-muted mt-1">{{ category_description }}</p>{% endif %}
+              {% else %}
+              <p class="info-value">Not recorded</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-5 border-line">
+
+      <!-- A · Dose schedule & vaccine -->
+      <div>
+        <h4 class="record-group-title"><span class="record-step">{% if assessment_only %}D{% else %}A{% endif %}</span> Dose Schedule &amp; Vaccine</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Dose schedule</p><p class="info-value">{{ dose_schedule_label|default:"Not recorded" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Date (1st dose)</p><p class="info-value">{{ first_dose_date|date:"F d, Y"|default:"Not yet set" }}</p></div></div>
+        </div>
+        <p class="record-subhead mt-4">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Dose Schedule Records
+        </p>
+        {% if dose_rows %}
+        <div class="overflow-x-auto">
+          <table class="dose-table">
+            <thead>
+              <tr>
+                <th scope="col">Dose</th>
+                <th scope="col">Date</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in dose_rows %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{% if row.date %}{{ row.date|date:"M d, Y" }}{% else %}Not yet set{% endif %}</td>
+                <td>
+                  <span class="status-pill {% if row.status_key == 'completed' %}status-pill--completed{% elif row.status_key == 'scheduled' %}status-pill--scheduled{% elif row.status_key == 'pending' %}status-pill--pending{% elif row.status_key == 'missed' %}status-pill--missed{% elif row.status_key == 'rescheduled' %}status-pill--rescheduled{% else %}status-pill--cancelled{% endif %}">{{ row.status }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-value text-muted">No dose records have been created for this case.</p></div></div>
+        {% endif %}
+      </div>
+
+      <hr class="my-5 border-line">
+
+      <!-- B · Vaccine brand -->
+      <div>
+        <h4 class="record-group-title"><span class="record-step record-step--gold">{% if assessment_only %}E{% else %}B{% endif %}</span> Vaccine Brand</h4>
+        <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Vaccine brand (from stock)</p><p class="info-value">{{ vaccine_brand|default:"Not recorded" }}</p></div></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Volume per dose (mL)</p><p class="info-value">{{ assessment.vaccine_dose_ml|default:"Not recorded" }}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity (vials/doses)</p><p class="info-value">{% if assessment.vaccine_quantity %}{{ assessment.vaccine_quantity }}{% else %}Not recorded{% endif %}</p></div></div>
+          <div class="info-tile"><div class="min-w-0"><p class="info-label">1st dose date</p><p class="info-value">{{ first_dose_date|date:"F d, Y"|default:"Not yet set" }}</p></div></div>
+        </div>
+      </div>
+
+      <hr class="my-5 border-line">
+
+      <!-- C · Treatment, prescription & follow-up -->
+      <div>
+        <h4 class="record-group-title"><span class="record-step record-step--dark">{% if assessment_only %}F{% else %}C{% endif %}</span> {% if assessment_only %}Treatment &amp; Prescription{% else %}Treatment, Prescription &amp; Follow-up{% endif %}</h4>
+        <div class="space-y-3">
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Treatment plan</p><p class="info-value whitespace-pre-line">{{ assessment.treatment_plan|default:"Not recorded" }}</p></div></div>
+
+          <div>
+            <p class="record-subhead mb-2">Prescription</p>
+            {% if prescriptions %}
+            <div class="space-y-2">
+              {% for rx in prescriptions %}
+              <div class="rx-line grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div class="info-tile"><div class="min-w-0"><p class="info-label">Prescription (from medicine inventory)</p><p class="info-value">{{ rx.medicine.label }}</p></div></div>
+                <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity</p><p class="info-value">{{ rx.quantity_display }}</p></div></div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="info-tile"><div class="min-w-0"><p class="info-label">Prescription</p><p class="info-value whitespace-pre-line">{{ assessment.prescription|default:"Not recorded" }}</p></div></div>
+              <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity</p><p class="info-value">Not recorded</p></div></div>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Dosage instructions — frequency &amp; duration</p><p class="info-value whitespace-pre-line">{{ assessment.dosage_instructions|default:"Not recorded" }}</p></div></div>
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Follow-up instructions</p><p class="info-value whitespace-pre-line">{{ assessment.follow_up_instructions|default:"Not recorded" }}</p></div></div>
+          <div class="info-tile info-tile--wide"><div class="min-w-0"><p class="info-label">Additional notes / allergy re-check</p><p class="info-value whitespace-pre-line">{{ assessment.additional_notes|default:"Not recorded" }}</p></div></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="mt-4 flex flex-wrap items-center no-print" style="justify-content:flex-start;">
+    <button type="button" onclick="window.print()" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-emerald-950 text-white text-sm font-semibold hover:bg-emerald-900 shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>
+      Print Sheet
+    </button>
+  </div>
+</div>
+{% endblock %}

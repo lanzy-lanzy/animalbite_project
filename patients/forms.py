@@ -13,6 +13,7 @@ class PatientForm(forms.ModelForm):
             'middle_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'M.'}),
             'last_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Dela Cruz'}),
             'suffix': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Jr / Sr'}),
+            'profile_image': forms.ClearableFileInput(attrs={'class': 'form-input', 'accept': 'image/*'}),
             'birthdate': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
             'sex': forms.Select(attrs={'class': 'form-input'}),
             'civil_status': forms.Select(attrs={'class': 'form-input'}),
@@ -28,7 +29,7 @@ class PatientForm(forms.ModelForm):
             'remarks': forms.Textarea(attrs={'rows': 2, 'class': 'form-input', 'placeholder': 'Additional notes'}),
         }
         help_texts = {
-            'contact_number': 'Required for SMS reminders via RHUDumingag: 09123456789, 639123456789, or +639123456789.',
+            'contact_number': 'Required for SMS reminders: 09123456789, 639123456789, or +639123456789.',
             'emergency_contact_number': 'Optional, but must be valid PH mobile if provided (for fallback SMS).',
         }
 

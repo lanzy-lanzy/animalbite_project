@@ -2,7 +2,8 @@ from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_GET
 
 from functools import wraps
 
@@ -44,6 +45,7 @@ def dashboard(request):
         dose_status='scheduled', scheduled_date=today
     ).count()
     missed_count = VaccineDose.objects.filter(dose_status='missed').count()
+    pending_scheduling_count = VaccineDose.objects.filter(dose_status='pending').count()
     upcoming_count = VaccineDose.objects.filter(
         dose_status='scheduled', scheduled_date__gt=today
     ).count()
@@ -66,6 +68,7 @@ def dashboard(request):
         'due_today': due_today,
         'due_today_count': due_today_count,
         'missed_count': missed_count,
+        'pending_scheduling_count': pending_scheduling_count,
         'upcoming_count': upcoming_count,
         'sms_pending': sms_pending,
         'sms_failed': sms_failed,
@@ -75,3 +78,34 @@ def dashboard(request):
         'awaiting_schedule_count': awaiting_schedule_count,
     }
     return render(request, 'nurse/dashboard.html', context)
+
+
+@login_required
+@nurse_required
+@require_GET
+def doctor_finding_detail(request, case_pk):
+    """Nurse Portal: the doctor's saved findings for one bite case, read-only.
+
+    The page is case-scoped so records from another bite case of the same
+    patient are never mixed in. It renders exactly what is stored and never
+    writes patient, assessment, dose, prescription, or inventory data.
+    """
+    from bite_cases.models import AnimalBiteCase
+    from vaccination.views import build_record_context
+
+    bite_case = get_object_or_404(
+        AnimalBiteCase.objects.select_related(
+            'patient__barangay', 'patient__created_by', 'created_by',
+        ),
+        pk=case_pk,
+    )
+    if bite_case.is_archived:
+        messages.error(
+            request,
+            'This bite case has been archived and is available to the System Administrator only.',
+        )
+        return redirect('bite_cases:case_list')
+
+    context = build_record_context(bite_case)
+    context.update({'nurse_view': True, 'cases': [bite_case]})
+    return render(request, 'vaccination/record_detail.html', context)

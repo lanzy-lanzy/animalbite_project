@@ -29,6 +29,7 @@ class Patient(models.Model):
     middle_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100)
     suffix = models.CharField(max_length=20, blank=True)
+    profile_image = models.ImageField(upload_to="patients/profile/", blank=True, null=True)
     birthdate = models.DateField()
     age = models.IntegerField(editable=False, default=0)
     sex = models.CharField(max_length=10, choices=SEX_CHOICES)

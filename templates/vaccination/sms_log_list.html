@@ -1,194 +1,558 @@
 {% extends 'base.html' %}
 {% block title %}SMS Reminders — ABTC{% endblock %}
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-{% endblock %}
 {% block content %}
-<div class="space-y-6">
-    <!-- Hero -->
-    <div class="relative overflow-hidden rounded-[1.5rem] border text-white shadow-xl shadow-emerald-950/10" style="background:linear-gradient(155deg,#0d352b 0%,#08201a 55%,#061a15 100%);border-color:rgba(201,162,39,.35);">
-        <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
-        <div class="absolute -top-16 -right-16 w-72 h-72 rounded-full blur-3xl opacity-15" style="background: radial-gradient(circle at 30% 30%, #c9a227, transparent 65%);"></div>
-        <div class="relative p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-            <div>
-                <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Semaphore · RHUDumingag · Auto 3-days & On-day
-                </p>
-                <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight mt-3">SMS Reminders (Semaphore)</h1>
-                <p class="text-sm font-medium text-sage-200 mt-1.5 max-w-2xl">Vaccine schedules trigger <span class="text-white font-bold">3 days before</span> and <span class="text-white font-bold">on-day</span>. Sender: <span class="text-white font-bold">RHUDumingag</span>. Uses <code class="text-sage-300">SEMAPHORE_API_KEY</code>. Disable via <code class="text-sage-300">SEMAPHORE_ENABLED=False</code> for dry-run.</p>
-                <div class="flex flex-wrap gap-2 mt-4 text-xs font-bold">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-ink">1 <span class="font-medium text-muted">Schedule</span></span>
-                    <span class="text-white/40">→</span>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-white">3 days before SMS</span>
-                    <span class="text-white/40">→</span>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white">On-day SMS</span>
-                </div>
-            </div>
-            <div class="flex gap-3 shrink-0 flex-wrap">
-                <div class="bg-white rounded-2xl p-4 min-w-[118px] shadow-xl">
-                    <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Logs</p>
-                    <p class="font-display text-2xl font-bold text-ink">{{ total }}</p>
-                    <p class="text-xs font-medium text-muted">{{ sent }} sent · {{ failed }} failed</p>
-                </div>
-                <div class="hidden sm:flex flex-col gap-2">
-                    <div class="bg-emerald-500 text-white rounded-2xl px-4 py-3 shadow-xl min-w-[118px]">
-                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Sent / Queued</p>
-                        <p class="font-display text-xl font-bold">{{ sent }} / {{ queued }}</p>
-                    </div>
-                    <div class="bg-red-500 text-white rounded-2xl px-4 py-3 shadow-xl min-w-[118px]">
-                        <p class="text-[11px] font-bold tracking-widest uppercase text-white/80">Failed</p>
-                        <p class="font-display text-xl font-bold">{{ failed }}</p>
-                    </div>
-                </div>
-            </div>
+<div class="space-y-5">
+    <!-- Page header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h1 class="font-display text-xl font-bold text-ink">SMS Reminders</h1>
+            <p class="text-sm font-medium text-muted mt-1">Manage and monitor patient vaccination reminders.</p>
         </div>
-        <!-- Trigger bar -->
-        <div class="relative px-6 pb-5 flex flex-wrap gap-2">
-            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="inline-flex gap-2">
-                {% csrf_token %}
-                <input type="hidden" name="rtype" value="all">
-                <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-emerald-950 text-sm font-bold hover:bg-sage-50 shadow">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Trigger Now (all due)
-                </button>
-            </form>
-            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="inline-flex gap-2">
-                {% csrf_token %}
-                <input type="hidden" name="rtype" value="3days">
-                <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 shadow">
-                    Trigger 3-days only
-                </button>
-            </form>
-            <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="inline-flex gap-2">
-                {% csrf_token %}
-                <input type="hidden" name="rtype" value="on_day">
-                <input type="hidden" name="dry_run" value="1">
-                <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/15 text-white border border-white/15 text-sm font-bold hover:bg-white/20">
-                    Dry Run (simulate)
-                </button>
-            </form>
-            <span class="ml-auto hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-sage-300">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Run via cron: <code class="bg-white/10 px-1.5 py-0.5 rounded">python manage.py send_vaccination_reminders</code>
-            </span>
+        {% if can_send_due %}
+        <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}" class="shrink-0">
+            {% csrf_token %}
+            <input type="hidden" name="rtype" value="all">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-emerald-900 text-white text-sm font-bold px-5 py-2.5 shadow-sm hover:bg-emerald-900 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                Send Due Reminders
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3.5">
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Total</p>
+            <p class="font-display text-2xl font-bold text-emerald-950 mt-1">{{ total }}</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3.5">
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Sent</p>
+            <p class="font-display text-2xl font-bold text-emerald-700 mt-1">{{ sent }}</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3.5">
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Queued</p>
+            <p class="font-display text-2xl font-bold text-amber-600 mt-1">{{ queued }}</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3.5">
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Failed</p>
+            <p class="font-display text-2xl font-bold text-red-600 mt-1">{{ failed }}</p>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card">
-        <form method="GET" class="space-y-4">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                <div class="lg:col-span-4">
-                    <label class="form-label">Search patient / case / number / message</label>
-                    <div class="relative">
-                        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <input type="text" name="q" value="{{ q }}" placeholder="639..., PAT-..., Juan, ABC-..." class="form-input pl-9">
-                    </div>
-                </div>
-                <div class="lg:col-span-2">
-                    <label class="form-label">Reminder type</label>
-                    <select name="type" class="form-input">
-                        <option value="">All</option>
-                        <option value="3days_before" {% if reminder_type == '3days_before' %}selected{% endif %}>3 Days Before</option>
-                        <option value="on_day" {% if reminder_type == 'on_day' %}selected{% endif %}>On Day</option>
-                    </select>
-                </div>
-                <div class="lg:col-span-2">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-input">
-                        <option value="">All</option>
-                        <option value="sent" {% if status == 'sent' %}selected{% endif %}>Sent</option>
-                        <option value="queued" {% if status == 'queued' %}selected{% endif %}>Queued</option>
-                        <option value="failed" {% if status == 'failed' %}selected{% endif %}>Failed</option>
-                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
-                    </select>
-                </div>
-                <div class="lg:col-span-2">
-                    <label class="form-label">From</label>
-                    <input type="date" name="from" value="{{ date_from }}" class="form-input">
-                </div>
-                <div class="lg:col-span-2 flex gap-2 items-end">
-                    <button type="submit" class="btn-primary flex-1">Filter</button>
-                    <a href="{% url 'vaccination:sms_log_list' %}" class="btn-secondary">Reset</a>
-                </div>
+    <!-- How reminders work -->
+    <section class="rounded-2xl bg-emerald-950 text-white px-4 py-4 sm:px-5">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-sm font-bold">How SMS Reminders Work</h2>
+            <span class="hidden sm:inline text-[11px] font-medium text-sage-300">Sent automatically — no manual sending needed</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div class="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-400">Step 1 · Schedule Set</p>
+                <p class="text-sm font-bold mt-1">Confirmation SMS</p>
+                <p class="text-xs font-medium text-sage-300 mt-1">Sent when the nurse sets the dose date.</p>
             </div>
-            <div class="flex items-center gap-2 text-xs font-medium text-muted">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sender <code class="bg-sage-50 border border-line px-1.5 py-0.5 rounded font-bold text-ink">RHUDumingag</code> · API <code class="bg-sage-50 border border-line px-1.5 py-0.5 rounded">https://api.semaphore.co/api/v4/messages</code>
-                <a href="https://semaphore.co/docs" target="_blank" class="ml-2 text-emerald-700 font-bold hover:underline">Docs →</a>
+            <div class="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-400">Step 2 · 3 Days Before</p>
+                <p class="text-sm font-bold mt-1">Advance Reminder</p>
+                <p class="text-xs font-medium text-sage-300 mt-1">A reminder three days before the appointment.</p>
+            </div>
+            <div class="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-400">Step 3 · Appointment Day</p>
+                <p class="text-sm font-bold mt-1">On-Day Reminder</p>
+                <p class="text-xs font-medium text-sage-300 mt-1">A final reminder on the appointment day.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search -->
+    <div class="card">
+        <form method="GET">
+            <input type="hidden" name="upcoming" value="{{ upcoming_filter }}">
+            <h2 class="font-display text-sm font-bold text-ink mb-3">Search Reminders</h2>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1 min-w-0">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input id="sms-search" type="text" name="q" value="{{ q }}" placeholder="Search patient name, case number, or mobile number..." class="form-input pl-9 h-11" aria-label="Search reminders">
+                </div>
+                <button type="submit" class="btn-primary h-11 whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Search
+                </button>
             </div>
         </form>
     </div>
 
-    <!-- Table -->
-    <div class="card p-0 overflow-hidden">
-        <div class="px-5 py-4 border-b border-line bg-sage-50 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="font-display text-sm font-bold text-ink">Logs · {{ page_obj.paginator.count }} found</h3>
-            <span class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}</span>
+    <!-- Upcoming vaccination reminders -->
+    <div class="card p-0 overflow-hidden" x-data="manualSms()">
+        <div class="px-4 sm:px-5 py-4 border-b border-line flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="font-display text-sm font-bold text-ink">Upcoming Vaccination Reminders</h2>
+                <p class="text-xs font-medium text-muted mt-0.5">Patients with upcoming scheduled vaccine doses. Send an additional reminder when necessary.</p>
+            </div>
+            <div class="flex flex-wrap gap-1">
+                {% for value, label, link in upcoming_links %}
+                <a href="?{{ link }}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if upcoming_filter == value %}bg-emerald-900 border-emerald-900 text-white{% else %}bg-white border-line text-muted{% endif %}">{{ label }}</a>
+                {% endfor %}
+            </div>
         </div>
+
         <div class="hidden lg:block overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-line bg-sage-50">
-                        <th class="table-header">Sent At</th>
-                        <th class="table-header">Patient</th>
-                        <th class="table-header">Dose · Scheduled</th>
-                        <th class="table-header">Type</th>
-                        <th class="table-header">Recipient</th>
+                        <th class="table-header">Patient / Case</th>
+                        <th class="table-header">Mobile Number</th>
+                        <th class="table-header">Next Dose</th>
+                        <th class="table-header">Scheduled Date</th>
+                        <th class="table-header">Reminder Status</th>
+                        <th class="table-header text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for dose in upcoming_doses %}
+                    <tr class="hover:bg-sage-50 transition-colors">
+                        <td class="table-cell">
+                            <p class="text-sm font-semibold text-ink">{{ dose.schedule.bite_case.patient.full_name }}</p>
+                            <p class="text-xs font-mono text-muted">{{ dose.schedule.bite_case.case_number }}</p>
+                        </td>
+                        <td class="table-cell">
+                            <p class="text-sm font-mono {% if dose.has_mobile %}text-ink{% else %}text-muted{% endif %}">{{ dose.masked_mobile }}</p>
+                        </td>
+                        <td class="table-cell">
+                            <p class="text-sm font-bold text-ink">{{ dose.number_label }}</p>
+                        </td>
+                        <td class="table-cell">
+                            <p class="text-sm font-bold text-ink">{{ dose.scheduled_date|date:'M d, Y' }}</p>
+                            <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold border {% if dose.days_left == 0 %}bg-amber-50 border-amber-200 text-amber-800{% elif dose.days_left == 1 %}bg-emerald-50 border-emerald-200 text-emerald-800{% else %}bg-sage-50 border-line text-muted{% endif %}">{{ dose.date_badge }}</span>
+                        </td>
+                        <td class="table-cell">
+                            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold {% if dose.reminder_status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif dose.reminder_status == 'failed' %}bg-red-50 border border-red-200 text-red-700{% elif dose.reminder_status == 'not_sent' %}bg-sage-50 border border-line text-muted{% else %}bg-amber-50 border border-amber-200 text-amber-800{% endif %}">{{ dose.reminder_status_label }}</span>
+                        </td>
+                        <td class="table-cell">
+                            <div class="flex items-center justify-end gap-2">
+                                <button type="button"
+                                    class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900 text-white text-xs font-bold px-3.5 py-2 hover:bg-emerald-900 transition-colors"
+                                    data-url="{% url 'vaccination:sms_manual_send' dose.pk %}"
+                                    data-patient="{{ dose.schedule.bite_case.patient.full_name }}"
+                                    data-case="{{ dose.schedule.bite_case.case_number }}"
+                                    data-dose-label="{{ dose.number_label }}"
+                                    data-date="{{ dose.scheduled_date|date:'M d, Y' }}"
+                                    data-mobile="{{ dose.masked_mobile }}"
+                                    data-full-mobile="{{ dose.full_mobile }}"
+                                    data-has-mobile="{% if dose.has_mobile %}1{% else %}0{% endif %}"
+                                    data-days="{{ dose.days_left }}"
+                                    data-msg-now="{{ dose.preview_immediate }}"
+                                    data-msg2="{{ dose.preview_2days }}"
+                                    data-msg1="{{ dose.preview_1day }}"
+                                    data-custom-prefix="{{ dose.custom_prefix }}"
+                                    data-custom-suffix="{{ dose.custom_suffix }}"
+                                    data-appt-status="{{ dose.appointment_status }}"
+                                    data-reminder-status="{{ dose.reminder_status_label }}"
+                                    data-has-sms="{% if dose.has_sms %}1{% else %}0{% endif %}"
+                                    data-last-at="{{ dose.last_sms_at }}"
+                                    data-last-type="{{ dose.last_sms_type }}"
+                                    data-last-result="{{ dose.last_sms_result }}"
+                                    data-preview-details="{{ dose.preview_details }}"
+                                    @click="openDetails($el.dataset)">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    View
+                                </button>
+                                <button type="button"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-emerald-800 bg-white text-emerald-900 text-xs font-bold px-3.5 py-2 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    data-url="{% url 'vaccination:sms_manual_send' dose.pk %}"
+                                    data-patient="{{ dose.schedule.bite_case.patient.full_name }}"
+                                    data-case="{{ dose.schedule.bite_case.case_number }}"
+                                    data-dose-label="{{ dose.number_label }}"
+                                    data-date="{{ dose.scheduled_date|date:'M d, Y' }}"
+                                    data-mobile="{{ dose.masked_mobile }}"
+                                    data-days="{{ dose.days_left }}"
+                                    data-msg-now="{{ dose.preview_immediate }}"
+                                    data-msg2="{{ dose.preview_2days }}"
+                                    data-msg1="{{ dose.preview_1day }}"
+                                    data-custom-prefix="{{ dose.custom_prefix }}"
+                                    data-custom-suffix="{{ dose.custom_suffix }}"
+                                    {% if not dose.has_mobile %}disabled title="No registered mobile number"{% endif %}
+                                    @click="openModal($el.dataset)">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    Send SMS
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-14 px-4">
+                            <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <p class="text-sm font-bold text-ink mt-3">No upcoming vaccination reminders</p>
+                            <p class="text-xs font-medium text-muted mt-1">
+                                {% if upcoming_filter == 'all' %}Schedule a 2nd dose or later in Administer Vaccine to see it here.
+                                {% elif upcoming_filter == '2days' %}No appointments are scheduled two days from today.
+                                {% elif upcoming_filter == 'tomorrow' %}No appointments are scheduled for tomorrow.
+                                {% else %}No appointments are scheduled for today.{% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="lg:hidden divide-y divide-sage-100">
+            {% for dose in upcoming_doses %}
+            <div class="p-4 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-ink truncate">{{ dose.schedule.bite_case.patient.full_name }}</p>
+                        <p class="text-xs font-mono text-muted truncate">{{ dose.schedule.bite_case.case_number }}</p>
+                    </div>
+                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold shrink-0 {% if dose.reminder_status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif dose.reminder_status == 'failed' %}bg-red-50 border border-red-200 text-red-700{% elif dose.reminder_status == 'not_sent' %}bg-sage-50 border border-line text-muted{% else %}bg-amber-50 border border-amber-200 text-amber-800{% endif %}">{{ dose.reminder_status_label }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="rounded-xl bg-sage-100 border border-line p-3 col-span-2">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-700">Mobile Number</p>
+                        <p class="text-sm font-mono {% if dose.has_mobile %}text-ink{% else %}text-muted{% endif %}">{{ dose.masked_mobile }}</p>
+                    </div>
+                    <div class="rounded-xl bg-sage-100 border border-line p-3">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-700">Next Dose</p>
+                        <p class="text-sm font-bold text-ink">{{ dose.number_label }}</p>
+                    </div>
+                    <div class="rounded-xl bg-sage-100 border border-line p-3">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-700">Scheduled Date</p>
+                        <p class="text-sm font-bold text-ink">{{ dose.scheduled_date|date:'M d, Y' }}</p>
+                        <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold border {% if dose.days_left == 0 %}bg-amber-50 border-amber-200 text-amber-800{% elif dose.days_left == 1 %}bg-emerald-50 border-emerald-200 text-emerald-800{% else %}bg-sage-50 border-line text-muted{% endif %}">{{ dose.date_badge }}</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                        class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-emerald-900 text-white text-xs font-bold px-3.5 py-2 hover:bg-emerald-900 transition-colors"
+                        data-url="{% url 'vaccination:sms_manual_send' dose.pk %}"
+                        data-patient="{{ dose.schedule.bite_case.patient.full_name }}"
+                        data-case="{{ dose.schedule.bite_case.case_number }}"
+                        data-dose-label="{{ dose.number_label }}"
+                        data-date="{{ dose.scheduled_date|date:'M d, Y' }}"
+                        data-mobile="{{ dose.masked_mobile }}"
+                        data-full-mobile="{{ dose.full_mobile }}"
+                        data-has-mobile="{% if dose.has_mobile %}1{% else %}0{% endif %}"
+                        data-days="{{ dose.days_left }}"
+                        data-msg-now="{{ dose.preview_immediate }}"
+                        data-msg2="{{ dose.preview_2days }}"
+                        data-msg1="{{ dose.preview_1day }}"
+                        data-custom-prefix="{{ dose.custom_prefix }}"
+                        data-custom-suffix="{{ dose.custom_suffix }}"
+                        data-appt-status="{{ dose.appointment_status }}"
+                        data-reminder-status="{{ dose.reminder_status_label }}"
+                        data-has-sms="{% if dose.has_sms %}1{% else %}0{% endif %}"
+                        data-last-at="{{ dose.last_sms_at }}"
+                        data-last-type="{{ dose.last_sms_type }}"
+                        data-last-result="{{ dose.last_sms_result }}"
+                        data-preview-details="{{ dose.preview_details }}"
+                        @click="openDetails($el.dataset)">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        View
+                    </button>
+                    <button type="button"
+                        class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-800 bg-white text-emerald-900 text-xs font-bold px-3.5 py-2 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-url="{% url 'vaccination:sms_manual_send' dose.pk %}"
+                        data-patient="{{ dose.schedule.bite_case.patient.full_name }}"
+                        data-case="{{ dose.schedule.bite_case.case_number }}"
+                        data-dose-label="{{ dose.number_label }}"
+                        data-date="{{ dose.scheduled_date|date:'M d, Y' }}"
+                        data-mobile="{{ dose.masked_mobile }}"
+                        data-days="{{ dose.days_left }}"
+                        data-msg-now="{{ dose.preview_immediate }}"
+                        data-msg2="{{ dose.preview_2days }}"
+                        data-msg1="{{ dose.preview_1day }}"
+                        data-custom-prefix="{{ dose.custom_prefix }}"
+                        data-custom-suffix="{{ dose.custom_suffix }}"
+                        {% if not dose.has_mobile %}disabled title="No registered mobile number"{% endif %}
+                        @click="openModal($el.dataset)">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Send SMS
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-14 px-4">
+                <p class="text-sm font-bold text-ink">No upcoming vaccination reminders</p>
+                <p class="text-xs font-medium text-muted mt-1">
+                    {% if upcoming_filter == 'all' %}Schedule a 2nd dose or later in Administer Vaccine to see it here.
+                    {% elif upcoming_filter == '2days' %}No appointments are scheduled two days from today.
+                    {% elif upcoming_filter == 'tomorrow' %}No appointments are scheduled for tomorrow.
+                    {% else %}No appointments are scheduled for today.{% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Vaccination reminder details modal -->
+        <template x-teleport="body">
+        <div x-show="detailsOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div @click="closeDetails()" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
+            <div class="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-line">
+                <div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-line bg-sage-50">
+                    <div>
+                        <h3 class="font-display text-sm font-bold text-ink">Vaccination Reminder Details</h3>
+                        <p class="text-xs font-medium text-muted mt-0.5">Patient appointment information.</p>
+                    </div>
+                    <button type="button" @click="closeDetails()" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-muted">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="px-5 py-4 space-y-4">
+                    <section>
+                        <h4 class="font-display text-sm font-bold text-ink mb-2">Section A – Patient Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Patient Name</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.patient"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Case Number</p>
+                                <p class="text-sm font-bold font-mono text-emerald-950 mt-1" x-text="details.caseNo"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Registered Mobile Number</p>
+                                <p class="text-sm font-bold font-mono text-emerald-950 mt-1" x-text="details.fullMobile || 'No registered number.'"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Next Scheduled Dose</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.doseLabel"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Scheduled Appointment Date</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.date"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Appointment Status</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.apptStatus"></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h4 class="font-display text-sm font-bold text-ink mb-2">Section B – SMS Reminder Information</h4>
+                        <div x-show="!details.hasSms" class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                            <p class="text-sm font-medium text-muted">No previous SMS record.</p>
+                        </div>
+                        <div x-show="details.hasSms" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Reminder Status</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.reminderStatus"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Last SMS Date and Time</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.lastAt"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Reminder Type</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.lastType"></p>
+                            </div>
+                            <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Most Recent Sending Result</p>
+                                <p class="text-sm font-bold text-emerald-950 mt-1" x-text="details.lastResult"></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h4 class="font-display text-sm font-bold text-ink mb-2">Section C – SMS Message Preview</h4>
+                        <div class="rounded-xl border border-line bg-sage-50 px-4 py-3">
+                            <p class="text-sm text-ink whitespace-pre-wrap" x-text="details.preview"></p>
+                        </div>
+                        <p class="text-xs font-medium text-muted mt-1">Preview only — no SMS is sent until you confirm.</p>
+                    </section>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-line bg-sage-50">
+                    <button type="button" @click="closeDetails()" class="btn-secondary btn-sm">Close</button>
+                    <button type="button" @click="sendFromDetails()" :disabled="!details.hasMobile" :title="details.hasMobile ? '' : 'No registered mobile number'" class="btn-primary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        Send SMS
+                    </button>
+                </div>
+            </div>
+        </div>
+        </template>
+
+        <!-- Manual SMS modal -->
+        <template x-teleport="body">
+        <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div @click="closeModal()" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
+            <div class="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-line">
+                <div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-line bg-sage-50">
+                    <div>
+                        <h3 class="font-display text-sm font-bold text-ink">Send SMS Reminder</h3>
+                        <p class="text-xs font-medium text-muted mt-0.5">Manual vaccination appointment reminder.</p>
+                    </div>
+                    <button type="button" @click="closeModal()" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-muted">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="px-5 py-4 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Patient Name</p>
+                            <p class="text-sm font-bold text-emerald-950 mt-1" x-text="form.patient"></p>
+                        </div>
+                        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Case Number</p>
+                            <p class="text-sm font-bold font-mono text-emerald-950 mt-1" x-text="form.caseNo"></p>
+                        </div>
+                        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Scheduled Dose</p>
+                            <p class="text-sm font-bold text-emerald-950 mt-1" x-text="form.doseLabel"></p>
+                        </div>
+                        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Scheduled Date</p>
+                            <p class="text-sm font-bold text-emerald-950 mt-1" x-text="form.date"></p>
+                        </div>
+                        <div class="rounded-2xl border border-line bg-sage-100 px-4 py-3 md:col-span-2">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">Registered Mobile Number</p>
+                            <p class="text-sm font-bold font-mono text-emerald-950 mt-1" x-text="form.mobile"></p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="form-label">Reminder Type</p>
+                        <div class="space-y-2">
+                            <label class="flex items-start gap-2 rounded-xl border px-3 py-2.5 cursor-pointer"
+                                :class="form.type === 'manual_immediate' ? 'border-emerald-800 bg-emerald-50' : 'border-line bg-sage-50'">
+                                <input type="radio" name="manual_type" value="manual_immediate" class="mt-1" x-model="form.type" @change="duplicate=false; warning=''">
+                                <span>
+                                    <span class="block text-sm font-bold text-ink">Send Now</span>
+                                    <span class="block text-xs font-medium text-muted">Send the reminder immediately, regardless of how far away the appointment is.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 rounded-xl border px-3 py-2.5 cursor-pointer"
+                                :class="[form.type === 'manual_2days_before' ? 'border-emerald-800 bg-emerald-50' : 'border-line bg-sage-50', optionDisabled('manual_2days_before') ? 'opacity-50 cursor-not-allowed' : '']">
+                                <input type="radio" name="manual_type" value="manual_2days_before" class="mt-1" x-model="form.type" :disabled="optionDisabled('manual_2days_before')" @change="duplicate=false; warning=''">
+                                <span>
+                                    <span class="block text-sm font-bold text-ink">2 Days Before</span>
+                                    <span class="block text-xs font-medium text-muted">Predefined reminder for an appointment two days away.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 rounded-xl border px-3 py-2.5 cursor-pointer"
+                                :class="[form.type === 'manual_1day_before' ? 'border-emerald-800 bg-emerald-50' : 'border-line bg-sage-50', optionDisabled('manual_1day_before') ? 'opacity-50 cursor-not-allowed' : '']">
+                                <input type="radio" name="manual_type" value="manual_1day_before" class="mt-1" x-model="form.type" :disabled="optionDisabled('manual_1day_before')" @change="duplicate=false; warning=''">
+                                <span>
+                                    <span class="block text-sm font-bold text-ink">1 Day Before (Tomorrow)</span>
+                                    <span class="block text-xs font-medium text-muted">Predefined reminder for an appointment tomorrow.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 rounded-xl border px-3 py-2.5 cursor-pointer"
+                                :class="form.type === 'manual_custom' ? 'border-emerald-800 bg-emerald-50' : 'border-line bg-sage-50'">
+                                <input type="radio" name="manual_type" value="manual_custom" class="mt-1" x-model="form.type" @change="duplicate=false; warning=''">
+                                <span>
+                                    <span class="block text-sm font-bold text-ink">Custom Reminder</span>
+                                    <span class="block text-xs font-medium text-muted">Add a short appointment-related note to the standard reminder.</span>
+                                </span>
+                            </label>
+                        </div>
+                        <textarea x-show="form.type === 'manual_custom'" x-model="form.custom" maxlength="160" rows="3"
+                            class="form-input mt-2" placeholder="e.g. Palihog tawag sa RHU kung dili makaadto."
+                            @input="duplicate=false; warning=''"></textarea>
+                    </div>
+
+                    <div>
+                        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-700">SMS Message Preview</p>
+                        <div class="mt-1 rounded-xl border border-line bg-sage-50 px-4 py-3">
+                            <p class="text-sm text-ink whitespace-pre-wrap" x-text="preview()"></p>
+                        </div>
+                    </div>
+
+                    <div x-show="duplicate" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">Duplicate Reminder</p>
+                        <p class="text-sm font-medium text-amber-800 mt-1" x-text="warning"></p>
+                        <p class="text-xs font-medium text-amber-700 mt-1">Confirm below only if an additional reminder is intended.</p>
+                    </div>
+                    <div x-show="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                        <p class="text-sm font-medium text-red-800" x-text="error"></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-line bg-sage-50">
+                    <button type="button" @click="closeModal()" class="btn-secondary btn-sm">Cancel</button>
+                    <button type="button" @click="send(duplicate)" :disabled="sending" class="btn-primary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!sending" x-text="duplicate ? 'Send Anyway' : 'Confirm & Send SMS'"></span>
+                        <span x-show="sending">Sending…</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        </template>
+    </div>
+
+    <!-- Reminder history -->
+    <div class="card p-0 overflow-hidden">
+        <div class="px-4 sm:px-5 py-4 border-b border-line flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <h2 class="font-display text-sm font-bold text-ink">Reminder History</h2>
+                <p class="text-xs font-medium text-muted mt-0.5">{{ page_obj.paginator.count }} matching reminder{{ page_obj.paginator.count|pluralize }}</p>
+            </div>
+            <span class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}</span>
+        </div>
+
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Patient / Case</th>
+                        <th class="table-header">Dose / Date</th>
+                        <th class="table-header">Reminder Type</th>
                         <th class="table-header">Status</th>
-                        <th class="table-header">Message</th>
+                        <th class="table-header text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-sage-100">
                     {% for log in logs %}
-                    <tr class="hover:bg-sage-50">
+                    <tr class="hover:bg-sage-50 transition-colors">
                         <td class="table-cell">
-                            <span class="text-sm font-semibold text-ink">{{ log.sent_at|date:'M d, Y h:i A' }}</span>
-                            <span class="block text-xs text-muted">{{ log.sent_at|date:'D' }}</span>
-                        </td>
-                        <td class="table-cell">
-                            {% if log.patient %}
-                            <p class="text-sm font-semibold text-ink">{{ log.patient.full_name }}</p>
-                            <p class="text-xs font-mono text-muted">{{ log.patient.patient_number }} · {{ log.bite_case.case_number|default:'—' }}</p>
+                            {% if log.display_patient %}
+                            <p class="text-sm font-semibold text-ink">{{ log.display_patient.full_name }}</p>
+                            <p class="text-xs font-mono text-muted">{{ log.display_case.case_number|default:'—' }}</p>
                             {% else %}
-                            <span class="text-xs text-muted">—</span>
+                            <span class="text-xs font-medium text-muted">—</span>
                             {% endif %}
                         </td>
                         <td class="table-cell">
-                            {% if log.dose %}
-                                <p class="text-sm font-bold text-ink">{{ log.dose.dose_label }}</p>
-                                <p class="text-xs font-medium text-muted">{{ log.scheduled_date|date:'M d, Y' }}</p>
-                            {% else %}
-                                <span class="text-xs text-muted">{{ log.scheduled_date|date:'M d, Y'|default:'—' }}</span>
-                            {% endif %}
+                            <p class="text-sm font-bold text-ink">{{ log.display_dose_label|default:'—' }}</p>
+                            <p class="text-xs font-medium text-muted">{{ log.display_appointment|date:'M d, Y'|default:'—' }}</p>
                         </td>
                         <td class="table-cell">
-                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold border {% if log.reminder_type == '3days_before' %}bg-amber-50 border-amber-200 text-amber-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %}">
-                                {{ log.get_reminder_type_display }}
+                            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold {% if log.reminder_type == 'schedule_set' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif log.reminder_type == '3days_before' %}bg-amber-50 border border-amber-200 text-amber-800{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+                                {% if log.reminder_type == 'schedule_set' %}Confirmation{% else %}{{ log.get_reminder_type_display }}{% endif %}
                             </span>
                         </td>
-                        <td class="table-cell font-mono text-sm">{{ log.recipient }}</td>
                         <td class="table-cell">
-                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold
-                                {% if log.status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800
-                                {% elif log.status == 'queued' %}bg-blue-50 border border-blue-200 text-blue-700
-                                {% elif log.status == 'failed' %}bg-red-50 border border-red-200 text-red-700
-                                {% else %}bg-sage-50 border border-line text-ink{% endif %}">
+                            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold {% if log.status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif log.status == 'queued' %}bg-amber-50 border border-amber-200 text-amber-800{% elif log.status == 'failed' %}bg-red-50 border border-red-200 text-red-700{% else %}bg-sage-50 border border-line text-muted{% endif %}">
                                 {{ log.get_status_display }}
                             </span>
-                            {% if log.semaphore_message_id %}<span class="block text-xs font-mono text-muted mt-1">#{{ log.semaphore_message_id }}</span>{% endif %}
                         </td>
-                        <td class="table-cell max-w-[320px]">
-                            <p class="text-sm text-ink truncate" title="{{ log.message }}">{{ log.message }}</p>
-                            {% if log.api_response %}<p class="text-xs font-mono text-muted truncate mt-1" title="{{ log.api_response }}">{{ log.api_response|truncatechars:80 }}</p>{% endif %}
+                        <td class="table-cell text-right">
+                            <a href="{% url 'vaccination:sms_log_detail' log.pk %}" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900 text-white text-xs font-bold px-3.5 py-2 hover:bg-emerald-900 transition-colors">
+                                View <span aria-hidden="true">→</span>
+                            </a>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-14">
-                        <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                        </div>
-                        <p class="text-sm font-bold text-ink mt-3">No SMS logs</p>
-                        <p class="text-xs font-medium text-muted mt-1">Trigger a dry-run or wait for scheduled doses.</p>
-                    </td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center py-14 px-4">
+                            <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            </div>
+                            {% if q or reminder_type or status or scheduled %}
+                            <p class="text-sm font-bold text-ink mt-3">No reminders match your search</p>
+                            <p class="text-xs font-medium text-muted mt-1">Try a different name, case number, or mobile number.</p>
+                            {% else %}
+                            <p class="text-sm font-bold text-ink mt-3">No SMS reminders yet</p>
+                            <p class="text-xs font-medium text-muted mt-1">Set a dose date on a schedule and the patient is texted automatically.</p>
+                            {% endif %}
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -200,74 +564,183 @@
             <div class="p-4 space-y-3">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        {% if log.patient %}
-                        <p class="text-sm font-bold text-ink truncate">{{ log.patient.full_name }}</p>
-                        <p class="text-xs font-mono text-muted truncate">{{ log.patient.patient_number }} · {{ log.bite_case.case_number|default:'—' }}</p>
-                        {% else %}<p class="text-sm font-bold text-muted">—</p>{% endif %}
+                        {% if log.display_patient %}
+                        <p class="text-sm font-bold text-ink truncate">{{ log.display_patient.full_name }}</p>
+                        <p class="text-xs font-mono text-muted truncate">{{ log.display_case.case_number|default:'—' }}</p>
+                        {% else %}
+                        <p class="text-sm font-bold text-muted">—</p>
+                        {% endif %}
                     </div>
-                    <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold shrink-0
-                        {% if log.status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800
-                        {% elif log.status == 'queued' %}bg-blue-50 border border-blue-200 text-blue-700
-                        {% elif log.status == 'failed' %}bg-red-50 border border-red-200 text-red-700
-                        {% else %}bg-sage-50 border border-line text-ink{% endif %}">
+                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold shrink-0 {% if log.status == 'sent' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif log.status == 'queued' %}bg-amber-50 border border-amber-200 text-amber-800{% elif log.status == 'failed' %}bg-red-50 border border-red-200 text-red-700{% else %}bg-sage-50 border border-line text-muted{% endif %}">
                         {{ log.get_status_display }}
                     </span>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-xl bg-sage-50 border border-line p-3">
-                        <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Sent At</p>
-                        <p class="text-sm font-bold text-ink">{{ log.sent_at|date:'M d, Y h:i A' }}</p>
+                    <div class="rounded-xl bg-sage-100 border border-line p-3">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-700">Dose</p>
+                        <p class="text-sm font-bold text-ink">{{ log.display_dose_label|default:'—' }}</p>
                     </div>
-                    <div class="rounded-xl bg-white border border-line p-3">
-                        <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Dose</p>
-                        {% if log.dose %}<p class="text-sm font-bold text-ink">{{ log.dose.dose_label }}</p><p class="text-xs text-muted">{{ log.scheduled_date|date:'M d, Y' }}</p>
-                        {% else %}<p class="text-xs text-muted">{{ log.scheduled_date|date:'M d, Y'|default:'—' }}</p>{% endif %}
+                    <div class="rounded-xl bg-sage-100 border border-line p-3">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-700">Appointment</p>
+                        <p class="text-sm font-bold text-ink">{{ log.display_appointment|date:'M d, Y'|default:'—' }}</p>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold border {% if log.reminder_type == '3days_before' %}bg-amber-50 border-amber-200 text-amber-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %}">
-                        {{ log.get_reminder_type_display }}
+                <div class="flex items-center justify-between gap-2">
+                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold {% if log.reminder_type == 'schedule_set' %}bg-emerald-50 border border-emerald-200 text-emerald-800{% elif log.reminder_type == '3days_before' %}bg-amber-50 border border-amber-200 text-amber-800{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+                        {% if log.reminder_type == 'schedule_set' %}Confirmation{% else %}{{ log.get_reminder_type_display }}{% endif %}
                     </span>
-                    <span class="text-sm font-mono text-ink">{{ log.recipient }}</span>
-                    {% if log.semaphore_message_id %}<span class="text-xs font-mono text-muted">#{{ log.semaphore_message_id }}</span>{% endif %}
+                    <a href="{% url 'vaccination:sms_log_detail' log.pk %}" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900 text-white text-xs font-bold px-3.5 py-2 hover:bg-emerald-900 transition-colors">
+                        View <span aria-hidden="true">→</span>
+                    </a>
                 </div>
-                <p class="text-sm text-ink bg-sage-50 border border-line rounded-xl p-3">{{ log.message }}</p>
             </div>
             {% empty %}
             <div class="text-center py-14 px-4">
-                <p class="text-sm font-bold text-ink">No SMS logs</p>
-                <p class="text-xs font-medium text-muted mt-1">Trigger a dry-run or wait for scheduled doses.</p>
+                {% if q or reminder_type or status or scheduled %}
+                <p class="text-sm font-bold text-ink">No reminders match your search</p>
+                <p class="text-xs font-medium text-muted mt-1">Try a different name, case number, or mobile number.</p>
+                {% else %}
+                <p class="text-sm font-bold text-ink">No SMS reminders yet</p>
+                <p class="text-xs font-medium text-muted mt-1">Set a dose date on a schedule and the patient is texted automatically.</p>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
+
         {% if page_obj.has_other_pages %}
-        <div class="flex items-center justify-between px-5 py-4 border-t border-line bg-sage-50">
+        <div class="flex items-center justify-between px-4 sm:px-5 py-4 border-t border-line bg-sage-50">
             <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
             <div class="flex gap-1">
-                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-secondary btn-xs">Prev</a>{% endif %}
-                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-secondary btn-xs">Next</a>{% endif %}
+                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="btn-secondary btn-xs">Prev</a>{% endif %}
+                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="btn-secondary btn-xs">Next</a>{% endif %}
             </div>
         </div>
         {% endif %}
     </div>
-
-    <div class="card bg-sage-50 border-dashed">
-        <h4 class="text-sm font-bold text-ink">Cron setup (Windows/Linux)</h4>
-        <p class="text-xs font-medium text-muted mt-1">Run daily at 08:00 AM Asia/Manila:</p>
-        <code class="block mt-2 p-3 rounded-xl bg-emerald-950 text-sage-100 text-xs font-mono overflow-x-auto">
-            python manage.py send_vaccination_reminders<br>
-            # For dry-run (no credits): python manage.py send_vaccination_reminders --dry-run<br>
-            # Specific date: python manage.py send_vaccination_reminders --date 2026-09-01 --verbose<br>
-            # Force resend: python manage.py send_vaccination_reminders --force
-        </code>
-        <p class="text-xs font-medium text-muted mt-2">Env needed: <code class="bg-white border border-line px-1 py-0.5 rounded">SEMAPHORE_API_KEY=xxx</code> <code class="bg-white border border-line px-1 py-0.5 rounded">SEMAPHORE_SENDER_NAME=RHUDumingag</code> <code class="bg-white border border-line px-1 py-0.5 rounded">SEMAPHORE_ENABLED=True</code></p>
-        <p class="text-xs font-medium text-muted mt-1">PowerShell Task Scheduler example:</p>
-        <code class="block mt-1 p-2 rounded-xl bg-white border border-line text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">schtasks /create /tn "ABTC_SMS_Reminders" /tr "powershell.exe -c 'cd C:\Users\gerla\2026\animalbite\animalbite_project; .\venv\Scripts\python.exe manage.py send_vaccination_reminders'" /sc daily /st 08:00</code>
-    </div>
 </div>
 <script>
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        gsap.from('.card', { y: 12, opacity: 0, duration: 0.45, stagger: 0.06, ease: 'power2.out' });
+    function manualSms() {
+        return {
+            open: false,
+            sending: false,
+            duplicate: false,
+            warning: '',
+            error: '',
+            detailsOpen: false,
+            details: {
+                send: {},
+                patient: '', caseNo: '', fullMobile: '', hasMobile: false,
+                doseLabel: '', date: '', apptStatus: '', reminderStatus: '',
+                hasSms: false, lastAt: '', lastType: '', lastResult: '', preview: '',
+            },
+            form: {
+                url: '', patient: '', caseNo: '', doseLabel: '', date: '', mobile: '',
+                days: 0, msgNow: '', msg2: '', msg1: '', customPrefix: '', customSuffix: '',
+                custom: '', type: '',
+            },
+            openDetails(data) {
+                this.details = {
+                    send: Object.assign({}, data),
+                    patient: data.patient || '',
+                    caseNo: data.case || '',
+                    fullMobile: data.fullMobile || '',
+                    hasMobile: data.hasMobile === '1',
+                    doseLabel: data.doseLabel || '',
+                    date: data.date || '',
+                    apptStatus: data.apptStatus || '',
+                    reminderStatus: data.reminderStatus || 'Not Sent',
+                    hasSms: data.hasSms === '1',
+                    lastAt: data.lastAt || '',
+                    lastType: data.lastType || '',
+                    lastResult: data.lastResult || '',
+                    preview: data.previewDetails || '',
+                };
+                this.detailsOpen = true;
+            },
+            closeDetails() {
+                this.detailsOpen = false;
+            },
+            sendFromDetails() {
+                if (!this.details.hasMobile) return;
+                const sendData = this.details.send;
+                this.detailsOpen = false;
+                this.openModal(sendData);
+            },
+            openModal(data) {
+                this.form = {
+                    url: data.url || '',
+                    patient: data.patient || '',
+                    caseNo: data.case || '',
+                    doseLabel: data.doseLabel || '',
+                    date: data.date || '',
+                    mobile: data.mobile || '',
+                    days: Number(data.days || 0),
+                    msgNow: data.msgNow || '',
+                    msg2: data.msg2 || '',
+                    msg1: data.msg1 || '',
+                    customPrefix: data.customPrefix || '',
+                    customSuffix: data.customSuffix || '',
+                    custom: '',
+                    type: '',
+                };
+                this.form.type = this.form.days === 2
+                    ? 'manual_2days_before'
+                    : (this.form.days === 1 ? 'manual_1day_before' : 'manual_immediate');
+                this.duplicate = false;
+                this.warning = '';
+                this.error = '';
+                this.open = true;
+            },
+            closeModal() {
+                if (this.sending) return;
+                this.open = false;
+            },
+            optionDisabled(kind) {
+                if (kind === 'manual_2days_before') return this.form.days !== 2;
+                if (kind === 'manual_1day_before') return this.form.days !== 1;
+                return false;
+            },
+            preview() {
+                if (this.form.type === 'manual_immediate') return this.form.msgNow;
+                if (this.form.type === 'manual_2days_before') return this.form.msg2;
+                if (this.form.type === 'manual_1day_before') return this.form.msg1;
+                const note = (this.form.custom || '').trim() || 'Pumunta sa RHU sa nakatakdang petsa.';
+                return this.form.customPrefix + note + this.form.customSuffix;
+            },
+            async send(confirmDuplicate) {
+                if (this.sending) return;
+                this.error = '';
+                this.sending = true;
+                const body = new FormData();
+                body.append('csrfmiddlewaretoken', document.querySelector('meta[name="csrf-token"]').content);
+                body.append('reminder_type', this.form.type);
+                body.append('custom_message', this.form.custom || '');
+                if (confirmDuplicate) body.append('confirm_duplicate', '1');
+                try {
+                    const response = await fetch(this.form.url, {
+                        method: 'POST',
+                        body: body,
+                        headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    });
+                    const data = await response.json();
+                    if (data.duplicate) {
+                        this.duplicate = true;
+                        this.warning = data.warning;
+                        this.sending = false;
+                        return;
+                    }
+                    if (!data.ok) {
+                        this.error = data.error || 'Unable to send the reminder.';
+                        this.sending = false;
+                        return;
+                    }
+                    window.location = data.redirect;
+                } catch (err) {
+                    this.error = 'Unable to send the reminder. Please try again.';
+                    this.sending = false;
+                }
+            },
+        };
     }
 </script>
 {% endblock %}

@@ -55,11 +55,7 @@
               <span class="px-2 py-1 rounded-full text-xs font-bold {% if a.status == 'final' %}bg-emerald-600 text-white{% else %}bg-amber-500 text-white{% endif %}">{{ a.get_status_display }}</span>
             </td>
             <td class="table-cell text-right">
-              {% if a.bite_case %}
-              <a href="{% url 'doctor:assess_case' a.bite_case.pk %}" class="btn-secondary btn-xs">Open</a>
-              {% else %}
-              <a href="{% url 'doctor:assess_patient' a.patient.pk %}" class="btn-secondary btn-xs">Open</a>
-              {% endif %}
+              <a href="{% url 'doctor:assessment_detail' a.pk %}" class="btn-secondary btn-xs">View</a>
             </td>
           </tr>
           {% empty %}

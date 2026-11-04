@@ -47,36 +47,32 @@
         </div>
     </div>
 
-    <!-- SMS Auto-Reminders (Semaphore RHUDumingag) -->
+    <!-- SMS Reminders -->
     <div class="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
         <div class="flex gap-3">
             <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
             </div>
             <div>
-                <p class="text-sm font-bold text-ink flex items-center gap-2">
-                    SMS Reminders via Semaphore
-                    {% if semaphore_enabled %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">LIVE</span>
-                    {% else %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">DRY-RUN</span>
-                    {% endif %}
-                    <span class="text-xs font-mono font-bold text-emerald-700 bg-white border border-emerald-200 px-1.5 py-0.5 rounded">{{ semaphore_sender|default:"RHUDumingag" }}</span>
+                <p class="text-sm font-bold text-ink">SMS Reminders</p>
+                <p class="text-xs font-medium text-muted mt-1">
+                    The patient is texted when a dose date is set, then again
+                    <span class="font-bold text-amber-700">3 days before</span> and
+                    <span class="font-bold text-emerald-700">on the day</span>.
+                    Number: <span class="font-mono font-bold text-ink">{{ schedule.bite_case.patient.contact_display }}</span>.
                 </p>
-                <p class="text-xs font-medium text-muted mt-1">Auto: <span class="font-bold text-amber-700">3 days before</span> + <span class="font-bold text-emerald-700">on-day</span> to <span class="font-mono font-bold text-ink">{{ schedule.bite_case.patient.contact_display }}</span>. Manual send below per dose. <a href="{% url 'vaccination:sms_log_list' %}" class="font-bold text-emerald-700 hover:underline">View SMS Logs →</a></p>
-                {% if not semaphore_enabled %}
-                <p class="text-xs font-medium text-amber-700 mt-1">⚠️ SEMAPHORE_ENABLED=False — messages are simulated & logged as queued. Set <code class="bg-white px-1 rounded border">SEMAPHORE_API_KEY</code> + <code class="bg-white px-1 rounded border">SEMAPHORE_ENABLED=True</code> to actually send.</p>
-                {% endif %}
             </div>
         </div>
         <div class="flex gap-2 shrink-0 flex-wrap">
             <form method="POST" action="{% url 'vaccination:trigger_sms_reminders' %}">
                 {% csrf_token %}
                 <input type="hidden" name="rtype" value="all">
-                <input type="hidden" name="dry_run" value="{% if semaphore_enabled %}0{% else %}1{% endif %}">
-                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Trigger Due SMS</button>
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Send Due Reminders
+                </button>
             </form>
-            <a href="{% url 'vaccination:sms_log_list' %}?q={{ schedule.bite_case.case_number }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">Logs for this case</a>
+            <a href="{% url 'vaccination:sms_log_list' %}?q={{ schedule.bite_case.case_number }}" class="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink hover:bg-sage-50">SMS Logs</a>
         </div>
     </div>
 
@@ -158,6 +154,7 @@
                         {% if dose.dose_status == 'completed' %}bg-emerald-600 border-emerald-600 text-white
                         {% elif dose.dose_status == 'missed' %}bg-red-500 border-red-500 text-white
                         {% elif dose.dose_status == 'scheduled' %}bg-white border-emerald-300 text-emerald-700
+                        {% elif dose.dose_status == 'pending' %}bg-amber-50 border-amber-400 text-amber-700
                         {% else %}bg-white border-line text-muted{% endif %}">
                         {% if dose.dose_status == 'completed' %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                         {% elif dose.dose_status == 'missed' %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -171,9 +168,14 @@
                             {% if dose.scheduled_date == today %}<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white">Today</span>{% endif %}
                         </div>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                            <div class="rounded-xl bg-white border border-line p-3">
-                                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Scheduled</p>
-                                <p class="text-sm font-bold text-ink mt-1">{{ dose.scheduled_date|date:'M d, Y' }}</p>
+                            <div class="rounded-xl {% if dose.scheduled_date %}bg-white border border-line{% else %}bg-amber-50 border border-amber-200{% endif %} p-3">
+                                <p class="text-[11px] font-bold tracking-widest uppercase {% if dose.scheduled_date %}text-muted{% else %}text-amber-700{% endif %}">Scheduled</p>
+                                <p class="text-sm font-bold {% if dose.scheduled_date %}text-ink{% else %}text-amber-700{% endif %} mt-1">
+                                    {% if dose.scheduled_date %}{{ dose.scheduled_date|date:'M d, Y' }}{% else %}Pending Scheduling{% endif %}
+                                </p>
+                                {% if not dose.scheduled_date and dose.expected_date %}
+                                <p class="text-[11px] font-medium text-muted mt-1">Protocol: {{ dose.expected_date|date:'M d, Y' }}</p>
+                                {% endif %}
                             </div>
                             <div class="rounded-xl {% if dose.actual_date %}bg-emerald-50 border border-emerald-200{% else %}bg-sage-50 border border-dashed border-line{% endif %} p-3">
                                 <p class="text-[11px] font-bold tracking-widest uppercase {% if dose.actual_date %}text-emerald-700{% else %}text-muted{% endif %}">Actual</p>
@@ -215,24 +217,22 @@
                                 <form method="POST" action="{% url 'vaccination:send_sms_for_dose' dose.pk %}" class="inline-flex">
                                     {% csrf_token %}
                                     <input type="hidden" name="reminder_type" value="3days_before">
-                                    {% if not semaphore_enabled %}<input type="hidden" name="dry_run" value="1">{% endif %}
-                                    <button type="submit" class="px-2.5 py-1.5 rounded-full border text-xs font-bold {% if dose.dose_status == 'completed' %}bg-sage-100 text-muted border-line cursor-not-allowed{% else %}bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100{% endif %}" {% if dose.dose_status == 'completed' %}disabled title="Already completed"{% endif %}>SMS 3-days</button>
+                                    <button type="submit" class="px-2.5 py-1.5 rounded-full border text-xs font-bold {% if dose.dose_status == 'completed' or not dose.scheduled_date %}bg-sage-100 text-muted border-line cursor-not-allowed{% else %}bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100{% endif %}" {% if dose.dose_status == 'completed' %}disabled title="Already completed"{% elif not dose.scheduled_date %}disabled title="Assign a date first"{% endif %}>3-day reminder</button>
                                 </form>
                                 <form method="POST" action="{% url 'vaccination:send_sms_for_dose' dose.pk %}" class="inline-flex">
                                     {% csrf_token %}
                                     <input type="hidden" name="reminder_type" value="on_day">
-                                    {% if not semaphore_enabled %}<input type="hidden" name="dry_run" value="1">{% endif %}
-                                    <button type="submit" class="px-2.5 py-1.5 rounded-full border text-xs font-bold {% if dose.dose_status == 'completed' %}bg-sage-100 text-muted border-line cursor-not-allowed{% else %}bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100{% endif %}" {% if dose.dose_status == 'completed' %}disabled{% endif %}>SMS Today</button>
+                                    <button type="submit" class="px-2.5 py-1.5 rounded-full border text-xs font-bold {% if dose.dose_status == 'completed' or not dose.scheduled_date %}bg-sage-100 text-muted border-line cursor-not-allowed{% else %}bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100{% endif %}" {% if dose.dose_status == 'completed' %}disabled title="Already completed"{% elif not dose.scheduled_date %}disabled title="Assign a date first"{% endif %}>Today reminder</button>
                                 </form>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex flex-col gap-2 shrink-0">
-                        <a href="{% url 'vaccination:dose_update' dose.pk %}" class="inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow">
-                            Update
+                        <a href="{% url 'vaccination:dose_update' dose.pk %}" class="inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-full {% if dose.dose_status == 'pending' %}bg-amber-500 hover:bg-amber-600{% else %}bg-emerald-950 hover:bg-emerald-900{% endif %} text-white text-xs font-bold shadow">
+                            {% if dose.dose_status == 'pending' %}Assign date{% else %}Update{% endif %}
                         </a>
-                        <span class="text-[11px] font-medium text-muted text-center hidden sm:block">{{ dose.scheduled_date|date:'D' }}</span>
+                        {% if dose.scheduled_date %}<span class="text-[11px] font-medium text-muted text-center hidden sm:block">{{ dose.scheduled_date|date:'D' }}</span>{% endif %}
                     </div>
                 </div>
                 {% empty %}
@@ -244,6 +244,7 @@
             </div>
         </div>
         <div class="px-5 py-3 bg-sage-50 border-t border-line flex flex-wrap gap-2 text-xs font-bold">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending Scheduling → nurse assigns a date</span>
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-ink"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Completed deducts stock</span>
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-line text-muted">Missed → follow-up</span>
         </div>
@@ -251,7 +252,7 @@
 
     <!-- Workflow footer -->
     <div class="card bg-sage-50 border-dashed flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <p class="text-sm font-medium text-ink"><span class="font-bold">Workflow:</span> Schedule set by a nurse &rarr; Update each dose as <span class="text-emerald-700 font-bold">Completed</span> on the day &rarr; If not, mark <span class="text-red-600 font-bold">Missed</span> &rarr; Create Follow-up.</p>
+        <p class="text-sm font-medium text-ink"><span class="font-bold">Workflow:</span> Doctor sets the dose count and 1st dose date &rarr; nurse assigns each pending date within the protocol &rarr; mark <span class="text-emerald-700 font-bold">Completed</span> on the day (stock is deducted once) &rarr; if not given, mark <span class="text-red-600 font-bold">Missed</span>.</p>
         <a href="{% url 'vaccination:follow_up_list' %}" class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Follow-ups →</a>
     </div>
 </div>

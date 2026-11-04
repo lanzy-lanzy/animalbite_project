@@ -3844,7 +3844,7 @@
     color: var(--color-emerald-800);
     border-color: rgba(46,153,117,.30);
   }
-  .status-missed, .status-cancelled, .status-inactive, .status-expired, .status-overdue {
+  .status-missed, .status-rejected, .status-cancelled, .status-inactive, .status-expired, .status-overdue {
     background: linear-gradient(145deg, #fdeaea, #fbdada);
     color: #991b1b;
     border-color: rgba(220,38,38,.25);
