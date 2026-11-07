@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}{% if assessment_only %}Doctor's Assessment{% elif nurse_view %}Doctor Findings{% else %}Vaccination Record{% endif %} — {{ patient.full_name }}{% endblock %}
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/print_official.css' %}">
 <style>
   /* ---------- Record hero — forest-green patient header ---------- */
   .record-hero {
@@ -276,7 +278,7 @@
 
   /* ---------- A4 portrait print sheet ---------- */
   @media print {
-    @page { size: A4 portrait; margin: 14mm 12mm; }
+    @page { size: A4 portrait; margin: 15mm; }
 
     html, body {
       height: auto !important;
@@ -307,84 +309,101 @@
       margin: 0 !important;
     }
 
-    .record-hero {
-      display: block !important;
-      min-height: 0 !important;
-      padding: 12px 14px !important;
-      margin-bottom: 8px !important;
-      border: 2px solid #063d2e !important;
-      border-radius: 8px !important;
-      background: #fff !important;
-      color: #063d2e !important;
-    }
-    .record-hero__waves { display: none !important; }
-    .record-hero__top { display: flex !important; gap: 12px !important; }
-    .record-hero__avatar {
-      width: 54px !important;
-      height: 54px !important;
-      border: 1.5px solid #063d2e !important;
-      border-radius: 10px !important;
-      background: #fff !important;
-    }
-    .record-hero__initials { color: #063d2e !important; font-size: 21px !important; }
-    .record-hero__divider { height: 40px !important; margin: 0 14px !important; background: #9bb5a9 !important; }
-    .record-hero__name { color: #063d2e !important; font-size: 22px !important; }
-    .record-hero__eyebrow { color: #5b7266 !important; font-size: 9px !important; }
-    .record-hero__badges { margin-left: auto !important; gap: 4px !important; }
-    .badge-hero {
-      padding: 2px 8px !important;
-      border: 1px solid #063d2e !important;
-      background: #fff !important;
-      color: #063d2e !important;
-      font-size: 9px !important;
-    }
-    .record-hero__meta {
-      padding-top: 8px !important;
-      margin-top: 10px !important;
-      gap: 4px 12px !important;
-      border-top-color: #c9d7d0 !important;
-    }
-    .hero-meta-label { color: #5b7266 !important; font-size: 8.5px !important; }
-    .hero-meta-value { color: #111 !important; font-size: 11px !important; }
+    /* The dashboard summary card is replaced by the official information panel. */
+    .record-hero { display: none !important; }
 
     section.card {
-      border: 1px solid #a9b8b0 !important;
-      border-radius: 6px !important;
-      margin-bottom: 8px !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      margin: 0 0 12px !important;
       overflow: visible !important;
-      background: #fff !important;
+      background: transparent !important;
     }
     .section-head {
-      padding: 6px 10px !important;
-      background: #fff !important;
-      color: #063d2e !important;
-      border-bottom: 1.5px solid #063d2e !important;
+      margin: 0 0 7px !important;
+      padding: 0 0 5px 8px !important;
+      background: transparent !important;
+      color: #08291F !important;
+      border: 0 !important;
+      border-left: 3px solid #08291F !important;
+      border-bottom: 1px solid #D9DED9 !important;
+      break-after: avoid;
+      page-break-after: avoid;
     }
-    .section-head h3, .section-head span { color: #063d2e !important; }
-    .section-num { background: #063d2e !important; color: #fff !important; }
-    .record-step { background: #fff !important; border-color: #063d2e !important; color: #063d2e !important; }
-    .section-note { color: #5b7266 !important; font-size: 8.5px !important; }
-    .section-body { padding: 8px 10px !important; }
-    .section-body hr { border-color: #d8d1c1 !important; }
+    .section-head h3 {
+      color: #08291F !important;
+      font-size: 10pt !important;
+      font-weight: 800 !important;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .section-head h3 span.section-num {
+      display: inline !important;
+      padding: 0 !important;
+      background: transparent !important;
+      color: #08291F !important;
+      font-size: 10pt !important;
+      font-weight: 800 !important;
+    }
+    .section-note { display: none !important; }
+    .section-body {
+      padding: 9px 12px !important;
+      background: #FAF8F2 !important;
+      border: 1px solid #DFCDAA !important;
+      border-radius: 8px !important;
+    }
+    .section-body hr { border-color: #DFCDAA !important; }
+    .overflow-x-auto { overflow: visible !important; }
 
     .info-tile {
-      padding: 6px 8px !important;
-      border: 1px solid #d8d1c1 !important;
-      border-radius: 6px !important;
-      background: #fff !important;
+      padding: 2px 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
       break-inside: avoid;
       page-break-inside: avoid;
     }
-    .info-label { color: #7a5c14 !important; font-size: 8.5px !important; }
-    .info-value { color: #111 !important; font-size: 10.5px !important; }
+    .info-label {
+      color: #496458 !important;
+      font-size: 8pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .info-value { color: #26352F !important; font-size: 9.5pt !important; }
 
-    .record-subhead { color: #063d2e !important; font-size: 9px !important; }
-    .record-group-title { color: #063d2e !important; font-size: 10.5px !important; }
-    .dose-table { border-color: #a9b8b0 !important; border-radius: 4px !important; font-size: 10px !important; }
+    .record-subhead {
+      color: #08291F !important;
+      font-size: 8.5pt !important;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .record-group-title {
+      color: #08291F !important;
+      font-size: 9.5pt !important;
+      font-weight: 800 !important;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .record-step {
+      width: auto !important;
+      height: auto !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+      color: #08291F !important;
+      font-size: 9.5pt !important;
+    }
+    .status-pill {
+      background: #FFFFFF !important;
+      border: 1px solid #D9DED9 !important;
+      color: #26352F !important;
+    }
+    .dose-table { border-color: #D9DED9 !important; border-radius: 4px !important; font-size: 10px !important; }
     .dose-table th {
       padding: 4px 6px !important;
-      background: #f2eee4 !important;
-      color: #063d2e !important;
+      background: #F3F0E7 !important;
+      color: #08291F !important;
       font-size: 8.5px !important;
     }
     .dose-table td { padding: 4px 6px !important; font-size: 10px !important; }
@@ -395,8 +414,8 @@
     thead { display: table-header-group; }
     .record-empty {
       padding: 10px !important;
-      border: 1px dashed #a9b8b0 !important;
-      background: #fff !important;
+      border: 1px dashed #DFCDAA !important;
+      background: #FAF8F2 !important;
     }
     a { color: inherit !important; text-decoration: none !important; }
   }
@@ -404,6 +423,32 @@
 {% endblock %}
 {% block content %}
 <div class="max-w-[1000px] mx-auto record-sheet">
+  <div class="abtc-print-only">
+    {% if assessment_only %}
+    {% include 'print/_official_head.html' with document_title="Clinical Assessment Sheet" show_printed_at=1 %}
+    {% elif nurse_view %}
+    {% include 'print/_official_head.html' with document_title="Doctor Findings Report" show_printed_at=1 %}
+    {% else %}
+    {% include 'print/_official_head.html' with document_title="Vaccination Record" show_printed_at=1 %}
+    {% endif %}
+
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Document Information</h2>
+      <div class="abtc-panel abtc-summary">
+        <div class="abtc-summary__row"><span>Patient Name</span><strong>{{ patient.full_name }}</strong></div>
+        <div class="abtc-summary__row"><span>Patient ID</span><strong>{{ patient.patient_number }}</strong></div>
+        <div class="abtc-summary__row"><span>Case Number</span><strong>{{ bite_case.case_number|default:"—" }}</strong></div>
+        {% if assessment_only or nurse_view %}
+        <div class="abtc-summary__row"><span>Assessment Date</span><strong>{{ assessment.encounter_date|date:"F d, Y · h:i A"|default:"Not recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Attending Doctor</span><strong>{% if assessment %}{{ assessment.assessed_by.get_full_name|default:assessment.assessed_by.username }}{% else %}Not recorded{% endif %}</strong></div>
+        <div class="abtc-summary__row"><span>Status</span><strong>{% if assessment and assessment.is_finalized %}Final{% elif assessment %}Draft{% else %}No assessment recorded{% endif %}</strong></div>
+        {% else %}
+        <div class="abtc-summary__row"><span>Vaccination Started</span><strong>{{ first_dose_date|date:"F d, Y"|default:"Not yet set" }}</strong></div>
+        <div class="abtc-summary__row"><span>Dose Schedule</span><strong>{{ dose_schedule_label|default:"Not recorded" }}</strong></div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
   <div class="flex flex-wrap items-center justify-between gap-3 mb-4 no-print">
     <div class="flex items-center gap-2">
       <a href="{% if nurse_view %}{% url 'bite_cases:case_list' %}{% else %}{% url 'vaccination:patient_schedule_list' %}{% endif %}" class="p-2 rounded-lg hover:bg-white border border-transparent hover:border-line">← Back</a>
@@ -481,7 +526,7 @@
   </header>
 
   {% if assessment_only and assessment and not assessment.is_finalized %}
-  <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3" role="alert">
+  <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 no-print" role="alert">
     <p class="text-sm font-bold text-amber-900">ASSESSMENT DRAFT</p>
     <p class="text-xs font-medium text-amber-800 mt-1">This assessment has not been finalized and signed. It is not an approved medication or vaccination order.</p>
   </div>
@@ -696,8 +741,8 @@
             <div class="space-y-2">
               {% for rx in prescriptions %}
               <div class="rx-line grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div class="info-tile"><div class="min-w-0"><p class="info-label">Prescription (from medicine inventory)</p><p class="info-value">{{ rx.medicine.label }}</p></div></div>
-                <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity</p><p class="info-value">{{ rx.quantity_display }}</p></div></div>
+                <div class="info-tile"><div class="min-w-0"><p class="info-label">Prescription (from medicine inventory)</p><p class="info-value">{{ rx.medicine.label|default:"Medicine record unavailable" }}</p></div></div>
+                <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity</p><p class="info-value">{{ rx.quantity_display|default:rx.quantity }}</p></div></div>
               </div>
               {% endfor %}
             </div>
@@ -723,6 +768,10 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>
       Print Sheet
     </button>
+  </div>
+
+  <div class="abtc-print-only">
+    {% include 'print/_official_footer.html' with confidential=True %}
   </div>
 </div>
 {% endblock %}

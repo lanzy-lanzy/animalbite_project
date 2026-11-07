@@ -16,6 +16,7 @@ from .forms import (
 )
 from audit.models import AuditLog
 from doctor.models import Prescription
+from .notifications import get_inventory_alerts
 
 # Medicine stock is managed by clinic staff; dispensing needs an authorized
 # hand (nurse or admin) so the transaction record reflects who released it.
@@ -76,10 +77,13 @@ def _nurse_vaccine_groups(query=''):
                 'batch_count': 0,
                 'quantity_used': 0,
                 'quantity_available': 0,
+                'reorder_level': 0,
                 'batch_expiries': [],
             }
         group['batch_count'] += 1
         group['quantity_used'] += batch.quantity_used
+        group['reorder_level'] = max(
+            group['reorder_level'], batch.reorder_level)
         if not batch.is_expired():
             group['quantity_available'] += batch.quantity_available
         group['batch_expiries'].append((
@@ -109,7 +113,10 @@ def _nurse_vaccine_groups(query=''):
         if not upcoming:
             group['status_label'] = 'Expired'
             group['status_class'] = 'bg-red-100 text-red-800'
-        elif group['quantity_available'] <= 5:
+        elif group['quantity_available'] <= 0:
+            group['status_label'] = 'Out of Stock'
+            group['status_class'] = 'bg-red-100 text-red-800'
+        elif group['quantity_available'] <= group['reorder_level']:
             group['status_label'] = 'Low Stock'
             group['status_class'] = 'bg-yellow-100 text-yellow-800'
         else:
@@ -125,7 +132,8 @@ def vaccine_list(request):
         paginator = Paginator(_nurse_vaccine_groups(query), 20)
         page = paginator.get_page(request.GET.get('page'))
         return render(request, 'inventory/vaccine_list.html',
-                      {'items': page, 'query': query})
+                      {'items': page, 'query': query,
+                       'alerts': get_inventory_alerts(module='vaccine')})
     items = VaccineInventory.objects.all()
     if query:
         items = items.filter(Q(vaccine_name__icontains=query) | Q(brand__icontains=query) | Q(batch_number__icontains=query))
@@ -211,9 +219,11 @@ def vaccine_detail(request, pk):
     live_batches = [batch for batch in product_batches if not batch.is_expired()]
     live_available = sum(batch.quantity_available for batch in live_batches)
     totals['available'] = live_available
+    # Section 3 only lists deliveries; administration deductions stay in the
+    # database and in Section 4 so the same event is not shown twice.
     movements = (
         VaccineStockMovement.objects
-        .filter(vaccine__in=product_batches)
+        .filter(vaccine__in=product_batches, movement_type='stock_in')
         .select_related('moved_by', 'vaccine')
         .order_by('-created_at')
     )
@@ -244,10 +254,20 @@ def vaccine_detail(request, pk):
 
     if not live_batches:
         stock_status = 'expired'
-    elif live_available <= 5:
+    elif live_available <= 0:
+        stock_status = 'out'
+    elif live_available <= max(
+            (batch.reorder_level for batch in product_batches), default=5):
         stock_status = 'low'
     else:
         stock_status = 'available'
+
+    highlight_batch = request.GET.get('batch', '').strip()
+    highlight_item = (
+        product_batches.filter(batch_number__iexact=highlight_batch)
+        .order_by('expiration_date').first()
+        if highlight_batch else None
+    )
 
     return render(request, 'inventory/vaccine_detail_nurse.html', {
         'item': item,
@@ -255,6 +275,8 @@ def vaccine_detail(request, pk):
         'movements': movements,
         'dispensing_records': dispensing_records,
         'stock_status': stock_status,
+        'highlight_batch': highlight_batch.casefold(),
+        'highlight_item': highlight_item,
     })
 
 def _nurse_medicine_groups(query=''):
@@ -372,6 +394,7 @@ def medicine_list(request):
             'query': query,
             'state': state,
             'pending_count': pending_count,
+            'alerts': get_inventory_alerts(module='medicine'),
         })
     items = MedicineInventory.objects.all()
     if query:
@@ -492,9 +515,11 @@ def medicine_detail(request, pk):
         received=Sum('quantity_received'),
         dispensed=Sum('quantity_dispensed'),
     )
+    # Section 3 only lists deliveries; dispensing deductions stay in the
+    # database and in Section 4 so the same event is not shown twice.
     movements = (
         MedicineStockMovement.objects
-        .filter(medicine__in=product_batches)
+        .filter(medicine__in=product_batches, movement_type='stock_in')
         .select_related('moved_by', 'medicine')
         .order_by('-created_at')
     )
@@ -519,12 +544,21 @@ def medicine_detail(request, pk):
     else:
         stock_status = 'available'
 
+    highlight_batch = request.GET.get('batch', '').strip()
+    highlight_item = (
+        product_batches.filter(batch_number__iexact=highlight_batch)
+        .order_by('expiration_date').first()
+        if highlight_batch else None
+    )
+
     return render(request, 'inventory/medicine_detail_nurse.html', {
         'item': item,
         'totals': totals,
         'movements': movements,
         'prescriptions': prescriptions,
         'stock_status': stock_status,
+        'highlight_batch': highlight_batch.casefold(),
+        'highlight_item': highlight_item,
     })
 
 

@@ -421,6 +421,14 @@ class PatientDetailRecordTests(TestCase):
         response = self.client.get(reverse("patients:patient_print", args=[self.patient.pk]))
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
+        for marker in (
+            "Animal Bite Treatment Center", "Municipal Health Office",
+            "Patient Information Sheet", "print_official.css",
+            "lgu_dumingag_logo.png", "abtc-letterhead", "abtc-footer",
+            "System-Generated Document",
+        ):
+            self.assertIn(marker, content)
+        self.assertNotIn("ABTC Management System", content)
         letters = [f'<span class="cs-letter">{letter}</span>' for letter in "ABCDEF"]
         positions = [content.index(marker) for marker in letters]
         self.assertEqual(positions, sorted(positions))
@@ -466,6 +474,13 @@ class PatientDetailRecordTests(TestCase):
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertTrue(response.content.startswith(b"%PDF"))
         self.assertGreater(len(response.content), 5000)
+        import re
+        match = re.search(
+            rb'/MediaBox\s*\[\s*0\s+0\s+([0-9.]+)\s+([0-9.]+)',
+            response.content)
+        self.assertIsNotNone(match)
+        width, height = (float(value) for value in match.groups())
+        self.assertLess(width, height)
 
     def test_portal_access_is_last_and_does_not_repeat_stored_password(self):
         response = self._get()
@@ -479,6 +494,79 @@ class PatientDetailRecordTests(TestCase):
         self.assertNotIn("Temporary Password (shown once)", content)
         self.assertNotIn("Bite Cases &amp; Vaccination Schedules", content)
         self.assertNotIn("Bite Cases & Vaccination Schedules", content)
+
+    def test_existing_patient_shows_full_portal_panel_without_password(self):
+        response = self._get()
+        content = response.content.decode()
+        login_url = response.wsgi_request.build_absolute_uri(reverse("accounts:login"))
+        # Restored light-green panel heading and the three white information cards.
+        self.assertIn("Patient Login Access", content)
+        self.assertIn("Share these credentials securely with the patient.", content)
+        self.assertIn('class="pd-cred-grid"', content)
+        self.assertIn(">Username</p>", content)
+        self.assertIn(">Login URL</p>", content)
+        self.assertIn(login_url, content)
+        # Existing accounts never reveal a stored/regenerated password.
+        self.assertIn("Shown only when created or reset", content)
+        self.assertIn("pd-value--muted", content)
+        self.assertNotIn("pd-value--secret", content)
+        self.assertNotIn("pw12345678", content)
+        # Restored white Scan-for-Login QR container with a URL-only QR.
+        self.assertIn("Scan for Login", content)
+        self.assertIn(
+            "Point a phone camera at this QR code to open the Patient Portal login page.",
+            content)
+        self.assertIn('alt="Patient login QR code"', content)
+        self.assertIn("data:image/png;base64,", content)
+        self.assertIn("ABTC Patient Portal", content)
+        self.assertIn("Download QR", content)
+        self.assertIn('download="ABTC_login_', content)
+        self.assertIn("window.print()", content)
+        # SMS line and the three cream summary cards remain below the panel.
+        self.assertIn("SMS reminders are also sent to", content)
+        self.assertIn("Account Status", content)
+        self.assertIn("Patient Login Details", content)
+        # The persistent QR encodes only the login URL — no reusable secret.
+        from utils.qr import qr_data_uri
+        self.assertIn(qr_data_uri(login_url), content)
+
+    def test_one_time_credentials_shown_after_reset(self):
+        self.client.force_login(self.admin)
+        session = self.client.session
+        session[f"temp_creds_{self.patient.pk}"] = {
+            "username": self.portal.username,
+            "password": "OneTime-Temp-999",
+            "created": False,
+            "reset": True,
+        }
+        session.save()
+        response = self.client.get(
+            reverse("patients:patient_detail", args=[self.patient.pk]))
+        content = response.content.decode()
+        self.assertIn("Password Reset", content)
+        self.assertIn("One-Time Credentials", content)
+        self.assertIn("Temporary Password (shown once)", content)
+        self.assertIn("OneTime-Temp-999", content)
+        self.assertIn("pd-value--secret", content)
+        # The one-time print sheet carries the password row.
+        self.assertIn("One-Time Login Credentials", content)
+        # Consuming the record a second time must not repeat the password.
+        again = self.client.get(
+            reverse("patients:patient_detail", args=[self.patient.pk]))
+        self.assertNotIn("OneTime-Temp-999", again.content.decode())
+        self.assertIn("Shown only when created or reset", again.content.decode())
+
+    def test_print_sheet_present_for_existing_patient_without_password(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn('class="abtc-print-only pd-cred-print"', content)
+        self.assertIn("Patient Portal Login Information", content)
+        self.assertIn("Existing Login", content)
+        self.assertIn(self.portal.username, content)
+        self.assertIn(reverse("accounts:login"), content)
+        # No temporary-password row is printed for an existing login.
+        self.assertNotIn(">Temporary Password</span>", content)
+        self.assertNotIn("One-Time Login Credentials", content)
 
     def test_actions_and_qr_remain_available(self):
         response = self._get()

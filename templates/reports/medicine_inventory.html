@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Medicine Inventory Report — ABTC{% endblock %}
+{% block content %}
+<div x-data="reportPreview()" class="space-y-5">
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <a href="{% url 'reports:reports_index' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Reports Center
+            </a>
+            <h1 class="font-display text-2xl font-bold text-ink mt-1">Medicine Inventory Report</h1>
+            <p class="text-sm font-medium text-muted">{{ label }} · <span class="text-ink font-bold">{{ totals.products }}</span> product{{ totals.products|pluralize }} · {{ totals.batches }} batch{{ totals.batches|pluralize }}</p>
+        </div>
+        {% include 'reports/_report_toolbar.html' %}
+    </div>
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+        Current inventory snapshot as of {{ snapshot_date|date:'M d, Y' }}. Dispensed counts come from confirmed dispensing only. Available quantities exclude expired batches.
+    </div>
+
+    <div class="card">
+        <form method="GET" class="flex flex-wrap items-end gap-2">
+            <div class="flex-1 min-w-[200px]">
+                <label class="form-label">Search medicine, generic or strength</label>
+                <input type="text" name="q" value="{{ q }}" placeholder="e.g., Amoxicillin, 500 mg" class="form-input">
+            </div>
+            <button type="submit" class="btn-primary" style="min-width:110px;">Apply</button>
+            <a href="{% url 'reports:medicine_inventory_report' %}" class="btn-secondary" style="min-width:100px;text-align:center;">Clear</a>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Received</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ totals.received }}</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Dispensed</p>
+            <p class="font-display text-2xl font-bold text-emerald-800">{{ totals.dispensed }}</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Available</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ totals.available }}</p>
+        </div>
+        <div class="card text-center p-4 bg-emerald-950 border-emerald-950 text-white">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Batches</p>
+            <p class="font-display text-2xl font-bold">{{ totals.batches }}</p>
+        </div>
+    </div>
+
+    <div id="report-print-area" class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Products — Medicine Inventory</h3>
+                <p class="text-xs font-medium text-muted">One row per medicine product · different strengths stay separate</p>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-700 bg-white border border-line px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live snapshot
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Medicine Name</th>
+                        <th class="table-header">Generic / Brand</th>
+                        <th class="table-header">Dosage Form</th>
+                        <th class="table-header">Unit</th>
+                        <th class="table-header">Batches</th>
+                        <th class="table-header">Total Received</th>
+                        <th class="table-header">Total Dispensed</th>
+                        <th class="table-header">Total Available</th>
+                        <th class="table-header">Nearest Expiration</th>
+                        <th class="table-header">Stock Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for product in products %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell font-bold text-ink">
+                            {{ product.name }}{% if product.strength %} <span class="block text-xs font-semibold text-muted">{{ product.strength }}</span>{% endif %}
+                        </td>
+                        <td class="table-cell">{{ product.generic_name|default:'—' }}</td>
+                        <td class="table-cell">{{ product.dosage_form }}</td>
+                        <td class="table-cell">{{ product.unit }}</td>
+                        <td class="table-cell">{{ product.batch_count }}</td>
+                        <td class="table-cell">{{ product.total_received }}</td>
+                        <td class="table-cell">{{ product.total_dispensed }}</td>
+                        <td class="table-cell font-bold {% if product.total_available <= 0 %}text-red-600{% elif product.stock_status == 'Low Stock' %}text-amber-600{% else %}text-emerald-700{% endif %}">{{ product.total_available }}</td>
+                        <td class="table-cell {% if product.has_expired_batches %}text-amber-700{% else %}text-muted{% endif %}">{{ product.nearest_expiration|date:'M d, Y'|default:'—' }}</td>
+                        <td class="table-cell"><span class="status-badge {{ product.status_class }}">{{ product.stock_status }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center py-12">
+                        <p class="text-sm font-semibold text-ink">No medicine products found.</p>
+                        <p class="text-xs text-muted mt-1">Adjust the search or record medicine stock first.</p>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-5 py-3 border-t border-line bg-white flex flex-wrap gap-2 text-xs font-medium text-muted">
+            <span>Generated {% now "M d, Y h:i A" %}</span>
+            <span class="opacity-40">·</span>
+            <span>ABTC System · Confidential</span>
+        </div>
+    </div>
+
+    {% if products %}
+    <div class="card no-print">
+        <h3 class="font-display text-sm font-bold text-ink mb-3">Batch detail</h3>
+        <div class="space-y-2">
+            {% for product in products %}
+            <details class="rounded-xl border border-line bg-white">
+                <summary class="cursor-pointer px-4 py-2.5 text-sm font-bold text-ink flex items-center justify-between">
+                    <span>{{ product.display_name }} · {{ product.dosage_form }}</span>
+                    <span class="text-xs font-semibold text-muted">{{ product.batch_count }} batch{{ product.batch_count|pluralize }}</span>
+                </summary>
+                <div class="overflow-x-auto border-t border-line">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-sage-50 border-b border-line">
+                                <th class="table-header">Batch</th>
+                                <th class="table-header">Expiration</th>
+                                <th class="table-header">Received</th>
+                                <th class="table-header">Dispensed</th>
+                                <th class="table-header">Available</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-sage-100">
+                            {% for batch in product.batches %}
+                            <tr>
+                                <td class="table-cell text-xs font-mono">{{ batch.batch_number }}</td>
+                                <td class="table-cell {% if batch.expiration_date < snapshot_date %}text-red-600 font-semibold{% else %}text-muted{% endif %}">{{ batch.expiration_date|date:'M d, Y' }}</td>
+                                <td class="table-cell">{{ batch.quantity_received }}</td>
+                                <td class="table-cell">{{ batch.quantity_dispensed }}</td>
+                                <td class="table-cell">{{ batch.quantity_available }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% include 'reports/_pdf_modal.html' %}
+</div>
+{% endblock %}

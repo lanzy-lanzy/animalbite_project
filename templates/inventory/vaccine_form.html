@@ -18,6 +18,12 @@
                 <div><label class="form-label">Expiration Date *</label>{{ form.expiration_date }}</div>
                 <div><label class="form-label">Quantity Received *</label>{{ form.quantity_received }}</div>
             </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="form-label">Reorder Level</label>{{ form.reorder_level }}
+                    <p class="text-xs text-muted mt-1">Alerts trigger when usable stock reaches this level.</p>
+                </div>
+            </div>
             <div><label class="form-label">Source/Supplier</label>{{ form.source_supplier }}</div>
             <div><label class="form-label">Remarks</label>{{ form.remarks }}</div>
             <div class="flex gap-2 pt-4">

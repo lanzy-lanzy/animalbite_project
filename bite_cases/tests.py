@@ -274,6 +274,37 @@ class BiteCasePortalAccessVisibilityTests(BiteCaseDeleteTestCase):
         self.assertNotIn(f"temp_creds_{self.patient.pk}", self.client.session)
 
 
+class BiteCaseListActionTests(BiteCaseDeleteTestCase):
+    """The doctor's Bite Cases table exposes one emerald View pill per row."""
+
+    def _list(self, user):
+        self.client.force_login(user)
+        return self.client.get(reverse("bite_cases:case_list")).content.decode()
+
+    def _view_pill(self, case):
+        return '<a href="%s" class="btn-view"><svg' % reverse(
+            "bite_cases:case_detail", args=[case.pk])
+
+    def test_doctor_rows_use_the_shared_view_pill_without_edit(self):
+        html = self._list(self.doctor)
+        for case in (self.case, self.other_case):
+            self.assertIn(self._view_pill(case), html)
+        self.assertNotIn(reverse("bite_cases:case_edit", args=[self.case.pk]), html)
+        self.assertNotIn(">Edit</a>", html)
+        for style in ("#157A61", "#0C543F", "9999px", "8px 16px"):
+            self.assertIn(style, html)
+
+    def test_admin_keeps_edit_and_the_shared_view_pill(self):
+        html = self._list(self.admin)
+        self.assertIn(reverse("bite_cases:case_edit", args=[self.case.pk]), html)
+        self.assertIn(self._view_pill(self.case), html)
+
+    def test_nurse_keeps_the_doctor_findings_button(self):
+        html = self._list(self.nurse)
+        self.assertIn("findings-view-btn", html)
+        self.assertNotIn('class="btn-view"', html)
+
+
 class BiteCaseDeleteModalTests(BiteCaseDeleteTestCase):
 
     def test_modal_copy_and_case_fields_are_rendered(self):

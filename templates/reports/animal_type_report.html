@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Animal Bite Cases by Animal Type — ABTC{% endblock %}
+{% block content %}
+<div x-data="reportPreview()" class="space-y-5">
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <a href="{% url 'reports:reports_index' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Reports Center
+            </a>
+            <h1 class="font-display text-2xl font-bold text-ink mt-1">Animal Bite Cases by Animal Type</h1>
+            <p class="text-sm font-medium text-muted">{{ label }} · <span class="text-ink font-bold">{{ total }}</span> case{{ total|pluralize }} · {{ rows|length }} animal type{{ rows|length|pluralize }}</p>
+        </div>
+        {% include 'reports/_report_toolbar.html' %}
+    </div>
+
+    {% include 'reports/_case_filters.html' %}
+
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Cases</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ total }}</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Animal Types</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ rows|length }}</p>
+        </div>
+        <div class="card text-center p-4 bg-emerald-950 border-emerald-950 text-white">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Highest</p>
+            <p class="font-display text-lg font-bold leading-tight mt-1">{{ top.name|default:'—' }}</p>
+            <p class="text-xs font-medium text-sage-200">{{ top.count|default:0 }} case{{ top.count|pluralize }}</p>
+        </div>
+    </div>
+
+    <div id="report-print-area" class="space-y-4">
+        <div class="card p-0 overflow-hidden">
+            <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+                <div>
+                    <h3 class="font-display text-sm font-bold text-ink">Cases by Animal Type · {{ label }}</h3>
+                    <p class="text-xs font-medium text-muted">Saved animal type per recorded bite case</p>
+                </div>
+                <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-700 bg-white border border-line px-2.5 py-1 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live preview
+                </span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-line bg-sage-50">
+                            <th class="table-header">Animal Type</th>
+                            <th class="table-header">Cases</th>
+                            <th class="table-header">Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-sage-100">
+                        {% for row in rows %}
+                        <tr class="hover:bg-sage-50">
+                            <td class="table-cell font-bold text-ink">{{ row.name }}</td>
+                            <td class="table-cell">{{ row.count }}</td>
+                            <td class="table-cell">{{ row.pct }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center py-12">
+                            <p class="text-sm font-semibold text-ink">No cases found for this period.</p>
+                            <p class="text-xs text-muted mt-1">Try a different search or reporting period.</p>
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-display text-sm font-bold text-ink mb-3">Distribution — horizontal bars</h3>
+            <div class="space-y-2.5">
+                {% for row in rows %}
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-semibold text-ink w-28 w-40 truncate">{{ row.name }}</span>
+                    <div class="flex-1 h-2 bg-sage-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-700 rounded-full" style="width: {{ row.pct }}%"></div>
+                    </div>
+                    <span class="text-xs font-bold text-ink w-16 text-right">{{ row.count }} · {{ row.pct }}%</span>
+                </div>
+                {% empty %}
+                <p class="text-sm text-muted text-center py-4">No data</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 text-xs font-medium text-muted">
+        <span>Generated {% now "M d, Y h:i A" %}</span>
+        <span class="opacity-40">·</span>
+        <span>ABTC System · Confidential</span>
+    </div>
+
+    {% include 'reports/_pdf_modal.html' %}
+</div>
+{% endblock %}

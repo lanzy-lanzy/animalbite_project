@@ -1,0 +1,35 @@
+<div class="card">
+    <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2 mb-3">
+        <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </span>
+        Reporting Period
+    </h2>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+        <a href="?type=daily{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Daily</a>
+        <a href="?type=weekly{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Weekly</a>
+        <a href="?type=monthly{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Monthly</a>
+        <a href="?type=last7{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 7 days</a>
+        <a href="?type=last30{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 30 days</a>
+        <a href="?type=annual{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'annual' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Annual</a>
+    </div>
+
+    <form method="GET">
+        <input type="hidden" name="type" value="{{ report_type }}">
+        <label for="report-search" class="form-label">Search case number or patient</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <div class="w-full min-w-0">
+                <input id="report-search" type="text" name="q" value="{{ q }}" placeholder="e.g., ABC-00001 or Juan Dela Cruz" class="form-input" style="height:2.75rem;">
+            </div>
+            <button type="submit" class="btn-primary shrink-0" style="min-width:120px;height:2.75rem;background:#0F3D2E;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                Search
+            </button>
+        </div>
+    </form>
+
+    <p class="text-[11px] font-medium text-muted mt-2">
+        {{ filter_note|default:"Case statistics follow the selected reporting period. Inventory statistics show current stock." }}
+    </p>
+</div>

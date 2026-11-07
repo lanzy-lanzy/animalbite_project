@@ -10,6 +10,7 @@ class VaccineInventory(models.Model):
     quantity_received = models.IntegerField(default=0)
     quantity_available = models.IntegerField(default=0)
     quantity_used = models.IntegerField(default=0)
+    reorder_level = models.PositiveIntegerField(default=5)
     source_supplier = models.CharField(max_length=200, blank=True)
     date_received = models.DateField(default=date.today)
     remarks = models.TextField(blank=True)
@@ -28,7 +29,7 @@ class VaccineInventory(models.Model):
         return self.expiration_date < date.today()
 
     def is_low_stock(self):
-        return self.quantity_available <= 5
+        return self.quantity_available <= self.reorder_level
 
 class SupplyInventory(models.Model):
     SUPPLY_TYPES = [

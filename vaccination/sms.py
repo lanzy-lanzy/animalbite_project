@@ -193,10 +193,15 @@ def send_dose_reminder(dose, reminder_type: str = "3days_before", dry_run: bool 
     ).filter(status__in=["sent", "queued", "pending"]).first() if not force and not dry_run else None
     # Alternative: prevent duplicate today
     if existing and not force and not dry_run:
-        # Check if already sent today or within last 24h for this reminder_type
-        # If existing sent_at date is today, skip
-        if existing.sent_at and existing.sent_at.date() == today:
-            return existing, {"success": False, "error": "Already sent today", "response": None, "skipped": True}
+        # Compare the Manila calendar day, not the UTC one
+        if existing.sent_at:
+            sent_local = (
+                timezone.localtime(existing.sent_at)
+                if timezone.is_aware(existing.sent_at)
+                else existing.sent_at
+            )
+            if sent_local.date() == today:
+                return existing, {"success": False, "error": "Already sent today", "response": None, "skipped": True}
 
     if dry_run:
         # Create a simulated log without calling API

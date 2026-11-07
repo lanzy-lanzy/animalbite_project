@@ -309,31 +309,40 @@
 }
 .pr-slip .pr-section { margin-top: 18px; }
 .pr-slip .pr-section-head {
-    padding: 8px 2px;
+    padding: 8px 2px 8px 10px;
     border-radius: 0;
-    border-bottom: 2px solid #0d352b;
+    border-bottom: 0;
+    border-left: 3px solid #08291F;
     background: #fff;
     box-shadow: none;
 }
-.pr-slip .pr-section-num { background: #0d352b; color: #fff; }
-.pr-slip .pr-section-head h2 { color: #08201a; }
+.pr-slip .pr-section-num {
+    width: auto;
+    height: auto;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #08291F;
+    font-size: .98rem;
+}
+.pr-slip .pr-section-head h2 { color: #08291F; }
 .pr-slip .pr-section-body {
     gap: 8px;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #ddd6c7;
-    background: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #DFCDAA;
+    background: #FAF8F2;
     box-shadow: none;
 }
 .pr-slip .pr-tile {
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid #e4ddce;
-    background: #fff;
+    padding: 2px 0;
+    border-radius: 0;
+    border: 0;
+    background: transparent;
     box-shadow: none;
 }
-.pr-slip .pr-label { color: #6b5418; font-size: .58rem; }
-.pr-slip .pr-value { font-size: .82rem; font-weight: 500; }
+.pr-slip .pr-label { color: #496458; font-size: .58rem; }
+.pr-slip .pr-value { color: #26352F; font-size: .82rem; font-weight: 500; }
 .pr-slip .pr-tile--alert { border-color: #e3b4b4; background: #fff7f7; }
 
 .pr-slip-reminder {
@@ -354,10 +363,24 @@
 }
 
 @media print {
-    @page { size: A4; margin: 16mm; }
+    @page { size: A4 portrait; margin: 15mm; }
     .pr-actions, .no-print { display: none !important; }
+    aside, header.topbar { display: none !important; }
+    .flex.h-screen {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .flex-1.flex.flex-col { display: block !important; }
+    main.app-canvas {
+        display: block !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
     body { background: #fff !important; }
-    .pr-slip { max-width: none; margin: 0; }
+    .pr-wrap, .pr-slip { max-width: none; margin: 0; }
+    .pr-slip.card { border: 0 !important; box-shadow: none !important; padding: 0 !important; }
     .pr-slip .pr-section-head { break-after: avoid; }
     .pr-slip .pr-tile { break-inside: avoid; }
     .pr-slip .pr-note, .pr-slip-reminder { break-inside: avoid; }

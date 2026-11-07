@@ -531,7 +531,7 @@ def assessment_detail(request, pk):
         'doses': doses,
         'first_dose_date': first_dose_date,
         'dose_schedule_label': dose_schedule_label,
-        'prescriptions': assessment.prescriptions.select_related('medicine').order_by('id'),
+        'prescriptions': assessment.prescriptions.prefetch_related('medicine').order_by('id'),
     })
 
 

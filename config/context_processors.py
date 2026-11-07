@@ -25,3 +25,17 @@ def doctor_notifications(request):
         'bell_drafts': draft_count,
         'bell_total': queue_count + draft_count,
     }
+
+
+def inventory_notifications(request):
+    """Inventory alerts behind the Nurse Portal bell (vaccines + medicines)."""
+    user = getattr(request, 'user', None)
+    if not (user and user.is_authenticated and getattr(user, 'role', '') == 'nurse'):
+        return {}
+    from inventory.notifications import get_inventory_alerts
+
+    alerts = get_inventory_alerts()
+    return {
+        'inventory_alerts': alerts,
+        'inventory_alert_total': len(alerts),
+    }

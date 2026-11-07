@@ -6,11 +6,12 @@ policy — dispensed prescriptions, administered vaccine doses, signed clinical
 assessments — block deletion so the admin can archive instead.
 """
 import datetime
+import re
 from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -21,7 +22,7 @@ from inventory.models import MedicineInventory, MedicineStockMovement
 from pre_registrations.models import PreRegistration
 from vaccination.models import SMSLog, VaccinationSchedule, VaccineDose
 
-from .models import Patient, VitalSign
+from .models import Barangay, Patient, VitalSign
 
 U = get_user_model()
 
@@ -375,6 +376,210 @@ class PatientDeleteBehaviourTests(PatientDeleteTestCase):
 
         self.assertRedirects(response, reverse("patients:patient_list"))
         self.assertFalse(Patient.objects.filter(pk=self.patient.pk).exists())
+
+
+@override_settings(SEMAPHORE_ENABLED=False)
+class PatientRegistrationSidebarTests(PatientDeleteTestCase):
+    """Register Patient moved from the list header into the admin sidebar."""
+
+    def _page(self, user, url_name="patients:patient_list"):
+        self.client.force_login(user)
+        return self.client.get(reverse(url_name)).content.decode()
+
+    def _sidebar_links(self, html):
+        return re.findall(r'<a href="([^"]+)" class="sidebar-link', html)
+
+    def test_admin_header_keeps_scan_only_without_schedules_or_register(self):
+        html = self._page(self.admin)
+        self.assertNotIn("+ Register Patient", html)
+        self.assertIn("Scan QR", html)
+        self.assertNotIn("Vaccination Schedules", html)
+
+    def test_admin_sidebar_places_register_patient_directly_after_patients(self):
+        html = self._page(self.admin)
+        links = self._sidebar_links(html)
+        list_url = reverse("patients:patient_list")
+        create_url = reverse("patients:patient_create")
+        self.assertIn(create_url, links)
+        self.assertEqual(links.index(create_url), links.index(list_url) + 1)
+        self.assertEqual(
+            links.index(create_url) + 1,
+            links.index(reverse("vaccination:patient_schedule_list")))
+        self.assertIn("Register Patient", html)
+
+    def test_active_state_follows_the_open_page(self):
+        create_url = reverse("patients:patient_create")
+        list_url = reverse("patients:patient_list")
+
+        html = self._page(self.admin, "patients:patient_create")
+        self.assertIn('href="%s" class="sidebar-link active"' % create_url, html)
+        self.assertNotIn('href="%s" class="sidebar-link active"' % list_url, html)
+
+        html = self._page(self.admin)
+        self.assertIn('href="%s" class="sidebar-link active"' % list_url, html)
+        self.assertNotIn('href="%s" class="sidebar-link active"' % create_url, html)
+
+    def test_other_portals_keep_their_header_button_and_no_sidebar_item(self):
+        create_url = reverse("patients:patient_create")
+        for user in (self.doctor, self.nurse):
+            with self.subTest(role=user.role):
+                html = self._page(user)
+                self.assertIn("+ Register Patient", html)
+                self.assertIn("Scan QR", html)
+                self.assertIn("Vaccination Schedules", html)
+                self.assertNotIn(create_url, self._sidebar_links(html))
+
+@override_settings(SEMAPHORE_ENABLED=False)
+class PatientRegistrationFlowTests(TestCase):
+    """The sidebar link reuses the original registration route and behaviour."""
+
+    def test_registration_form_still_creates_a_patient_with_a_generated_id(self):
+        admin = U.objects.create_user("admin.reg", password="pw12345678", role="admin")
+        self.client.force_login(admin)
+        url = reverse("patients:patient_create")
+        self.assertEqual(self.client.get(url).status_code, 200)
+        barangay = Barangay.objects.create(name="Poblacion")
+
+        response = self.client.post(url, {
+            "first_name": "New", "last_name": "Registrant",
+            "birthdate": "1990-01-01", "sex": "female", "civil_status": "single",
+            "contact_number": "09170000099", "address": "Poblacion, Dumingag",
+            "barangay": "Poblacion",
+        }, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        patient = Patient.objects.get(first_name="New", last_name="Registrant")
+        self.assertEqual(patient.patient_number, "PAT-00001")
+        self.assertEqual(patient.barangay.name, "Poblacion")
+        self.assertEqual(patient.created_by, admin)
+        self.assertTrue(AuditLog.objects.filter(
+            action="CREATE_PATIENT",
+            description__contains=patient.patient_number).exists())
+
+
+@override_settings(SEMAPHORE_ENABLED=False)
+class PatientDemographicsFormTests(TestCase):
+    """Register/Edit demographics: photo hidden on register, barangay is free text."""
+
+    def setUp(self):
+        self.admin = U.objects.create_user("admin.demo", password="pw12345678", role="admin")
+        self.client.force_login(self.admin)
+        self.create_url = reverse("patients:patient_create")
+
+    def _payload(self, **overrides):
+        data = {
+            "first_name": "Maria", "last_name": "Clara",
+            "birthdate": "1992-02-02", "sex": "female", "civil_status": "single",
+            "contact_number": "09170000111", "address": "Purok 1, Dumingag",
+            "barangay": "San Pedro",
+        }
+        data.update(overrides)
+        return data
+
+    def _barangay_tag(self, html):
+        match = re.search(r'<input[^>]*name="barangay"[^>]*>', html)
+        self.assertIsNotNone(match, "barangay should render as a text input")
+        return match.group(0)
+
+    def test_register_page_hides_photo_and_uses_required_barangay_text_input(self):
+        html = self.client.get(self.create_url).content.decode()
+        self.assertNotIn("Profile photo", html)
+        self.assertNotIn('name="profile_image"', html)
+        self.assertNotIn("No file chosen", html)
+        self.assertNotIn('<select name="barangay"', html)
+        tag = self._barangay_tag(html)
+        self.assertIn('type="text"', tag)
+        self.assertIn('required', tag)
+        self.assertIn('placeholder="Type barangay name, e.g., San Pedro"', tag)
+        self.assertIn("Barangay *", html)
+
+    def test_barangay_whitespace_is_trimmed_and_collapsed(self):
+        response = self.client.post(self.create_url, self._payload(barangay="  San   Pedro  "), follow=True)
+        self.assertEqual(response.status_code, 200)
+        patient = Patient.objects.get(first_name="Maria", last_name="Clara")
+        self.assertEqual(patient.barangay.name, "San Pedro")
+
+    def test_barangay_matches_existing_case_insensitively_without_duplicate(self):
+        existing = Barangay.objects.create(name="San Pedro")
+        self.client.post(self.create_url, self._payload(barangay="san pedro"), follow=True)
+        patient = Patient.objects.get(first_name="Maria")
+        self.assertEqual(patient.barangay_id, existing.pk)
+        self.assertEqual(Barangay.objects.filter(name__iexact="san pedro").count(), 1)
+
+    def test_new_barangay_preserves_the_typed_text(self):
+        self.client.post(self.create_url, self._payload(barangay="Bagong Silang"), follow=True)
+        patient = Patient.objects.get(first_name="Maria")
+        self.assertEqual(patient.barangay.name, "Bagong Silang")
+
+    def test_empty_barangay_shows_a_clear_validation_message(self):
+        response = self.client.post(self.create_url, self._payload(barangay=""))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Barangay is required. Please type the barangay name.")
+        self.assertFalse(Patient.objects.filter(first_name="Maria").exists())
+
+    def test_whitespace_only_barangay_is_rejected(self):
+        response = self.client.post(self.create_url, self._payload(barangay="   "))
+        self.assertContains(response, "Barangay is required. Please type the barangay name.")
+        self.assertFalse(Patient.objects.filter(first_name="Maria").exists())
+
+    def test_edit_form_shows_and_updates_a_manual_barangay_and_keeps_photo(self):
+        barangay = Barangay.objects.create(name="San Pedro")
+        patient = Patient.objects.create(
+            patient_number="PAT-90001", first_name="Ed", last_name="It",
+            birthdate=datetime.date(1990, 1, 1), sex="male", contact_number="09170000222",
+            address="Purok 2", barangay=barangay)
+        url = reverse("patients:patient_edit", args=[patient.pk])
+        html = self.client.get(url).content.decode()
+        self.assertIn('value="San Pedro"', self._barangay_tag(html))
+        self.assertIn('name="profile_image"', html)
+
+        response = self.client.post(url, self._payload(
+            first_name="Ed", last_name="It", barangay="New Manual Barangay"), follow=True)
+        self.assertEqual(response.status_code, 200)
+        patient.refresh_from_db()
+        self.assertEqual(patient.barangay.name, "New Manual Barangay")
+        listing = self.client.get(reverse("patients:patient_list"), {"q": "New Manual"})
+        self.assertContains(listing, "PAT-90001")
+
+
+class PatientListNurseActionsTests(PatientDeleteTestCase):
+    """The nurse patient list exposes one View pill per row and nothing else."""
+
+    def _list(self, user):
+        self.client.force_login(user)
+        return self.client.get(reverse("patients:patient_list")).content.decode()
+
+    def _row_action_urls(self, patient):
+        return (
+            "?q=%s" % patient.patient_number,
+            reverse("patients:patient_print", args=[patient.pk]),
+            reverse("patients:patient_vital_create", args=[patient.pk]),
+            reverse("patients:patient_edit", args=[patient.pk]),
+        )
+
+    def test_nurse_rows_show_only_the_view_pill(self):
+        html = self._list(self.nurse)
+        for patient in (self.patient, self.other_patient):
+            self.assertIn('<a href="%s" class="btn-view"><svg'
+                          % reverse("patients:patient_detail", args=[patient.pk]), html)
+            for url in self._row_action_urls(patient):
+                self.assertNotIn(url, html)
+        self.assertNotIn(">Edit</a>", html)
+        self.assertNotIn("View on Live", html)
+        self.assertEqual(html.count('class="btn-view"'), 4)
+
+    def test_admin_keeps_every_row_action(self):
+        html = self._list(self.admin)
+        for url in self._row_action_urls(self.patient):
+            self.assertIn(url, html)
+        self.assertIn(">Edit</a>", html)
+
+    def test_nurse_can_still_open_the_record_and_add_vitals_there(self):
+        self.client.force_login(self.nurse)
+        detail = self.client.get(
+            reverse("patients:patient_detail", args=[self.patient.pk]))
+        self.assertContains(
+            detail, reverse("patients:patient_vital_create", args=[self.patient.pk]))
 
 
 class PatientDeleteModalTests(PatientDeleteTestCase):

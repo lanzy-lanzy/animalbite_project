@@ -4,10 +4,20 @@ from utils.phone import normalize_to_09, validate_ph_number
 from .models import Patient, Barangay, VitalSign
 
 class PatientForm(forms.ModelForm):
+    barangay = forms.CharField(
+        max_length=100,
+        label='Barangay',
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Type barangay name, e.g., San Pedro',
+        }),
+        error_messages={'required': 'Barangay is required. Please type the barangay name.'},
+    )
+
     class Meta:
         model = Patient
         fields = '__all__'
-        exclude = ['patient_number', 'age', 'created_by', 'is_archived']
+        exclude = ['patient_number', 'age', 'created_by', 'is_archived', 'barangay']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Juan'}),
             'middle_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'M.'}),
@@ -19,7 +29,6 @@ class PatientForm(forms.ModelForm):
             'civil_status': forms.Select(attrs={'class': 'form-input'}),
             'contact_number': forms.TextInput(attrs={'class': 'form-input', 'type': 'tel', 'placeholder': '09123456789', 'pattern': '^(09\\d{9}|639\\d{9}|\\+639\\d{9})$', 'title': '09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX'}),
             'address': forms.Textarea(attrs={'rows': 2, 'class': 'form-input', 'placeholder': 'House #, Street, Barangay, Municipality'}),
-            'barangay': forms.Select(attrs={'class': 'form-input'}),
             'parent_guardian': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'For minors'}),
             'emergency_contact_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Emergency contact person'}),
             'emergency_contact_number': forms.TextInput(attrs={'class': 'form-input', 'type': 'tel', 'placeholder': '09123456789', 'pattern': '^(09\\d{9}|639\\d{9}|\\+639\\d{9})$', 'title': '09XXXXXXXXX or 639XXXXXXXXX or +639XXXXXXXXX'}),
@@ -46,6 +55,29 @@ class PatientForm(forms.ModelForm):
         validate_ph_number(val)
         n09 = normalize_to_09(val)
         return n09 or val
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.instance.pk and self.instance.barangay_id:
+            self.fields['barangay'].initial = self.instance.barangay.name
+
+    def clean_barangay(self):
+        value = ' '.join(self.cleaned_data.get('barangay', '').split())
+        if not value:
+            raise forms.ValidationError(self.fields['barangay'].error_messages['required'])
+        return value
+
+    def save(self, commit=True):
+        patient = super().save(commit=False)
+        name = self.cleaned_data.get('barangay', '')
+        if name:
+            barangay = Barangay.objects.filter(name__iexact=name).first()
+            if barangay is None:
+                barangay = Barangay.objects.create(name=name)
+            patient.barangay = barangay
+        if commit:
+            patient.save()
+        return patient
 
 
 class VitalSignForm(forms.ModelForm):

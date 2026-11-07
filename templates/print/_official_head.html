@@ -1,0 +1,11 @@
+{% load static %}
+<header class="abtc-letterhead">
+    <img src="{% static 'images/lgu_dumingag_logo.png' %}" alt="Municipal Health Office – Dumingag logo" class="abtc-logo">
+    <div class="abtc-letterhead__text">
+        <p class="abtc-org">Animal Bite Treatment Center</p>
+        <p class="abtc-office">Municipal Health Office</p>
+        <h1 class="abtc-doc-title">{{ document_title|default:"Official Document" }}</h1>
+    </div>
+</header>
+<div class="abtc-rule"></div>
+{% if show_printed_at %}<p class="abtc-doc-meta abtc-doc-meta--printed">Date Printed: {% now "F d, Y · g:i A" %}</p>{% endif %}

@@ -1,185 +1,294 @@
 {% extends 'base.html' %}
-{% block title %}Reports — ABTC System{% endblock %}
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-{% endblock %}
+{% block title %}Reports Center — ABTC System{% endblock %}
 {% block content %}
 <style>
-    .rep-card{background:linear-gradient(152deg, rgba(255,255,255,.72) 0%, rgba(255,253,246,.46) 45%, rgba(228,243,236,.48) 100%);backdrop-filter:blur(18px) saturate(175%);-webkit-backdrop-filter:blur(18px) saturate(175%);border:1px solid rgba(255,255,255,.62);border-radius:1.35rem;padding:1.25rem;box-shadow:18px 18px 40px -22px rgba(146,124,84,.46), -14px -14px 34px -22px rgba(255,255,255,.95), inset 0 1.5px 0 rgba(255,255,255,.95);transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s ease; }
-    .rep-card:hover{ transform:translateY(-4px);box-shadow:24px 26px 52px -22px rgba(146,124,84,.55), -16px -16px 36px -22px rgba(255,255,255,1);border-color:rgba(201,162,39,.5); }
+    /* Reports Center — flat neutral canvas */
+    .app-canvas{background-color:#F7F8F6;background-image:none;}
+    .app-canvas::before{display:none;}
+
+    /* Summary statistics — pastel cards */
+    .rep-kpi{
+        --rep-kpi-bg:#FFFFFF;--rep-kpi-border:#E5E7EB;--rep-kpi-accent:#0F3D2E;
+        display:flex;flex-direction:column;height:100%;
+        background:var(--rep-kpi-bg);border:1px solid var(--rep-kpi-border);border-radius:18px;
+        padding:1rem 1.1rem;
+        box-shadow:0 1px 2px rgba(16,24,40,.04), 0 10px 24px -24px rgba(16,24,40,.3);
+    }
+    .rep-kpi-label{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--rep-kpi-accent);}
+    .rep-kpi-value{color:var(--rep-kpi-accent);}
+    .rep-kpi-desc{font-size:11px;font-weight:500;line-height:1.45;color:#53645D;margin-top:.375rem;}
+    .rep-kpi--blue{--rep-kpi-bg:#EAF3FF;--rep-kpi-border:#C6DDF5;--rep-kpi-accent:#2563A6;}
+    .rep-kpi--lavender{--rep-kpi-bg:#F1ECFC;--rep-kpi-border:#DDD1F5;--rep-kpi-accent:#7653AB;}
+    .rep-kpi--mint{--rep-kpi-bg:#EAF7F0;--rep-kpi-border:#C7E8D4;--rep-kpi-accent:#247956;}
+    .rep-kpi--yellow{--rep-kpi-bg:#FFF5DD;--rep-kpi-border:#F0DDA9;--rep-kpi-accent:#98701C;}
+    .rep-kpi--coral{--rep-kpi-bg:#FFF0EF;--rep-kpi-border:#F0CFCE;--rep-kpi-accent:#BF4242;}
+    .rep-kpi--rose{--rep-kpi-bg:#FDEFF1;--rep-kpi-border:#F1CED4;--rep-kpi-accent:#B64258;}
+
+    /* Report cards — pastel tokens */
+    .rep-grid{display:grid;grid-template-columns:1fr;gap:.75rem;}
+    @media (min-width:640px){
+        .rep-grid--4,.rep-grid--2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+    @media (min-width:1024px){
+        .rep-grid--4{grid-template-columns:repeat(4,minmax(0,1fr));}
+    }
+
+    .rep-card{
+        --rep-bg:#FFFFFF;--rep-border:#E5E7EB;--rep-border-hover:#C9CFD6;--rep-accent:#0F3D2E;
+        display:flex;flex-direction:column;height:100%;min-width:0;
+        background:var(--rep-bg);border:1px solid var(--rep-border);border-radius:19px;
+        padding:22px;text-decoration:none;
+        box-shadow:0 1px 2px rgba(16,24,40,.04), 0 12px 26px -24px rgba(16,24,40,.35);
+        transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .rep-card:hover{
+        transform:translateY(-2px);
+        border-color:var(--rep-border-hover);
+        box-shadow:0 2px 4px rgba(16,24,40,.05), 0 16px 30px -22px rgba(16,24,40,.3);
+    }
+    .rep-card:focus-visible{outline:2px solid var(--rep-accent);outline-offset:2px;}
+    .rep-card__icon{
+        width:40px;height:40px;flex:0 0 40px;border-radius:12px;
+        background:#FFFFFF;color:var(--rep-accent);
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 1px 2px rgba(16,24,40,.06);margin-bottom:.9rem;
+    }
+    .rep-card__icon svg{width:20px;height:20px;}
+    .rep-card__title{font-size:.875rem;font-weight:700;line-height:1.35;color:#20362F;}
+    .rep-card__desc{font-size:.75rem;font-weight:500;line-height:1.5;color:#53645D;margin-top:.35rem;}
+    .rep-card__link{
+        margin-top:auto;padding-top:1rem;
+        display:inline-flex;align-items:center;gap:.3rem;
+        font-size:.75rem;font-weight:700;color:var(--rep-accent);
+    }
+    .rep-card:hover .rep-card__link{text-decoration:underline;text-underline-offset:3px;}
+
+    .rep-card--blue{--rep-bg:#EAF3FF;--rep-border:#C6DDF5;--rep-border-hover:#9CC4E8;--rep-accent:#2563A6;}
+    .rep-card--mint{--rep-bg:#EAF7F0;--rep-border:#C7E8D4;--rep-border-hover:#9FD6B8;--rep-accent:#247956;}
+    .rep-card--lavender{--rep-bg:#F1ECFC;--rep-border:#DDD1F5;--rep-border-hover:#C8B8EE;--rep-accent:#7653AB;}
+    .rep-card--peach{--rep-bg:#FFF2E8;--rep-border:#F2D8BD;--rep-border-hover:#E7C39F;--rep-accent:#A96932;}
+    .rep-card--teal{--rep-bg:#E5F5F1;--rep-border:#BDE5D8;--rep-border-hover:#98D6C3;--rep-accent:#157A61;}
+    .rep-card--periwinkle{--rep-bg:#EEF0FC;--rep-border:#CFD4F2;--rep-border-hover:#B6BDE8;--rep-accent:#555EAA;}
+    .rep-card--coral{--rep-bg:#FFF0EF;--rep-border:#F0CFCE;--rep-border-hover:#E5B3B2;--rep-accent:#BF4242;}
+    .rep-card--yellow{--rep-bg:#FFF5DD;--rep-border:#F0DDA9;--rep-border-hover:#E8CE8F;--rep-accent:#98701C;}
+    .rep-card--sky{--rep-bg:#E9F4FA;--rep-border:#C8DEEF;--rep-border-hover:#A9CDE4;--rep-accent:#377CA4;}
+    .rep-card--sand{--rep-bg:#F5EEE7;--rep-border:#E9D5C1;--rep-border-hover:#DDC0A5;--rep-accent:#95693D;}
+    .rep-card--rose{--rep-bg:#FDEFF1;--rep-border:#F1CED4;--rep-border-hover:#E7AFB8;--rep-accent:#B64258;}
+
+    @media (prefers-reduced-motion:reduce){
+        .rep-card{transition:none;}
+        .rep-card:hover{transform:none;}
+    }
 </style>
 
-<!-- Hero -->
-<div class="relative overflow-hidden rounded-[1.5rem] border text-white shadow-xl shadow-emerald-950/15 mb-6" style="background:linear-gradient(155deg,#0d352b 0%,#08201a 55%,#061a15 100%);border-color:rgba(201,162,39,.35);">
-    <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 22px 22px;"></div>
-    <div class="absolute -top-20 -right-20 w-[380px] h-[380px] rounded-full blur-3xl opacity-20" style="background: radial-gradient(circle at 30% 30%, #c9a227, transparent 65%);"></div>
-    <div class="relative p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-        <div>
-            <p class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-sage-300 bg-white/10 border border-white/15 px-3 py-1.5 rounded-full">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Reporting & Analytics · Live
-            </p>
-            <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight mt-3">Reports Center</h1>
-            <p class="text-sm font-medium text-sage-200 mt-1.5 max-w-xl">Filter by date range, preview live, then export print-ready PDF or CSV. All data is audited and filtered server-side.</p>
-        </div>
-        <div class="flex items-center gap-3 shrink-0">
-            <div class="bg-white text-ink rounded-2xl px-4 py-3 min-w-[120px] shadow-lg">
-                <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total in view</p>
-                <p class="font-display text-2xl font-bold leading-none mt-1">{{ total|default:0 }}</p>
-                <p class="text-xs font-medium text-muted mt-1">{{ label }}</p>
-            </div>
-            <div class="hidden sm:block bg-white/10 backdrop-blur border border-white/15 rounded-2xl px-4 py-3">
-                <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Patients</p>
-                <p class="font-display text-2xl font-bold leading-none mt-1 text-white">{{ total_patients|default:0 }}</p>
-                <p class="text-xs font-medium text-sage-200 mt-1">In range</p>
-            </div>
-        </div>
+<!-- Compact header -->
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+    <div>
+        <p class="text-[11px] font-bold tracking-widest uppercase text-amber-700">Reporting &amp; Analytics</p>
+        <h1 class="font-display text-2xl font-bold text-ink mt-1">Reports Center</h1>
+        <p class="text-sm font-medium text-muted mt-1">Patient cases, treatment status, inventory, and animal bite statistics.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 shrink-0">
+        <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-800 bg-white border border-line px-3 py-2 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> {{ label }}
+        </span>
+        <span class="text-xs font-semibold text-muted">Generated {% now "M d, Y h:i A" %}</span>
     </div>
 </div>
 
-<!-- Global Date Range Filter -->
-<div class="rep-card mb-6" x-data="{type:'{{ report_type }}'}" >
-    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-        <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2">
-            <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span>
-            Filter by date & context
-        </h2>
-        <span class="text-xs font-bold tracking-widest uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">{{ label }}</span>
+<!-- Summary cards -->
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
+    <div class="rep-kpi rep-kpi--blue">
+        <p class="rep-kpi-label">Total Patients</p>
+        <p class="font-display text-2xl font-bold rep-kpi-value leading-none mt-2">{{ summary.total_patients|default:0 }}</p>
+        <p class="rep-kpi-desc">Unique patients in view</p>
     </div>
-    <form method="GET" class="space-y-4">
-        <!-- Preset pills -->
-        <div class="flex flex-wrap gap-2">
-            <a href="?type=daily" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Daily</a>
-            <a href="?type=weekly" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Weekly</a>
-            <a href="?type=monthly" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Monthly</a>
-            <a href="?type=last7" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 7 days</a>
-            <a href="?type=last30" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 30 days</a>
-            <a href="?type=annual" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'annual' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Annual</a>
-            <a href="?type=custom" class="px-3.5 py-2 rounded-full text-xs font-bold border {% if report_type == 'custom' %}bg-emerald-950 text-white border-emerald-950 shadow{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Custom</a>
+    <div class="rep-kpi rep-kpi--lavender">
+        <p class="rep-kpi-label">Total Bite Cases</p>
+        <p class="font-display text-2xl font-bold rep-kpi-value leading-none mt-2">{{ summary.total_cases|default:0 }}</p>
+        <p class="rep-kpi-desc">Each incident counted once</p>
+    </div>
+    <div class="rep-kpi rep-kpi--mint">
+        <p class="rep-kpi-label">Completed</p>
+        <p class="font-display text-2xl font-bold rep-kpi-value leading-none mt-2">{{ summary.completed|default:0 }}</p>
+        <p class="rep-kpi-desc">Full treatment plans</p>
+    </div>
+    <div class="rep-kpi rep-kpi--yellow">
+        <p class="rep-kpi-label">Under Treatment</p>
+        <p class="font-display text-2xl font-bold rep-kpi-value leading-none mt-2">{{ summary.under_treatment|default:0 }}</p>
+        <p class="rep-kpi-desc">Ongoing, not completed</p>
+    </div>
+    <div class="rep-kpi rep-kpi--coral">
+        <p class="rep-kpi-label">Out of Stock</p>
+        <p class="font-display text-2xl font-bold rep-kpi-value leading-none mt-2">{{ inventory.out_of_stock|default:0 }}</p>
+        <p class="rep-kpi-desc">Products · live snapshot</p>
+    </div>
+    <div class="rep-kpi rep-kpi--rose">
+        <p class="rep-kpi-label">Expired Batches</p>
+        <p class="font-display text-2xl font-bold rep-kpi-value leading-none mt-2">{{ inventory.expired_batches|default:0 }}</p>
+        <p class="rep-kpi-desc">Vaccine + medicine · live</p>
+    </div>
+</div>
+
+<!-- Reporting period and search -->
+<div class="card mb-5">
+    <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2 mb-3">
+        <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </span>
+        Reporting Period
+    </h2>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+        <a href="?type=daily{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Today</a>
+        <a href="?type=weekly{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">This Week</a>
+        <a href="?type=monthly{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">This Month</a>
+        <a href="?type=all{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'all' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">All Time</a>
+    </div>
+
+    <form method="GET">
+        <input type="hidden" name="type" value="{{ report_type }}">
+        <label for="reports-search" class="form-label">Search case number or patient</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <div class="w-full min-w-0">
+                <input id="reports-search" type="text" name="q" value="{{ q }}" placeholder="e.g., ABC-00001 or Juan Dela Cruz" class="form-input" style="height:2.75rem;">
+            </div>
+            <button type="submit" class="btn-primary shrink-0" style="min-width:120px;height:2.75rem;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                Search
+            </button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-                <label class="form-label">Start date</label>
-                <input type="date" name="start_date" value="{{ start_date }}" class="form-input">
-            </div>
-            <div>
-                <label class="form-label">End date</label>
-                <input type="date" name="end_date" value="{{ end_date }}" class="form-input">
-            </div>
-            <div>
-                <label class="form-label">Barangay</label>
-                <input type="text" name="barangay" value="{{ selected_barangay }}" placeholder="All barangays" class="form-input">
-            </div>
-            <div>
-                <label class="form-label">Animal</label>
-                <select name="animal" class="form-input">
-                    <option value="">All animals</option>
-                    <option value="dog" {% if selected_animal == 'dog' %}selected{% endif %}>Dog</option>
-                    <option value="cat" {% if selected_animal == 'cat' %}selected{% endif %}>Cat</option>
-                    <option value="monkey" {% if selected_animal == 'monkey' %}selected{% endif %}>Monkey</option>
-                    <option value="bat" {% if selected_animal == 'bat' %}selected{% endif %}>Bat</option>
-                    <option value="other" {% if selected_animal == 'other' %}selected{% endif %}>Other</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label">Status</label>
-                <select name="status" class="form-input">
-                    <option value="">All status</option>
-                    <option value="new" {% if selected_status == 'new' %}selected{% endif %}>New</option>
-                    <option value="under_treatment" {% if selected_status == 'under_treatment' %}selected{% endif %}>Under Treatment</option>
-                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
-                    <option value="missed" {% if selected_status == 'missed' %}selected{% endif %}>Missed</option>
-                    <option value="referred" {% if selected_status == 'referred' %}selected{% endif %}>Referred</option>
-                </select>
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <input type="hidden" name="type" value="{{ report_type }}">
-            <button type="submit" class="btn-primary">Apply Filters</button>
-            <a href="{% url 'reports:reports_index' %}" class="btn-secondary">Clear</a>
-            <div class="ml-auto flex gap-2">
-                <a href="{% url 'reports:cases_report' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}&barangay={{ selected_barangay }}&animal={{ selected_animal }}&status={{ selected_status }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900">Open Cases Report →</a>
-            </div>
-        </div>
-        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
     </form>
 
-    <!-- Live summary for filtered view -->
-    {% if total is not None %}
-    <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="rounded-xl bg-sage-50 border border-line p-3 text-center">
-            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Cases</p>
-            <p class="font-display text-xl font-bold text-ink">{{ total }}</p>
-        </div>
-        {% for s in by_status|slice:":3" %}
-        <div class="rounded-xl bg-white border border-line p-3 text-center">
-            <p class="text-[11px] font-bold tracking-widest uppercase text-muted truncate">{{ s.case_status }}</p>
-            <p class="font-display text-xl font-bold text-ink">{{ s.c }}</p>
-        </div>
-        {% endfor %}
-        <div class="rounded-xl bg-emerald-950 text-white p-3 text-center">
-            <p class="text-[11px] font-bold tracking-widest uppercase text-sage-300">Patients</p>
-            <p class="font-display text-xl font-bold">{{ total_patients }}</p>
-        </div>
+    <p class="text-[11px] font-medium text-muted mt-2">
+        Case statistics follow the selected reporting period. Inventory statistics show current stock.
+    </p>
+</div>
+
+<!-- A. Patient and Case Reports -->
+<section class="mb-6">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-[11px] font-bold tracking-widest uppercase text-amber-700">A · Patient and Case Reports</h2>
+        <span class="text-[11px] font-semibold text-muted">{{ label }}</span>
     </div>
-    {% endif %}
-</div>
+    <div class="rep-grid rep-grid--4">
+        <a href="{% url 'reports:cases_report' %}?type=daily" class="rep-card rep-card--blue group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+            <h3 class="rep-card__title">Daily Cases</h3>
+            <p class="rep-card__desc">Bite cases recorded today.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:cases_report' %}?type=weekly" class="rep-card rep-card--mint group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </span>
+            <h3 class="rep-card__title">Weekly Cases</h3>
+            <p class="rep-card__desc">This week's incidents.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:cases_report' %}?type=monthly" class="rep-card rep-card--lavender group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </span>
+            <h3 class="rep-card__title">Monthly Cases</h3>
+            <p class="rep-card__desc">This month's incidents.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:patient_treatment_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--peach group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-3-3"/></svg>
+            </span>
+            <h3 class="rep-card__title">Patient and Treatment</h3>
+            <p class="rep-card__desc">Per-case treatment status and totals.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+    </div>
+</section>
 
-<!-- Report Hub Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <a href="{% url 'reports:cases_report' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
-        <div class="w-11 h-11 rounded-xl bg-emerald-950 text-white flex items-center justify-center mb-3 group-hover:scale-[1.03] transition-transform">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-ink">Daily Cases Report</h3>
-        <p class="text-xs font-medium text-muted mt-1">Filtered by {{ label|default:"all time" }} · CSV + PDF preview</p>
-        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
-    </a>
-    <a href="{% url 'reports:cases_report' %}?type=weekly&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
-        <div class="w-11 h-11 rounded-xl bg-emerald-700 text-white flex items-center justify-center mb-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-ink">Weekly Cases Report</h3>
-        <p class="text-xs font-medium text-muted mt-1">Week trends · print-ready PDF</p>
-        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
-    </a>
-    <a href="{% url 'reports:cases_report' %}?type=monthly&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
-        <div class="w-11 h-11 rounded-xl bg-sage-200 text-ink flex items-center justify-center mb-3 border border-line">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-ink">Monthly Cases Report</h3>
-        <p class="text-xs font-medium text-muted mt-1">Monthly stats · export PDF</p>
-        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
-    </a>
-    <a href="{% url 'reports:vaccine_report' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
-        <div class="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center mb-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-ink">Vaccine Usage Report</h3>
-        <p class="text-xs font-medium text-muted mt-1">Inventory · date-filtered · PDF</p>
-        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
-    </a>
-    <a href="{% url 'reports:missed_appointments' %}?type={{ report_type }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group">
-        <div class="w-11 h-11 rounded-xl bg-red-500 text-white flex items-center justify-center mb-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-ink">Missed Appointments</h3>
-        <p class="text-xs font-medium text-muted mt-1">Follow-up misses · exportable</p>
-        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
-    </a>
-    <a href="{% url 'reports:cases_report' %}?type=custom&start_date={{ start_date }}&end_date={{ end_date }}" class="rep-card group ring-2 ring-emerald-950/10">
-        <div class="w-11 h-11 rounded-xl bg-emerald-950 text-white flex items-center justify-center mb-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-ink">Custom Report</h3>
-        <p class="text-xs font-medium text-muted mt-1">Pick any range · preview then PDF/print</p>
-        <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">Open →</span>
-    </a>
-</div>
+<!-- B. Inventory Reports -->
+<section class="mb-6">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-[11px] font-bold tracking-widest uppercase text-amber-700">B · Inventory Reports</h2>
+        <span class="text-[11px] font-semibold text-muted">Live stock snapshot</span>
+    </div>
+    <div class="rep-grid rep-grid--4">
+        <a href="{% url 'reports:vaccine_inventory_report' %}" class="rep-card rep-card--teal group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            </span>
+            <h3 class="rep-card__title">Vaccine Inventory</h3>
+            <p class="rep-card__desc">One row per vaccine product with batch detail.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:medicine_inventory_report' %}" class="rep-card rep-card--periwinkle group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0H5a2 2 0 01-2-2V9m6 12h10a2 2 0 002-2V9m-6-6v18"/></svg>
+            </span>
+            <h3 class="rep-card__title">Medicine Inventory</h3>
+            <p class="rep-card__desc">Strength-aware products and dispensed totals.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:stock_alerts_report' %}" class="rep-card rep-card--coral group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </span>
+            <h3 class="rep-card__title">Stock Alerts</h3>
+            <p class="rep-card__desc">Low, out, expiring and expired stock.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:vaccine_report' %}?type={{ report_type }}" class="rep-card rep-card--yellow group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </span>
+            <h3 class="rep-card__title">Vaccine Usage</h3>
+            <p class="rep-card__desc">Existing date-filtered lot report.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+    </div>
+</section>
 
-<script>
-    // subtle stagger
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        gsap.from('.rep-card', { y: 12, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'power2.out' });
-    }
-</script>
+<!-- C. Animal Bite Statistics -->
+<section class="mb-6">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-[11px] font-bold tracking-widest uppercase text-amber-700">C · Animal Bite Statistics</h2>
+        <span class="text-[11px] font-semibold text-muted">Recorded incident data</span>
+    </div>
+    <div class="rep-grid rep-grid--2">
+        <a href="{% url 'reports:barangay_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--sky group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+            </span>
+            <h3 class="rep-card__title">Cases by Barangay</h3>
+            <p class="rep-card__desc">Ranked incident barangays with percentages.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+        <a href="{% url 'reports:animal_type_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--sand group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 5.5a2 2 0 114 0 2 2 0 01-4 0zm11 0a2 2 0 114 0 2 2 0 01-4 0zm-11 8a2 2 0 114 0 2 2 0 01-4 0zm11 0a2 2 0 114 0 2 2 0 01-4 0zM9 13c0 4 6 4 6 0"/></svg>
+            </span>
+            <h3 class="rep-card__title">Cases by Animal Type</h3>
+            <p class="rep-card__desc">Dog, cat and other recorded animal types.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+    </div>
+</section>
+
+<!-- D. Follow-up Reports -->
+<section>
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-[11px] font-bold tracking-widest uppercase text-amber-700">D · Follow-up Reports</h2>
+    </div>
+    <div class="rep-grid rep-grid--2">
+        <a href="{% url 'reports:missed_appointments' %}?type={{ report_type }}" class="rep-card rep-card--rose group">
+            <span class="rep-card__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </span>
+            <h3 class="rep-card__title">Missed Appointments</h3>
+            <p class="rep-card__desc">Existing follow-up misses report.</p>
+            <span class="rep-card__link">View Report →</span>
+        </a>
+    </div>
+</section>
 {% endblock %}

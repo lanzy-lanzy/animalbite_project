@@ -38,10 +38,9 @@
         }
     },
     printPreview(){
-    const el=document.getElementById('report-print-area');
-    const w=window.open('', '_blank');
-    w.document.write('<html><head><title>{{ title }}</title><link rel=\'stylesheet\' href=\'/static/css/output.css\'><style>@media print{ .no-print{display:none!important} body{ background:white!important } }</style></head><body>'+el.innerHTML+'</body></html>');
-    w.document.close(); w.focus(); setTimeout(()=>w.print(), 300);
+    const params=new URLSearchParams(window.location.search);
+    params.delete('preview'); params.set('export','print');
+    window.open(window.location.pathname+'?'+params.toString(), '_blank');
 } }" class="space-y-5">
 
     <!-- Header -->
@@ -72,91 +71,7 @@
         </div>
     </div>
 
-    <!-- Filters — comprehensive date range + context -->
-    <div class="card">
-        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-            <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2">
-                <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l-4 4"/></svg></span>
-                Filters — date range is primary
-            </h2>
-            <span class="text-xs font-bold tracking-widest uppercase px-2.5 py-1 rounded-full {% if has_filters %}bg-amber-50 border border-amber-200 text-amber-800{% else %}bg-sage-50 border border-line text-muted{% endif %}">{% if has_filters %}Filtered{% else %}All time{% endif %}</span>
-        </div>
-
-        <form method="GET" class="space-y-4">
-            <!-- Preset pills -->
-            <div class="flex flex-wrap gap-2">
-                <a href="?type=daily" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Daily</a>
-                <a href="?type=weekly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Weekly</a>
-                <a href="?type=monthly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Monthly</a>
-                <a href="?type=last7" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 7 days</a>
-                <a href="?type=last30" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Last 30 days</a>
-                <a href="?type=annual" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'annual' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Annual</a>
-                <a href="?type=custom" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'custom' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">Custom range</a>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-                <div>
-                    <label class="form-label">Start date</label>
-                    <input type="date" name="start_date" value="{{ start_date }}" class="form-input">
-                </div>
-                <div>
-                    <label class="form-label">End date</label>
-                    <input type="date" name="end_date" value="{{ end_date }}" class="form-input">
-                </div>
-                <div>
-                    <label class="form-label">Barangay</label>
-                    <input type="text" name="barangay" value="{{ selected_barangay }}" list="brgy-list" placeholder="All" class="form-input">
-                    <datalist id="brgy-list">
-                        {% for b in barangays %}<option value="{{ b }}">{% endfor %}
-                    </datalist>
-                </div>
-                <div>
-                    <label class="form-label">Animal</label>
-                    <select name="animal" class="form-input">
-                        <option value="">All</option>
-                        <option value="dog" {% if selected_animal == 'dog' %}selected{% endif %}>Dog</option>
-                        <option value="cat" {% if selected_animal == 'cat' %}selected{% endif %}>Cat</option>
-                        <option value="monkey" {% if selected_animal == 'monkey' %}selected{% endif %}>Monkey</option>
-                        <option value="bat" {% if selected_animal == 'bat' %}selected{% endif %}>Bat</option>
-                        <option value="other" {% if selected_animal == 'other' %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-input">
-                        <option value="">All</option>
-                        <option value="new" {% if selected_status == 'new' %}selected{% endif %}>New</option>
-                        <option value="under_treatment" {% if selected_status == 'under_treatment' %}selected{% endif %}>Under Treatment</option>
-                        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
-                        <option value="missed" {% if selected_status == 'missed' %}selected{% endif %}>Missed</option>
-                        <option value="referred" {% if selected_status == 'referred' %}selected{% endif %}>Referred</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Exposure</label>
-                    <select name="exposure" class="form-input">
-                        <option value="">All</option>
-                        <option value="bite" {% if selected_exposure == 'bite' %}selected{% endif %}>Bite</option>
-                        <option value="scratch" {% if selected_exposure == 'scratch' %}selected{% endif %}>Scratch</option>
-                        <option value="lick" {% if selected_exposure == 'lick' %}selected{% endif %}>Lick</option>
-                        <option value="saliva" {% if selected_exposure == 'saliva' %}selected{% endif %}>Saliva</option>
-                        <option value="other" {% if selected_exposure == 'other' %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <div class="lg:col-span-2">
-                    <label class="form-label">Search (case # or patient)</label>
-                    <input type="text" name="q" value="{{ q }}" placeholder="e.g., AB-2024-001 or Juan Dela Cruz" class="form-input">
-                </div>
-                <div class="flex items-end gap-2">
-                    <input type="hidden" name="type" value="{{ report_type }}">
-                    <button type="submit" class="btn-primary flex-1">Apply Filters</button>
-                    <a href="{% url 'reports:cases_report' %}" class="btn-secondary">Clear</a>
-                </div>
-            </div>
-        </form>
-    </div>
+    {% include 'reports/_case_filters.html' with filter_note='Case statistics follow the selected reporting period.' %}
 
     <!-- Summary -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -215,7 +130,7 @@
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </div>
                         <p class="text-sm font-semibold text-ink mt-3">No cases found for this period.</p>
-                        <p class="text-xs text-muted mt-1">Adjust date range or filters and apply again.</p>
+                        <p class="text-xs text-muted mt-1">Try a different search or reporting period.</p>
                     </td></tr>
                     {% endfor %}
                 </tbody>

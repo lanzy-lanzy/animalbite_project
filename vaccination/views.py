@@ -993,7 +993,7 @@ def build_record_context(selected_case):
     prescriptions = []
     if assessment:
         prescriptions = list(
-            assessment.prescriptions.select_related('medicine').order_by('id')
+            assessment.prescriptions.prefetch_related('medicine').order_by('id')
         )
 
     try:
@@ -1333,7 +1333,6 @@ def nurse_schedule_print(request, pk):
         'dose_count': dose_count,
         'prescribed_vaccine': _prescribed_vaccine_name(assessment, doses),
         'first_dose_date': first_dose_date,
-        'date_printed': timezone.localdate(),
     })
 
 

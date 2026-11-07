@@ -252,6 +252,12 @@ class PublicPreRegistrationTests(TestCase):
 
         success = self.client.get(response.url)
         self.assertContains(success, "Download QR Code")
+        for marker in (
+            "abtc-print-only", "abtc-letterhead", "abtc-footer",
+            "print_official.css", "Animal Bite Treatment Center",
+            "Registration Confirmation", "System-Generated Document",
+        ):
+            self.assertContains(success, marker)
 
         download = self.client.get(
             reverse("pre_registrations:qr_code", args=[record.pre_registration_number]),
@@ -762,6 +768,12 @@ class StaffPreRegistrationTests(TestCase):
         self.assertEqual(slip.status_code, 200)
         for heading in ("Patient Information", "Medical History", "Bite Incident Details"):
             self.assertContains(slip, heading)
+        for marker in (
+            "abtc-letterhead", "abtc-footer", "print_official.css",
+            "Animal Bite Treatment Center", "Registration Slip",
+            "System-Generated Document",
+        ):
+            self.assertContains(slip, marker)
         for value in (
             self.record.pre_registration_number,
             "Rico Bautista",

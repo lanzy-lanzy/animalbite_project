@@ -38,10 +38,9 @@
         }
     },
     printPreview(){
-    const el=document.getElementById('report-print-area');
-    const w=window.open('', '_blank');
-    w.document.write('<html><head><title>Vaccine Report</title><link rel=\'stylesheet\' href=\'/static/css/output.css\'><style>@media print{ .no-print{display:none!important} }</style></head><body>'+el.innerHTML+'</body></html>');
-    w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+    const params=new URLSearchParams(window.location.search);
+    params.delete('preview'); params.set('export','print');
+    window.open(window.location.pathname+'?'+params.toString(), '_blank');
 } }" class="space-y-5">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

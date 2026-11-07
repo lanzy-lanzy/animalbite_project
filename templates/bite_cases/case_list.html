@@ -87,9 +87,9 @@
                                 View
                             </a>
                             {% else %}
-                            <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-secondary btn-xs">View</a>
+                            <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-view"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>View</a>
                             {% endif %}
-                            {% if request.user.role != 'nurse' and not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-xs">Edit</a>{% endif %}
+                            {% if request.user.role != 'nurse' and request.user.role != 'doctor' and not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-xs">Edit</a>{% endif %}
                             {% if request.user.role == 'admin' and not case.is_archived %}
                             <button type="button" onclick="openBiteCaseDeleteModal('{% url 'bite_cases:case_delete' case.pk %}', '{{ case.case_number|escapejs }}', '{{ case.patient.full_name|escapejs }}', '{{ case.get_animal_type_display|escapejs }}', '{{ case.date_time_bite|date:"M d, Y"|escapejs }}')" class="btn-secondary btn-xs btn-danger inline-flex items-center gap-1" title="Delete or archive this bite case">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
@@ -130,9 +130,9 @@
                     View
                 </a>
                 {% else %}
-                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">View</a>
+                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="btn-view flex-1 justify-center"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>View</a>
                 {% endif %}
-                {% if request.user.role != 'nurse' and not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>{% endif %}
+                {% if request.user.role != 'nurse' and request.user.role != 'doctor' and not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="flex-1 justify-center inline-flex items-center px-3 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Edit</a>{% endif %}
                 {% if request.user.role == 'admin' and not case.is_archived %}
                 <button type="button" onclick="openBiteCaseDeleteModal('{% url 'bite_cases:case_delete' case.pk %}', '{{ case.case_number|escapejs }}', '{{ case.patient.full_name|escapejs }}', '{{ case.get_animal_type_display|escapejs }}', '{{ case.date_time_bite|date:"M d, Y"|escapejs }}')" class="flex-1 justify-center inline-flex items-center gap-1 px-3 py-2 rounded-full bg-white border border-red-200 text-red-700 text-xs font-bold hover:bg-red-50">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>

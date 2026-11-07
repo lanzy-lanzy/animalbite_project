@@ -10,7 +10,7 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
+from django.utils import dateformat, timezone
 
 from audit.models import AuditLog
 from bite_cases.models import AnimalBiteCase, ExposureClassification
@@ -772,6 +772,21 @@ class PatientRecordIsAdminOwnedTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(VitalSign.objects.filter(patient=patient).count(), 1)
 
+    def test_doctor_patient_list_view_button_is_the_emerald_pill(self):
+        patient = Patient.objects.create(
+            patient_number="PAT-D0004", first_name="Vera", last_name="View",
+            birthdate=datetime.date(1990, 1, 1), contact_number="09170000004")
+        doctor = U.objects.create_user("doc.three", password="pw12345678", role="doctor")
+        self.client.force_login(doctor)
+        response = self.client.get(reverse("patients:patient_list"))
+        html = response.content.decode()
+        self.assertIn(
+            '<a href="%s" class="btn-view"><svg'
+            % reverse("patients:patient_detail", args=[patient.pk]), html)
+        self.assertIn("View</a>", html)
+        for style in ("#157A61", "#0C543F", "9999px", "8px 16px"):
+            self.assertIn(style, html)
+
 
 class AssessmentDetailReadOnlyTests(EncounterTestCase):
     """The My Assessments → Open page is a strict read-only view of saved data."""
@@ -843,6 +858,35 @@ class AssessmentDetailReadOnlyTests(EncounterTestCase):
         self.assertNotContains(
             response, reverse("doctor:assess_case", args=[self.case.pk]))
 
+    def test_my_assessments_view_button_is_the_shared_emerald_pill(self):
+        scratch_case = AnimalBiteCase.objects.create(
+            case_number="ABC-D0002", patient=self.patient, created_by=self.nurse,
+            animal_type="cat", animal_ownership="owned", animal_vax_status="unknown",
+            animal_condition="healthy", exposure_type="scratch",
+            body_part_affected="left forearm", number_of_wounds=1,
+            date_time_bite=datetime.datetime(2026, 10, 29, 9, 0),
+            date_time_consultation=datetime.datetime(2026, 10, 29, 10, 0),
+        )
+        draft = ClinicalAssessment.objects.create(
+            patient=self.patient, bite_case=scratch_case, assessed_by=self.doctor,
+            chief_complaint="Minor scratch", category_confirmed="category_i",
+            status="draft")
+        response = self.client.get(reverse("doctor:assessment_list"))
+        html = response.content.decode()
+
+        for assessment in (self.assessment, draft):
+            url = reverse("doctor:assessment_detail", args=[assessment.pk])
+            self.assertIn('<a href="%s" class="btn-view"><svg' % url, html)
+        self.assertNotIn('class="btn-secondary btn-xs">View', html)
+
+        for style in ("#157A61", "#0C543F", "9999px", "8px 16px"):
+            self.assertIn(style, html)
+        for badge in ("Category III", "Category I",
+                      "bg-red-50 text-red-700 border-red-200",
+                      "bg-emerald-50 text-emerald-800 border-emerald-200",
+                      "bg-emerald-600 text-white", "bg-amber-500 text-white"):
+            self.assertIn(badge, html)
+
     def test_header_shows_patient_case_doctor_status_and_view_only(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
@@ -851,6 +895,204 @@ class AssessmentDetailReadOnlyTests(EncounterTestCase):
                      timezone.localtime(self.assessment.encounter_date)
                      .strftime("%B %d, %Y")):
             self.assertContains(response, text)
+
+    def test_print_sheet_uses_the_official_letterhead_and_footer(self):
+        response = self.client.get(self.url)
+        for marker in (
+            "abtc-print-only", "abtc-letterhead", "abtc-footer",
+            "print_official.css", "Animal Bite Treatment Center",
+            "Clinical Assessment Sheet",
+            "System-Generated Clinical Assessment Document",
+        ):
+            self.assertContains(response, marker)
+
+    def _print_patient_information(self):
+        html = self.client.get(self.url).content.decode()
+        start = html.index('class="abtc-print-only')
+        end = html.index('class="assessment-screen')
+        return html[start:end]
+
+    def test_print_patient_information_dedupes_address_and_hides_registered(self):
+        self.patient.address = "San Pedro, Dumingag, Zamboanga del Sur\r\nZamboanga del Sur"
+        self.patient.save()
+        print_html = self._print_patient_information()
+        self.assertEqual(
+            print_html.count("San Pedro, Dumingag, Zamboanga del Sur"), 1)
+        self.assertNotIn("Zamboanga del Sur, Zamboanga del Sur", print_html)
+        self.assertNotIn("<span>Registered</span>", print_html)
+        self.assertIn(
+            '<div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked">'
+            '<span>Complete Address</span>', print_html)
+
+    def test_print_patient_information_keeps_a_long_address_intact(self):
+        long_address = ("Purok 7, Sitio Malinawon, Barangay San Pedro, "
+                        "Dumingag, Zamboanga del Sur")
+        self.patient.address = long_address
+        self.patient.save()
+        print_html = self._print_patient_information()
+        self.assertEqual(print_html.count(long_address), 1)
+
+    def _print_animal_bite_information(self):
+        html = self.client.get(self.url).content.decode()
+        start = html.index("<!-- ANIMAL BITE INFORMATION -->")
+        end = html.index("<!-- VITAL SIGNS -->")
+        return html[start:end]
+
+    def test_print_animal_bite_pairs_incident_and_barangay_then_first_aid(self):
+        self.case.place_of_incident = "Kalsada"
+        self.case.incident_barangay = "San Pedro"
+        self.case.first_aid_given = "Washed"
+        self.case.save()
+        section = self._print_animal_bite_information()
+        rows = [
+            '<div class="abtc-summary__row"><span>Place of Incident</span>'
+            '<strong>Kalsada</strong></div>',
+            '<div class="abtc-summary__row"><span>Barangay</span>'
+            '<strong>San Pedro</strong></div>',
+            '<div class="abtc-summary__row"><span>First Aid Given</span>'
+            '<strong>Washed</strong></div>',
+        ]
+        for row in rows:
+            self.assertIn(row, section)
+        positions = [section.index(row) for row in rows]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_print_animal_bite_hides_date_of_consultation(self):
+        section = self._print_animal_bite_information()
+        consultation = timezone.localtime(self.case.date_time_consultation)
+        self.assertNotIn("Date of Consultation", section)
+        self.assertNotIn(
+            dateformat.format(consultation, "F j, Y · g:i A"), section)
+
+    def test_print_chief_complaint_hides_history_of_present_illness(self):
+        self.assessment.chief_complaint = "dog bite on left leg"
+        self.assessment.history_present_illness = (
+            "Pain and swelling since yesterday.")
+        self.assessment.save()
+        print_html = self._print_patient_information()
+        self.assertIn(
+            '<span>Chief Complaint</span>'
+            '<strong>dog bite on left leg</strong>', print_html)
+        self.assertNotIn("History of Present Illness", print_html)
+        self.assertNotIn("Pain and swelling since yesterday.", print_html)
+
+    def _print_clinical_block(self, title):
+        html = self._print_patient_information()
+        start = html.index('<h3 class="abtc-subhead">%s</h3>' % title)
+        ends = [
+            html.find('<div class="abtc-clinical-block">', start + 1),
+            html.find("<!-- VACCINATION SCHEDULE -->", start + 1),
+        ]
+        ends = [end for end in ends if end != -1]
+        return html[start:min(ends)] if ends else html[start:]
+
+    def _print_vaccination_schedule(self):
+        html = self._print_patient_information()
+        start = html.index("<!-- VACCINATION SCHEDULE -->")
+        end = html.index('<footer class="abtc-footer">', start)
+        return html[start:end]
+
+    def test_print_exposure_narrative_keeps_only_the_verified_narrative(self):
+        self.assessment.exposure_narrative = "ambot"
+        self.assessment.animal_type_verified = "dog"
+        self.assessment.exam_heent = "Normal"
+        self.assessment.save()
+        section = self._print_clinical_block(
+            "B. Exposure Narrative (Verified)")
+        self.assertIn(
+            '<span>Narrative as Verified by the Doctor</span>'
+            '<strong>ambot</strong>', section)
+        for marker in (
+            "Verified Animal Type", "Ownership (Verified)",
+            "Animal Vaccination (Verified)", "Wound Washed Immediately",
+            "Body Part (Verified)", "Number of Wounds",
+            "Date &amp; Time of Bite (Verified)", "Examination Findings",
+            "HEENT:", "Chest / Lungs:", "Cardiac:", "Abdomen:",
+            "Skin / Wound:", "Systemic Review:",
+        ):
+            self.assertNotIn(marker, section)
+
+    def test_print_bite_category_hides_category_description(self):
+        self.assessment.category_confirmed = "category_i"
+        self.assessment.save()
+        section = self._print_clinical_block("C. WHO Bite Category")
+        self.assertIn(
+            '<span>WHO Bite Category</span><strong>Category I</strong>',
+            section)
+        self.assertNotIn("Category Description", section)
+        self.assertNotIn("Touching/feeding animal", section)
+
+    def test_print_dose_schedule_hides_dose_records_count(self):
+        section = self._print_clinical_block(
+            "D. Dose Schedule &amp; Vaccine")
+        for label in ("Dose Schedule", "Required Doses", "First Dose Date"):
+            self.assertIn("<span>%s</span>" % label, section)
+        self.assertIn(
+            '<span>First Dose Date</span><strong>November 1, 2026</strong>',
+            section)
+        self.assertNotIn("<span>Dose Records</span>", section)
+        self.assertNotIn("doses on file", section)
+
+    def test_print_vaccine_section_groups_product_above_three_fields(self):
+        rig = VaccineInventory.objects.create(
+            vaccine_name="RIG (Rabies Immunoglobulin)", brand="Imogam",
+            batch_number="IG-2024-001", expiration_date=datetime.date(2027, 1, 1),
+            quantity_received=5, quantity_available=5)
+        self.assessment.vaccine_inventory = rig
+        self.assessment.vaccine_lot_number = ""
+        self.assessment.vaccine_dose_ml = "0.2"
+        self.assessment.vaccine_quantity = 1
+        self.assessment.save()
+        section = self._print_clinical_block(
+            "E. Vaccine Brand / Recorded Biological Product")
+        rows = [
+            "Recorded Biological Product",
+            "<strong>RIG (Rabies Immunoglobulin) · Imogam</strong>",
+            "Lot / Batch: <span>IG-2024-001</span>",
+            "<span>Volume per Dose</span><strong>0.2 mL</strong>",
+            "<span>Quantity (Vials / Doses)</span><strong>1</strong>",
+            "<span>First Dose Date</span><strong>November 1, 2026</strong>",
+        ]
+        for row in rows:
+            self.assertIn(row, section)
+        positions = [section.index(row) for row in rows]
+        self.assertEqual(positions, sorted(positions))
+        self.assertNotIn(" · Lot ", section)
+
+    def test_print_treatment_section_keeps_only_the_treatment_plan(self):
+        self.assessment.treatment_plan = "wound care"
+        self.assessment.pep_indicated = True
+        self.assessment.rig_indicated = True
+        self.assessment.tt_indicated = True
+        self.assessment.save()
+        section = self._print_clinical_block("F. Treatment &amp; Prescription")
+        self.assertIn(
+            '<span>Treatment Plan</span><strong>wound care</strong>', section)
+        for marker in ("PEP Indicated", "RIG Indicated",
+                       "Tetanus Toxoid Indicated"):
+            self.assertNotIn(marker, section)
+        for kept in ("Prescription", "Amoxicillin",
+                     "Dosage Instructions — Frequency &amp; Duration",
+                     "Follow-up Instructions",
+                     "Additional Notes / Allergy Re-check"):
+            self.assertIn(kept, section)
+
+    def test_print_schedule_hides_treatment_flags_and_drops_empty_panel(self):
+        section = self._print_vaccination_schedule()
+        for marker in ("RIG Given", "Tetanus Toxoid Given", "Antibiotics Given"):
+            self.assertNotIn(marker, section)
+        self.assertIn("Dose Schedule Records", section)
+        self.assertNotIn('class="abtc-panel abtc-summary"', section)
+
+    def test_print_schedule_keeps_notes_when_recorded(self):
+        self.schedule.doctor_notes = "Monitor for fever."
+        self.schedule.other_medicine = "Paracetamol as needed."
+        self.schedule.save()
+        section = self._print_vaccination_schedule()
+        self.assertIn("<span>Doctor Notes</span>", section)
+        self.assertIn("<span>Other Medicine</span>", section)
+        for marker in ("RIG Given", "Tetanus Toxoid Given", "Antibiotics Given"):
+            self.assertNotIn(marker, section)
 
     def test_six_sections_render_in_the_required_order(self):
         html = self.client.get(self.url).content.decode()

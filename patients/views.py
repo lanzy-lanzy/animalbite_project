@@ -223,8 +223,8 @@ def patient_detail(request, pk):
     # to the System Administrator. Other roles receive no portal data at all.
     can_manage_portal = getattr(request.user, 'role', '') == 'admin'
     temp_creds = None
-    creds_qr_data_uri = None
-    creds_qr_payload = None
+    portal_login_url = None
+    portal_qr_data_uri = None
     if can_manage_portal:
         # One-time temp credentials from session (set after auto-creation)
         temp_creds = request.session.pop(f'temp_creds_{patient.pk}', None)
@@ -233,19 +233,14 @@ def patient_detail(request, pk):
             temp_creds = request.session.pop('temp_creds_last', None)
             if temp_creds and str(temp_creds.get('patient_pk')) != str(patient.pk):
                 temp_creds = None
-        # One-time login QR code — only possible while the plaintext temp password
-        # is still in hand (right after registration or password reset).
-        if temp_creds and temp_creds.get('username') and temp_creds.get('password'):
-            try:
-                from utils.qr import qr_data_uri, build_credentials_payload
-                login_url = request.build_absolute_uri(reverse('accounts:login'))
-                creds_qr_payload = build_credentials_payload(
-                    login_url, temp_creds['username'], temp_creds['password'], patient.full_name()
-                )
-                creds_qr_data_uri = qr_data_uri(creds_qr_payload)
-            except Exception:
-                creds_qr_data_uri = None
-                creds_qr_payload = None
+        # Persistent login QR carries only the portal URL — never a password or
+        # other reusable secret — so it stays safe to display, download and reprint.
+        portal_login_url = request.build_absolute_uri(reverse('accounts:login'))
+        try:
+            from utils.qr import qr_data_uri
+            portal_qr_data_uri = qr_data_uri(portal_login_url)
+        except Exception:
+            portal_qr_data_uri = None
     else:
         # Never leak administrator-only credential material through another
         # user's session.
@@ -344,7 +339,7 @@ def patient_detail(request, pk):
     if first_dose_date is None and saved_doses:
         first_dose_date = saved_doses[0].clinical_date
 
-    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'creds_qr_data_uri': creds_qr_data_uri, 'creds_qr_payload': creds_qr_payload, 'can_manage_portal': can_manage_portal, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'assessments': assessments, 'primary_schedule': primary_schedule, 'display_schedule': display_schedule, 'dose_count': dose_count, 'clinical_dose_rows': clinical_dose_rows, 'first_dose_date': first_dose_date})
+    return render(request, 'patients/patient_detail.html', {'patient': patient, 'bite_cases': bite_cases, 'temp_creds': temp_creds, 'portal_login_url': portal_login_url, 'portal_qr_data_uri': portal_qr_data_uri, 'can_manage_portal': can_manage_portal, 'patient_qr_data_uri': patient_qr_data_uri, 'latest_vitals': latest_vitals, 'recent_vitals': recent_vitals, 'latest_assessment': latest_assessment, 'assessments': assessments, 'primary_schedule': primary_schedule, 'display_schedule': display_schedule, 'dose_count': dose_count, 'clinical_dose_rows': clinical_dose_rows, 'first_dose_date': first_dose_date})
 
 
 @login_required
@@ -581,6 +576,30 @@ def patient_print(request, pk):
             if _sched:
                 display_schedule = _sched
                 break
+    # A prescription can outlive its medicine row (dangling FK). Resolve it here so
+    # the sheet still prints every prescription instead of failing outright.
+    prescription_rows = []
+    if latest_assessment:
+        from inventory.models import MedicineInventory
+        for rx in latest_assessment.prescriptions.all():
+            try:
+                medicine = rx.medicine
+            except MedicineInventory.DoesNotExist:
+                medicine = None
+            if medicine:
+                prescription_rows.append({
+                    'medicine_name': medicine.medicine_name,
+                    'strength': medicine.strength,
+                    'status': rx.get_status_display(),
+                    'quantity': rx.quantity_display,
+                })
+            else:
+                prescription_rows.append({
+                    'medicine_name': 'Medicine record unavailable',
+                    'strength': '',
+                    'status': rx.get_status_display(),
+                    'quantity': str(rx.quantity),
+                })
     ctx = {
         'patient': patient,
         'bite_cases': bite_cases,
@@ -590,6 +609,7 @@ def patient_print(request, pk):
         'latest_assessment': latest_assessment,
         'clinical_by_case': clinical_by_case,
         'display_schedule': display_schedule,
+        'prescription_rows': prescription_rows,
         'now': datetime.now(),
         'print_mode': True,
     }
@@ -645,29 +665,32 @@ def patient_print_pdf(request, pk):
     from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable, KeepTogether
     from reportlab.lib.colors import HexColor
+    from reports.pdf import PAGE_MARGIN, _NumberedCanvas, _rule, _summary_panel, letterhead
+    import html as _html
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
-        topMargin=12*mm, bottomMargin=10*mm, leftMargin=10*mm, rightMargin=10*mm,
+        topMargin=PAGE_MARGIN, bottomMargin=18*mm,
+        leftMargin=PAGE_MARGIN, rightMargin=PAGE_MARGIN,
         title=f"{patient.patient_number} - {patient.full_name()}",
         author="ABTC System"
     )
 
-    emerald_950 = HexColor("#0a1f1a")
-    emerald_800 = HexColor("#143d33")
-    emerald_700 = HexColor("#1b4d3e")
-    sage_line = HexColor("#c8d8c6")
-    sage_50 = HexColor("#f2f5f1")
-    sage_100 = HexColor("#e6ece5")
-    muted = HexColor("#1e332b")
-    light_muted = HexColor("#5a6b63")
+    emerald_950 = HexColor("#08291F")
+    emerald_800 = HexColor("#08291F")
+    emerald_700 = HexColor("#08291F")
+    sage_line = HexColor("#D9DED9")
+    sage_50 = HexColor("#FAF8F2")
+    sage_100 = HexColor("#F3F0E7")
+    muted = HexColor("#26352F")
+    light_muted = HexColor("#496458")
 
     styles = getSampleStyleSheet()
     s_h1 = ParagraphStyle('h1', parent=styles['Heading1'], fontSize=13, leading=15, textColor=emerald_950, fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=2)
     s_h1sub = ParagraphStyle('h1sub', parent=styles['Normal'], fontSize=6.5, leading=8, textColor=light_muted, fontName='Helvetica', alignment=TA_CENTER, spaceAfter=4)
-    s_section = ParagraphStyle('section', parent=styles['Normal'], fontSize=7, leading=9, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_LEFT)
-    s_label = ParagraphStyle('label', parent=styles['Normal'], fontSize=6, leading=7, textColor=HexColor("#5a6b63"), fontName='Helvetica-Bold', alignment=TA_LEFT)
+    s_section = ParagraphStyle('section', parent=styles['Normal'], fontSize=8.5, leading=10.5, textColor=HexColor("#08291F"), fontName='Helvetica-Bold', alignment=TA_LEFT)
+    s_label = ParagraphStyle('label', parent=styles['Normal'], fontSize=6, leading=7, textColor=HexColor("#496458"), fontName='Helvetica-Bold', alignment=TA_LEFT)
     s_value = ParagraphStyle('value', parent=styles['Normal'], fontSize=7.5, leading=9, textColor=emerald_950, fontName='Helvetica-Bold', alignment=TA_LEFT)
     s_value_small = ParagraphStyle('vsmall', parent=s_value, fontSize=7)
     s_td = ParagraphStyle('td', parent=styles['Normal'], fontSize=6.5, leading=8, textColor=muted, fontName='Helvetica', alignment=TA_LEFT)
@@ -676,125 +699,191 @@ def patient_print_pdf(request, pk):
     s_note = ParagraphStyle('note', parent=styles['Normal'], fontSize=6, leading=7.5, textColor=muted, fontName='Helvetica')
 
     cell = lambda txt, style=s_td: Paragraph(str(txt) if txt not in (None, '') else "-", style)
-    label_cell = lambda txt: Paragraph(f'<font color="#5a6b63"><b>{txt}</b></font>', s_label)
+    label_cell = lambda txt: Paragraph(f'<font color="#496458"><b>{txt}</b></font>', s_label)
 
     story = []
 
-    # Header
-    hdr_data = [[
-        Paragraph('<b>ABTC</b> <font color="#1b4d3e">Management System</font>', ParagraphStyle('hdrL', parent=styles['Normal'], fontSize=8, leading=9, textColor=emerald_950, fontName='Helvetica-Bold')),
-        Paragraph(f'{datetime.now().strftime("%b %d, %Y %I:%M %p")} &nbsp;·&nbsp; Generated by {request.user.get_full_name() or request.user.username}', ParagraphStyle('hdrR', parent=styles['Normal'], fontSize=6, leading=8, textColor=light_muted, fontName='Helvetica', alignment=TA_RIGHT)),
-    ]]
-    hdr_tbl = Table(hdr_data, colWidths=[85*mm, 85*mm])
-    hdr_tbl.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-    ]))
-    story.append(hdr_tbl)
-    story.append(Paragraph("Municipal Health Office · Animal Bite Treatment Center — Dumingag, Zamboanga del Sur", ParagraphStyle('sub', parent=styles['Normal'], fontSize=6, leading=8, textColor=HexColor("#7a8b83"), fontName='Helvetica', alignment=TA_LEFT)))
-    story.append(HRFlowable(width="100%", thickness=0.7, color=emerald_800, spaceAfter=6, spaceBefore=3))
-    story.append(Paragraph("PATIENT INFORMATION SHEET", s_h1))
-    story.append(Paragraph("For clinical use — present at triage · Vital signs to be filled on-site", s_h1sub))
-    story.append(HRFlowable(width="100%", thickness=0.4, color=sage_line, spaceAfter=8, spaceBefore=2))
-
-    initials = f"{(patient.first_name[:1] or '').upper()}{(patient.last_name[:1] or '').upper()}"
+    # Official ABTC letterhead
     pid = patient.patient_number
     pname = patient.full_name()
-    age_sex = f"{patient.age}y · {patient.get_sex_display()} · {patient.get_civil_status_display()}"
-    barangay_name = str(patient.barangay) if patient.barangay_id else (patient.address[:40] if patient.address else "-")
-    band_data = [
-        [Paragraph(f'<font color="white" size="13"><b>{initials}</b></font>', ParagraphStyle('init', parent=styles['Normal'], textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER, fontSize=13, leading=15)), cell(f'<b>{pname}</b>', ParagraphStyle('pn', parent=styles['Normal'], fontSize=10, leading=12, textColor=colors.white, fontName='Helvetica-Bold')), cell(f'<b>{pid}</b><br/><font color="#c8d8c6" size="6">{age_sex}</font>', ParagraphStyle('pid', parent=styles['Normal'], fontSize=8, leading=9, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_RIGHT))],
-    ]
-    band = Table(band_data, colWidths=[18*mm, 110*mm, 42*mm])
-    band.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), emerald_950),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
-        ('TOPPADDING', (0,0), (-1,-1), 7),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 7),
-        ('ROUNDEDCORNERS', [4,4,4,4]),
-        ('BOX', (0,0), (-1,-1), 0.6, emerald_950),
-    ]))
-    story.append(band)
+    story.append(letterhead("Patient Information Sheet"))
+    story.append(_rule())
+    story.append(Paragraph(
+        f'Date Printed: {datetime.now().strftime("%B %d, %Y · %I:%M %p")}',
+        ParagraphStyle('officialMeta', parent=styles['Normal'], fontSize=7,
+                       leading=9, textColor=HexColor("#496458"),
+                       fontName='Helvetica')))
+    story.append(Paragraph("For clinical use — present this sheet at every visit. Verify patient identity before treatment.", s_h1sub))
     story.append(Spacer(1, 6))
-    contact_data = [[
-        cell(f'<b>Contact:</b> {patient.contact_number}', ParagraphStyle('c1', parent=s_td, fontSize=6.5, textColor=muted)),
-        cell(f'<b>Barangay:</b> {barangay_name}', ParagraphStyle('c2', parent=s_td, fontSize=6.5, textColor=muted)),
-        cell(f'<b>Registered:</b> {patient.created_at.strftime("%b %d, %Y")}', ParagraphStyle('c3', parent=s_td, fontSize=6.5, textColor=muted, alignment=TA_RIGHT)),
-    ]]
-    c_tbl = Table(contact_data, colWidths=[60*mm, 60*mm, 50*mm])
-    c_tbl.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), sage_50),
-        ('BOX', (0,0), (-1,-1), 0.5, sage_line),
-        ('INNERGRID', (0,0), (-1,-1), 0.4, sage_line),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-        ('RIGHTPADDING', (0,0), (-1,-1), 5),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('ROUNDEDCORNERS', [3,3,3,3]),
-    ]))
-    story.append(c_tbl)
-    story.append(Spacer(1, 8))
 
     def section_header(title):
-        t = Table([[Paragraph(f'{title}', s_section)]], colWidths=[170*mm])
+        t = Table([['', Paragraph(f'{title}', s_section)]], colWidths=[1.6*mm, 168.4*mm])
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), emerald_800),
-            ('LEFTPADDING', (0,0), (-1,-1), 6),
-            ('TOPPADDING', (0,0), (-1,-1), 4),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-            ('ROUNDEDCORNERS', [3,3,3,3]),
+            ('BACKGROUND', (0,0), (0,0), emerald_950),
+            ('LINEBELOW', (0,0), (-1,-1), 0.4, sage_line),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (0,0), 0),
+            ('RIGHTPADDING', (0,0), (0,0), 0),
+            ('LEFTPADDING', (1,0), (1,0), 7),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+            ('TOPPADDING', (0,0), (0,0), 0),
+            ('BOTTOMPADDING', (0,0), (0,0), 0),
         ]))
         return t
 
-    # Section 1: Demographics
-    story.append(section_header("1 &nbsp;·&nbsp; Patient Demographics"))
+    def panel_value(value):
+        return value if value not in (None, '') else 'Not Recorded'
+
+    def fmt_dt(value, pattern="%B %d, %Y · %I:%M %p"):
+        return value.strftime(pattern) if value else 'Not Recorded'
+
+    barangay_name = str(patient.barangay) if patient.barangay_id else 'Not Recorded'
+    emergency_contact = patient.emergency_contact_name or 'Not Recorded'
+    if patient.emergency_contact_name and patient.emergency_contact_number:
+        emergency_contact = f"{patient.emergency_contact_name} · {patient.emergency_contact_display}"
+
+    # Patient Information
+    story.append(section_header("Patient Information"))
     story.append(Spacer(1, 4))
-    demo_rows = [
-        [label_cell("PATIENT #"), cell(pid, s_value), label_cell("FULL NAME"), cell(pname, s_value)],
-        [label_cell("BIRTHDATE"), cell(patient.birthdate.strftime("%b %d, %Y") if patient.birthdate else "-", s_value_small), label_cell("AGE / SEX"), cell(f"{patient.age} / {patient.get_sex_display()}", s_value_small)],
-        [label_cell("CIVIL STATUS"), cell(patient.get_civil_status_display(), s_value_small), label_cell("BARANGAY"), cell(barangay_name, s_value_small)],
-        [label_cell("CONTACT #"), cell(patient.contact_number, s_value_small), label_cell("ADDRESS"), cell(patient.address or "-", s_value_small)],
-        [label_cell("PARENT / GUARDIAN"), cell(patient.parent_guardian or "—", s_value_small), label_cell("EMERGENCY CONTACT"), cell(f"{patient.emergency_contact_name or '—'}  {patient.emergency_contact_number or ''}".strip(), s_value_small)],
-    ]
-    demo_tbl = Table(demo_rows, colWidths=[28*mm, 57*mm, 30*mm, 55*mm])
-    demo_tbl.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.4, sage_line),
-        ('BACKGROUND', (0,0), (0,-1), sage_50),
-        ('BACKGROUND', (2,0), (2,-1), sage_50),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 3.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3.5),
+    story.append(_summary_panel([
+        ('Patient Full Name', pname),
+        ('Patient ID', pid),
+        ('Birthdate', fmt_dt(patient.birthdate, "%B %d, %Y")),
+        ('Age', str(patient.age)),
+        ('Sex', panel_value(patient.get_sex_display())),
+        ('Civil Status', panel_value(patient.get_civil_status_display())),
+        ('Contact Number', panel_value(patient.contact_display)),
+        ('Barangay', barangay_name),
+        ('Complete Address', panel_value(patient.address)),
+        ('Parent / Guardian', panel_value(patient.parent_guardian)),
+        ('Emergency Contact', emergency_contact),
     ]))
-    story.append(demo_tbl)
-    if patient.medical_history or patient.allergy_info or patient.previous_rabies_vax or patient.remarks:
-        story.append(Spacer(1, 3))
-        med_rows = []
-        if patient.medical_history:
-            med_rows.append([label_cell("MEDICAL HISTORY"), cell(patient.medical_history, s_td)])
-        if patient.allergy_info:
-            med_rows.append([label_cell("ALLERGIES"), cell(f"<b><font color=\"#991b1b\">{patient.allergy_info}</font></b>", s_td)])
-        if patient.previous_rabies_vax:
-            med_rows.append([label_cell("PREV. RABIES VAX"), cell(patient.previous_rabies_vax, s_td)])
-        if patient.remarks:
-            med_rows.append([label_cell("REMARKS"), cell(patient.remarks, s_td)])
-        if med_rows:
-            med_tbl = Table(med_rows, colWidths=[28*mm, 142*mm])
-            med_tbl.setStyle(TableStyle([
-                ('GRID', (0,0), (-1,-1), 0.4, sage_line),
-                ('BACKGROUND', (0,0), (0,-1), HexColor("#fef3c7") if patient.allergy_info else sage_50),
-                ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                ('LEFTPADDING', (0,0), (-1,-1), 4),
-                ('RIGHTPADDING', (0,0), (-1,-1), 4),
-                ('TOPPADDING', (0,0), (-1,-1), 3.5),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 3.5),
-            ]))
-            story.append(med_tbl)
+    story.append(Spacer(1, 8))
+
+    # Medical Information
+    story.append(section_header("Medical Information"))
+    story.append(Spacer(1, 4))
+    story.append(_summary_panel([
+        ('Medical History', panel_value(patient.medical_history)),
+        ('Allergies', panel_value(patient.allergy_info)),
+        ('Previous Rabies Vaccination', panel_value(patient.previous_rabies_vax)),
+        ('Remarks', panel_value(patient.remarks)),
+    ]))
+    story.append(Spacer(1, 8))
+
+    # Animal Bite Information — latest case only, never mixed with other incidents
+    latest_case = bite_cases[0] if bite_cases else None
+    story.append(section_header("Animal Bite Information"))
+    story.append(Spacer(1, 4))
+    if latest_case:
+        who_category = 'Not Recorded'
+        try:
+            exposure_info = latest_case.exposure
+        except Exception:
+            exposure_info = None
+        if exposure_info is not None:
+            who_category = exposure_info.get_category_display()
+        elif (latest_assessment and latest_assessment.bite_case_id == latest_case.pk
+              and latest_assessment.category_confirmed):
+            who_category = latest_assessment.category_label or 'Not Recorded'
+        story.append(_summary_panel([
+            ('Case Number', latest_case.case_number),
+            ('Date of Bite', fmt_dt(latest_case.date_time_bite)),
+            ('Animal Type', latest_case.get_animal_type_display()),
+            ('Exposure Type', latest_case.get_exposure_type_display()),
+            ('Bite Location / Body Part', panel_value(latest_case.body_part_affected)),
+            ('WHO Bite Category', who_category),
+            ('Case Status', latest_case.get_case_status_display()),
+            ('Place of Incident', panel_value(latest_case.place_of_incident)),
+        ]))
+        story.append(Paragraph(
+            f"<i>This sheet refers to bite case <b>{_html.escape(latest_case.case_number)}</b>. "
+            "Details from other bite incidents are listed separately under Recent Bite Cases.</i>", s_note))
+    else:
+        story.append(Paragraph(
+            "No bite case has been recorded for this patient. This sheet serves as the baseline intake form.",
+            s_note))
+    story.append(Spacer(1, 8))
+
+    # Vaccination Information — vaccine and RIG are reported separately
+    first_dose_date = latest_assessment.first_dose_date if latest_assessment else None
+    if not first_dose_date and assessment_schedule:
+        first_dose = assessment_schedule.doses.all().order_by('id').first()
+        first_dose_date = first_dose.clinical_date if first_dose else None
+    if latest_assessment and latest_assessment.vaccine_inventory:
+        inventory = latest_assessment.vaccine_inventory
+        vaccine_product = ' · '.join(
+            part for part in (inventory.vaccine_name, inventory.brand) if part) or 'Not Recorded'
+    elif latest_assessment and latest_assessment.vaccine_brand_plan:
+        vaccine_product = latest_assessment.vaccine_brand_plan
+    else:
+        vaccine_product = 'Not Recorded'
+    if assessment_schedule:
+        dose_total = assessment_schedule.doses.count()
+        total_doses = f"{dose_total} Dose" + ('' if dose_total == 1 else 's')
+        rig_status = 'Given' if assessment_schedule.rig_given else 'Not Given'
+    else:
+        total_doses = 'Not Recorded'
+        rig_status = 'Not Recorded'
+    treatment_status = (
+        latest_case.get_case_status_display() if latest_case else
+        (latest_assessment.get_status_display() if latest_assessment else 'Not Recorded'))
+    story.append(section_header("Vaccination Information"))
+    story.append(Spacer(1, 4))
+    story.append(_summary_panel([
+        ('Recorded Vaccine / Biological Product', vaccine_product),
+        ('Rabies Immunoglobulin (RIG)', rig_status),
+        ('Total Required Doses', total_doses),
+        ('First Dose Date', fmt_dt(first_dose_date, "%B %d, %Y")),
+        ('Current Treatment Status', treatment_status),
+    ]))
+    story.append(Spacer(1, 8))
+
+    # Vaccination Schedule — same DOSE / SCHEDULED DATE / STATUS view as the HTML sheet
+    story.append(section_header("Vaccination Schedule"))
+    story.append(Spacer(1, 4))
+    if assessment_schedule and assessment_schedule.doses.exists():
+        schedule_rows = []
+        for dose in assessment_schedule.doses.all().order_by('id'):
+            schedule_rows.append([
+                Paragraph(
+                    f'<b>{_html.escape(dose.number_label)}</b><br/>'
+                    f'<font color="#496458" size="6">{_html.escape(dose.dose_label)}</font>',
+                    ParagraphStyle('schd', parent=s_td, fontSize=6.5, leading=8)),
+                Paragraph(
+                    dose.scheduled_date.strftime("%B %d, %Y") if dose.scheduled_date
+                    else '<font color="#496458">Pending Scheduling</font>',
+                    ParagraphStyle('schdate', parent=s_td, fontSize=6.5, leading=8)),
+                Paragraph(_html.escape(dose.clinical_status),
+                          ParagraphStyle('schstat', parent=s_td, fontSize=6.5, leading=8)),
+            ])
+        sch_head = [
+            Paragraph(f'<b>{h}</b>', ParagraphStyle(
+                'sch_th', parent=styles['Normal'], fontSize=6, leading=7.5,
+                textColor=emerald_950, fontName='Helvetica-Bold'))
+            for h in ['DOSE', 'SCHEDULED DATE', 'STATUS']]
+        sch_tbl = Table([sch_head] + schedule_rows,
+                        colWidths=[70 * mm, 60 * mm, 40 * mm], repeatRows=1)
+        sch_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), sage_100),
+            ('GRID', (0, 0), (-1, -1), 0.4, sage_line),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, sage_50]),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(sch_tbl)
+    else:
+        story.append(_summary_panel([
+            ('Schedule Status', 'Pending Scheduling'),
+            ('Instruction', 'No vaccination schedule has been assigned for this patient.'),
+        ]))
+    story.append(Paragraph(
+        "A dose is marked Completed only when its administration has been recorded. "
+        "Scheduled dates do not imply the dose was given.", s_note))
     story.append(Spacer(1, 8))
 
     # Section 2: Vital signs — dynamic (shows stored if exists)
@@ -806,17 +895,17 @@ def patient_print_pdf(request, pk):
         vit_hint = f"<i>Last taken: <b>{taken_str}</b> &nbsp;by <b>{taken_by_str}</b> &nbsp;·&nbsp; Fill next on printed copy if needed.</i>"
     else:
         vit_hint = "<i>Staff: fill with ballpen on printed copy. Leave blank if not taken. Date/Time: &nbsp;_____ / _____ / _____ &nbsp;&nbsp; ___:___ &nbsp;&nbsp; Taken by: ______________________</i>"
-    story.append(section_header("2 &nbsp;·&nbsp; Vital Signs &nbsp; <font color=\"#c8d8c6\" size=\"6\">— " + ("stored — editable by admin" if latest_vitals else "to be filled on-site (use blank fields)") + "</font>"))
+    story.append(section_header("Vital Signs"))
     story.append(Spacer(1, 2))
-    story.append(Paragraph(vit_hint, ParagraphStyle('vitals_hint', parent=styles['Normal'], fontSize=6, leading=8, textColor=HexColor("#5a6b63"), alignment=TA_CENTER, spaceAfter=4, fontName='Helvetica-Oblique')))
+    story.append(Paragraph(vit_hint, ParagraphStyle('vitals_hint', parent=styles['Normal'], fontSize=6, leading=8, textColor=HexColor("#496458"), alignment=TA_CENTER, spaceAfter=4, fontName='Helvetica-Oblique')))
     def vit_cell(label, unit, value=None, blank_len=14):
         # If value is provided and not None/empty, show it bold; else show blank underscores
         if value is not None and str(value).strip() not in ("", "—", "None"):
             val_str = str(value)
             # For BP, value already formatted like "120/80"
-            return Paragraph(f'<font color="#5a6b63" size="6"><b>{label}</b></font><br/><font color="#0a1f1a" size="9"><b>{val_str}</b></font><font color="#5a6b63" size="6"> {unit}</font><br/><font color="#8aa589" size="5">__________________</font>', ParagraphStyle('vit', parent=styles['Normal'], alignment=TA_CENTER, leading=9))
+            return Paragraph(f'<font color="#496458" size="6"><b>{label}</b></font><br/><font color="#08291F" size="9"><b>{val_str}</b></font><font color="#496458" size="6"> {unit}</font><br/><font color="#8aa589" size="5">__________________</font>', ParagraphStyle('vit', parent=styles['Normal'], alignment=TA_CENTER, leading=9))
         blank = "_" * blank_len
-        return Paragraph(f'<font color="#5a6b63" size="6"><b>{label}</b></font><br/><font color="#0a1f1a" size="9">{blank}</font><font color="#5a6b63" size="6"> {unit}</font><br/><font color="#8aa589" size="5">__________________</font>', ParagraphStyle('vit', parent=styles['Normal'], alignment=TA_CENTER, leading=9))
+        return Paragraph(f'<font color="#496458" size="6"><b>{label}</b></font><br/><font color="#08291F" size="9">{blank}</font><font color="#496458" size="6"> {unit}</font><br/><font color="#8aa589" size="5">__________________</font>', ParagraphStyle('vit', parent=styles['Normal'], alignment=TA_CENTER, leading=9))
     # Prepare values from latest_vitals
     if latest_vitals:
         bp_val = latest_vitals.bp_display if latest_vitals.bp_display else None
@@ -835,12 +924,12 @@ def patient_print_pdf(request, pk):
         # For radio-like fields, show filled circle if matches
         def circ(chosen, val):
             return "●" if chosen == val else "○"
-        glucose_para = f'<font color="#5a6b63" size="6"><b>RANDOM / FASTING</b></font><br/><font size="6">{circ(glucose_type,"random")} Random &nbsp; {circ(glucose_type,"fasting")} Fasting</font>'
-        appearance_para = f'<font color="#5a6b63" size="6"><b>GENERAL APPEARANCE</b></font><br/><font size="6">{circ(appearance,"well")} Well &nbsp; {circ(appearance,"ill")} Ill &nbsp; {circ(appearance,"toxic")} Toxic</font>'
+        glucose_para = f'<font color="#496458" size="6"><b>RANDOM / FASTING</b></font><br/><font size="6">{circ(glucose_type,"random")} Random &nbsp; {circ(glucose_type,"fasting")} Fasting</font>'
+        appearance_para = f'<font color="#496458" size="6"><b>GENERAL APPEARANCE</b></font><br/><font size="6">{circ(appearance,"well")} Well &nbsp; {circ(appearance,"ill")} Ill &nbsp; {circ(appearance,"toxic")} Toxic</font>'
     else:
         bp_val = temp_val = pulse_val = rr_val = spo2_val = wt_val = ht_val = bmi_val = pain_val = glucose_val = None
-        glucose_para = '<font color="#5a6b63" size="6"><b>RANDOM / FASTING</b></font><br/><font size="6">○ Random &nbsp; ○ Fasting</font>'
-        appearance_para = '<font color="#5a6b63" size="6"><b>GENERAL APPEARANCE</b></font><br/><font size="6">○ Well &nbsp; ○ Ill &nbsp; ○ Toxic</font>'
+        glucose_para = '<font color="#496458" size="6"><b>RANDOM / FASTING</b></font><br/><font size="6">○ Random &nbsp; ○ Fasting</font>'
+        appearance_para = '<font color="#496458" size="6"><b>GENERAL APPEARANCE</b></font><br/><font size="6">○ Well &nbsp; ○ Ill &nbsp; ○ Toxic</font>'
         notes_val = ""
     v_rows = [
         [vit_cell("BLOOD PRESSURE", "mmHg", bp_val, 10), vit_cell("TEMPERATURE", "°C", temp_val, 8), vit_cell("PULSE RATE", "bpm", pulse_val, 8), vit_cell("RESP. RATE", "/min", rr_val, 8)],
@@ -868,12 +957,11 @@ def patient_print_pdf(request, pk):
     story.append(Spacer(1, 8))
 
     # Section 3: Clinical Assessment — full A–F sequence
-    import html as _html
 
     s_cs_head = ParagraphStyle('cshead', parent=styles['Normal'], fontSize=7.5, leading=9,
                                textColor=emerald_950, fontName='Helvetica-Bold')
     s_cs_label = ParagraphStyle('cslabel', parent=styles['Normal'], fontSize=5.5, leading=7,
-                                textColor=HexColor("#8a6a1c"), fontName='Helvetica-Bold', spaceAfter=1)
+                                textColor=HexColor("#496458"), fontName='Helvetica-Bold', spaceAfter=1)
     s_cs_value = ParagraphStyle('csval', parent=styles['Normal'], fontSize=7.5, leading=10,
                                 textColor=emerald_950, fontName='Helvetica')
     s_cs_note = ParagraphStyle('csnote', parent=styles['Normal'], fontSize=6.5, leading=8.5,
@@ -881,13 +969,13 @@ def patient_print_pdf(request, pk):
 
     def cs_text(value, fallback='Not recorded'):
         if value in (None, ''):
-            return f'<font color="#7b8f85">{fallback}</font>'
+            return f'<font color="#496458">{fallback}</font>'
         return _html.escape(str(value)).replace('\n', '<br/>')
 
     def cs_cell(label, value=None, value_html=None):
         val = value_html if value_html is not None else cs_text(value)
         return [
-            Paragraph(f'<font color="#8a6a1c"><b>{_html.escape(label.upper())}</b></font>', s_cs_label),
+            Paragraph(f'<font color="#496458"><b>{_html.escape(label.upper())}</b></font>', s_cs_label),
             Paragraph(val, s_cs_value),
         ]
 
@@ -912,7 +1000,7 @@ def patient_print_pdf(request, pk):
 
     def cs_header(letter, title):
         table = Table([[
-            Paragraph(f'<font color="#c9a227" size="8"><b>{letter}</b></font> &nbsp; <b>{_html.escape(title.upper())}</b>', s_cs_head)
+            Paragraph(f'<font color="#08291F" size="8"><b>{letter}</b></font> &nbsp; <b>{_html.escape(title.upper())}</b>', s_cs_head)
         ]], colWidths=[170 * mm])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), sage_100),
@@ -930,14 +1018,14 @@ def patient_print_pdf(request, pk):
         story.append(Spacer(1, 7))
 
     def cs_records_table(header, rows, widths):
-        head = [Paragraph(f'<font color="#ffffff"><b>{h}</b></font>',
+        head = [Paragraph(f'<font color="#08291F"><b>{h}</b></font>',
                           ParagraphStyle('cs_th', parent=styles['Normal'], fontSize=6, leading=7.5,
-                                         textColor=colors.white, fontName='Helvetica-Bold'))
+                                         textColor=emerald_950, fontName='Helvetica-Bold'))
                 for h in header]
         data = [head] + rows
         table = Table(data, colWidths=widths, repeatRows=1)
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), emerald_950),
+            ('BACKGROUND', (0, 0), (-1, 0), sage_100),
             ('GRID', (0, 0), (-1, -1), 0.4, sage_line),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, sage_50]),
@@ -952,7 +1040,7 @@ def patient_print_pdf(request, pk):
         cat_label = latest_assessment.category_label or "Not recorded"
         cat_desc = latest_assessment.category_description or "No category description recorded."
         story.append(section_header(
-            f"3 &nbsp;·&nbsp; Clinical Assessment <font color=\"#c8d8c6\" size=\"6\">— "
+            f"Clinical Assessment <font color=\"#496458\" size=\"6\">— "
             f"Dr. {(latest_assessment.assessed_by.get_full_name() if latest_assessment.assessed_by else '—')} · "
             f"{latest_assessment.encounter_date.strftime('%b %d, %Y %I:%M %p') if latest_assessment.encounter_date else ''} · "
             f"{cat_label} · {latest_assessment.get_status_display()}</font>"))
@@ -971,7 +1059,7 @@ def patient_print_pdf(request, pk):
         b_flows = [
             cs_grid([cs_cell('Narrative as Verified by the Doctor', latest_assessment.exposure_narrative)],
                     cols=1, widths=[170 * mm]),
-            Paragraph('<font color="#8a6a1c"><b>VERIFIED INCIDENT DETAILS</b></font>', s_cs_label),
+            Paragraph('<font color="#496458"><b>VERIFIED INCIDENT DETAILS</b></font>', s_cs_label),
         ]
         b_flows.append(cs_grid([
             cs_cell('Verified Animal Type', latest_assessment.animal_type_verified),
@@ -984,7 +1072,7 @@ def patient_print_pdf(request, pk):
                     latest_assessment.date_time_bite_verified.strftime('%b %d, %Y · %I:%M %p')
                     if latest_assessment.date_time_bite_verified else None),
         ], cols=3))
-        b_flows.append(Paragraph('<font color="#8a6a1c"><b>EXAMINATION FINDINGS</b></font>', s_cs_label))
+        b_flows.append(Paragraph('<font color="#496458"><b>EXAMINATION FINDINGS</b></font>', s_cs_label))
         b_flows.append(cs_grid([
             cs_cell('HEENT', latest_assessment.exam_heent),
             cs_cell('Chest / Lungs', latest_assessment.exam_chest_lungs),
@@ -1018,7 +1106,7 @@ def patient_print_pdf(request, pk):
                         latest_assessment.first_dose_date.strftime('%b %d, %Y')
                         if latest_assessment.first_dose_date else None),
             ], cols=2),
-            Paragraph('<font color="#8a6a1c"><b>DOSE SCHEDULE RECORDS</b></font>', s_cs_label),
+            Paragraph('<font color="#496458"><b>DOSE SCHEDULE RECORDS</b></font>', s_cs_label),
         ]
         if assessment_schedule:
             doses = list(assessment_schedule.doses.all().order_by('id'))
@@ -1031,7 +1119,7 @@ def patient_print_pdf(request, pk):
                               + (f' · Day {dose.protocol_day}' if dose.protocol_day is not None else ''),
                               ParagraphStyle('cs_dose', parent=s_td, fontSize=6.5, leading=8)),
                     Paragraph(dose.clinical_date.strftime('%b %d, %Y') if dose.clinical_date
-                              else '<font color="#7b8f85">Not yet set</font>',
+                              else '<font color="#496458">Not yet set</font>',
                               ParagraphStyle('cs_date', parent=s_td, fontSize=6.5, leading=8)),
                     Paragraph(_html.escape(dose.clinical_status),
                               ParagraphStyle('cs_stat', parent=s_td, fontSize=6.5, leading=8)),
@@ -1069,7 +1157,7 @@ def patient_print_pdf(request, pk):
         if brand_sub:
             brand_html += f'<br/>{_html.escape(brand_sub)}'
         if brand_lot:
-            brand_html += f'<br/><font color="#5a6b63" size="6">Lot / batch: {_html.escape(brand_lot)}</font>'
+            brand_html += f'<br/><font color="#496458" size="6">Lot / batch: {_html.escape(brand_lot)}</font>'
         if not brand_html:
             brand_html = cs_text(None)
         cs_add('E', 'Vaccine Brand', [
@@ -1093,19 +1181,29 @@ def patient_print_pdf(request, pk):
         f_flows = [Paragraph(flags_text, s_cs_note)]
         f_flows.append(cs_grid([cs_cell('Treatment Plan', latest_assessment.treatment_plan)],
                                cols=1, widths=[170 * mm]))
-        f_flows.append(Paragraph('<font color="#8a6a1c"><b>PRESCRIPTION</b></font>', s_cs_label))
+        f_flows.append(Paragraph('<font color="#496458"><b>PRESCRIPTION</b></font>', s_cs_label))
         prescriptions = list(latest_assessment.prescriptions.all())
         if prescriptions:
+            from inventory.models import MedicineInventory
             rx_rows = []
             for rx in prescriptions:
-                med_html = f'<b>{_html.escape(rx.medicine.medicine_name)}</b>'
-                if rx.medicine.strength:
-                    med_html += f' · {_html.escape(rx.medicine.strength)}'
-                med_html += (f'<br/><font color="#5a6b63" size="6">'
+                try:
+                    medicine = rx.medicine
+                except MedicineInventory.DoesNotExist:
+                    medicine = None
+                if medicine:
+                    med_html = f'<b>{_html.escape(medicine.medicine_name)}</b>'
+                    if medicine.strength:
+                        med_html += f' · {_html.escape(medicine.strength)}'
+                    qty_display = rx.quantity_display
+                else:
+                    med_html = '<b>Medicine record unavailable</b>'
+                    qty_display = str(rx.quantity)
+                med_html += (f'<br/><font color="#496458" size="6">'
                              f'{_html.escape(rx.get_status_display())}</font>')
                 rx_rows.append([
                     Paragraph(med_html, ParagraphStyle('cs_rx', parent=s_td, fontSize=6.5, leading=8)),
-                    Paragraph(_html.escape(rx.quantity_display),
+                    Paragraph(_html.escape(qty_display),
                               ParagraphStyle('cs_qty', parent=s_td, fontSize=6.5, leading=8)),
                 ])
             f_flows.append(cs_records_table(['MEDICINE', 'QUANTITY'], rx_rows, [110 * mm, 60 * mm]))
@@ -1128,11 +1226,11 @@ def patient_print_pdf(request, pk):
             + f' · {latest_assessment.get_status_display()}', s_cs_note))
         cs_add('F', 'Treatment & Prescription', f_flows)
     else:
-        story.append(section_header("3 &nbsp;·&nbsp; Clinical Assessment <font color=\"#c8d8c6\" size=\"6\">— no assessment recorded</font>"))
+        story.append(section_header("Clinical Assessment <font color=\"#496458\" size=\"6\">— no assessment recorded</font>"))
         story.append(Spacer(1, 4))
         empty_tbl = Table([[
             Paragraph('<b>NO ASSESSMENT YET</b><br/>'
-                      '<font color="#5a6b63" size="7">No doctor assessment has been recorded for this case.</font>',
+                      '<font color="#496458" size="7">No doctor assessment has been recorded for this case.</font>',
                       ParagraphStyle('cs_empty', parent=s_td, alignment=TA_CENTER, leading=10))
         ]], colWidths=[170 * mm])
         empty_tbl.setStyle(TableStyle([
@@ -1146,131 +1244,12 @@ def patient_print_pdf(request, pk):
         story.append(empty_tbl)
         story.append(Spacer(1, 8))
 
-    # Section 4: Vaccination Schedule — ADDED, emerald style
-    story.append(section_header("4 &nbsp;·&nbsp; Vaccination Schedule <font color=\"#c8d8c6\" size=\"6\">— ABTC use — tick / sign when given</font>"))
-    story.append(Spacer(1, 4))
-    has_sched = any(getattr(c, 'vaccination_schedule', None) for c in bite_cases)
-    if bite_cases and has_sched:
-        for case in bite_cases:
-            sched = getattr(case, 'vaccination_schedule', None)
-            if not sched:
-                continue
-            story.append(Paragraph(f"<b>Case {case.case_number}</b> &nbsp;·&nbsp; {case.date_time_bite.strftime('%b %d, %Y') if case.date_time_bite else ''} &nbsp;·&nbsp; {case.get_animal_type_display()} · {case.get_exposure_type_display()} &nbsp;<font color=\"#5a6b63\">· {case.incident_barangay} · {case.get_case_status_display()} · {sched.doses.count()} dose(s)</font>", ParagraphStyle('sch_h', parent=styles['Normal'], fontSize=6.5, leading=8, textColor=emerald_950, fontName='Helvetica', spaceAfter=3, spaceBefore=4)))
-            doses = list(sched.doses.all().order_by('id')) if hasattr(sched.doses, 'all') else []
-            if doses:
-                hdr = ["#", "Dose", "Scheduled Date", "Date Given", "Brand / Lot", "Status", "Site / Route", "Given by / Sign"]
-                header_row = [Paragraph(f"<b>{h}</b>", ParagraphStyle('thv', parent=styles['Normal'], fontSize=5.5, leading=7, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER)) for h in hdr]
-                data = [header_row]
-                for idx_d, d in enumerate(doses, 1):
-                    status = d.get_dose_status_display() if hasattr(d, 'get_dose_status_display') else d.dose_status
-                    # Brand
-                    brand = (d.vaccine_brand or "") + (f" · {d.batch_number}" if getattr(d, 'batch_number', None) else "")
-                    if not brand.strip():
-                        brand = "—"
-                    data.append([
-                        Paragraph(str(idx_d), ParagraphStyle(f'c{idx_d}', parent=s_td_center, fontSize=6)),
-                        Paragraph(d.dose_label or f"Dose {idx_d}", ParagraphStyle(f'd{idx_d}', parent=s_td, fontName='Helvetica-Bold', fontSize=6.5)),
-                        Paragraph(d.scheduled_date.strftime("%b %d, %Y") if d.scheduled_date else "—", ParagraphStyle(f'sd{idx_d}', parent=s_td_center, fontSize=6)),
-                        Paragraph(d.actual_date.strftime("%b %d, %Y") if getattr(d,'actual_date',None) and d.actual_date else "—", ParagraphStyle(f'ad{idx_d}', parent=s_td_center, fontSize=6)),
-                        Paragraph(brand, ParagraphStyle(f'br{idx_d}', parent=s_td, fontSize=6)),
-                        Paragraph(f"{status}", ParagraphStyle(f'st{idx_d}', parent=s_td_center, fontSize=6)),
-                        Paragraph("—", s_td_center),
-                        Paragraph("______________", ParagraphStyle(f'sg{idx_d}', parent=s_td_center, fontSize=6, textColor=light_muted)),
-                    ])
-                cw = [8*mm, 18*mm, 28*mm, 28*mm, 32*mm, 22*mm, 20*mm, 24*mm]
-                t = Table(data, colWidths=cw, repeatRows=1)
-                t.setStyle(TableStyle([
-                    ('BACKGROUND', (0,0), (-1,0), emerald_950),
-                    ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-                    ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                    ('GRID', (0,0), (-1,-1), 0.4, sage_line),
-                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, sage_50]),
-                    ('LEFTPADDING', (0,0), (-1,-1), 3),
-                    ('RIGHTPADDING', (0,0), (-1,-1), 3),
-                    ('TOPPADDING', (0,0), (-1,-1), 3),
-                    ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-                ]))
-                story.append(t)
-                if getattr(sched, 'doctor_notes', None):
-                    story.append(Spacer(1,2))
-                    story.append(Paragraph(f"<b>Notes:</b> {sched.doctor_notes}", ParagraphStyle('sch_n', parent=styles['Normal'], fontSize=6, leading=7, textColor=muted)))
-            else:
-                story.append(Paragraph("No doses recorded for this schedule.", ParagraphStyle('nod', parent=styles['Normal'], fontSize=6.5, textColor=light_muted, fontName='Helvetica-Oblique', alignment=TA_CENTER, borderPadding=(6,6,6), borderColor=sage_line, borderWidth=0.4, backColor=sage_50)))
-            story.append(Spacer(1, 3))
-        story.append(Paragraph("<i>Bring this sheet at every visit. Tick & sign when dose given. Scheduled doses highlight next due.</i>", ParagraphStyle('leg', parent=styles['Normal'], fontSize=6, leading=7, textColor=light_muted, fontName='Helvetica-Oblique', alignment=TA_CENTER, spaceBefore=4)))
-        story.append(Spacer(1, 6))
-    elif bite_cases:
-        # Cases exist but no schedule — show placeholder per case + blank template
-        for case in bite_cases:
-            if not getattr(case, 'vaccination_schedule', None):
-                story.append(Paragraph(f"<b>Case {case.case_number}</b> &nbsp;·&nbsp; {case.date_time_bite.strftime('%b %d, %Y') if case.date_time_bite else ''} — <font color=\"#5a6b63\">No vaccination schedule yet</font>", ParagraphStyle('ch2', parent=styles['Normal'], fontSize=6.5, leading=8, textColor=emerald_950, fontName='Helvetica', spaceAfter=2)))
-                story.append(Paragraph("Schedule to be created by ABTC clinician. Standard Essen regimen (Days 0, 3, 7, 14, 28) will appear here once generated.", ParagraphStyle('ph', parent=styles['Normal'], fontSize=6.5, textColor=light_muted, fontName='Helvetica-Oblique', alignment=TA_LEFT, borderPadding=(4,4,4), borderColor=sage_line, borderWidth=0.3, backColor=sage_50, spaceAfter=4)))
-        # Blank template
-        story.append(Paragraph("<b>Standard Post-Exposure Prophylaxis (Essen 5-dose IM) — blank template</b> &nbsp;<font color=\"#5a6b63\">to be scheduled by clinician</font>", ParagraphStyle('std', parent=styles['Normal'], fontSize=6.5, leading=8, textColor=emerald_950, fontName='Helvetica', spaceAfter=3, spaceBefore=4)))
-        data = [[Paragraph(f"<b>{h}</b>", ParagraphStyle('thb', parent=styles['Normal'], fontSize=5.5, leading=7, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER)) for h in ["#", "Dose", "Scheduled Date", "Date Given", "Brand / Lot", "Status", "Site / Route", "Given by"]]]
-        for i, label in enumerate(["Day 0", "Day 3", "Day 7", "Day 14", "Day 28"], 1):
-            data.append([
-                Paragraph(str(i), s_td_center),
-                Paragraph(label, ParagraphStyle(f'lb{i}', parent=s_td, fontName='Helvetica-Bold', fontSize=6.5)),
-                Paragraph("____ / ____ / ____", ParagraphStyle(f'sd{i}', parent=s_td_center, fontSize=6)),
-                Paragraph("", s_td_center),
-                Paragraph("", s_td_center),
-                Paragraph("Pending", s_td_center),
-                Paragraph("", s_td_center),
-                Paragraph("______________", ParagraphStyle(f'sg{i}', parent=s_td_center, textColor=light_muted, fontSize=6)),
-            ])
-        data.append([Paragraph("—", s_td_center), Paragraph("RIG", s_td_center), Paragraph("if indicated", s_td_center), Paragraph("", s_td_center), Paragraph("", s_td_center), Paragraph("—", s_td_center), Paragraph("", s_td_center), Paragraph("", s_td_center)])
-        t = Table(data, colWidths=[8*mm, 18*mm, 28*mm, 28*mm, 32*mm, 22*mm, 20*mm, 24*mm])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), emerald_950),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('GRID', (0,0), (-1,-1), 0.4, sage_line),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 3),
-            ('RIGHTPADDING', (0,0), (-1,-1), 3),
-            ('TOPPADDING', (0,0), (-1,-1), 3),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, sage_50]),
-        ]))
-        story.append(t)
-        story.append(Spacer(1,4))
-    else:
-        story.append(Paragraph("<b>Standard Post-Exposure Prophylaxis (Essen 5-dose IM)</b> — to be scheduled by clinician. Fill actual dates on-site.", ParagraphStyle('std0', parent=styles['Normal'], fontSize=6.5, leading=8, textColor=muted, fontName='Helvetica', spaceAfter=3)))
-        data = [[Paragraph(f"<b>{h}</b>", ParagraphStyle('th0', parent=styles['Normal'], fontSize=5.5, leading=7, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER)) for h in ["#", "Dose", "Scheduled Date", "Date Given", "Brand / Lot", "Status", "Site / Route", "Given by"]]]
-        for i, label in enumerate(["Day 0", "Day 3", "Day 7", "Day 14", "Day 28"], 1):
-            data.append([
-                Paragraph(str(i), s_td_center),
-                Paragraph(label, ParagraphStyle(f'la{i}', parent=s_td, fontName='Helvetica-Bold', fontSize=6.5)),
-                Paragraph("____ / ____ / ____", s_td_center),
-                Paragraph("", s_td_center),
-                Paragraph("", s_td_center),
-                Paragraph("Pending", s_td_center),
-                Paragraph("", s_td_center),
-                Paragraph("______________", ParagraphStyle(f'si{i}', parent=s_td_center, textColor=light_muted)),
-            ])
-        data.append([Paragraph("—", s_td_center), Paragraph("RIG", s_td_center), Paragraph("if indicated", s_td_center), Paragraph("", s_td_center), Paragraph("", s_td_center), Paragraph("—", s_td_center), Paragraph("", s_td_center), Paragraph("", s_td_center)])
-        t = Table(data, colWidths=[8*mm, 18*mm, 28*mm, 28*mm, 32*mm, 22*mm, 20*mm, 24*mm])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), emerald_950),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('GRID', (0,0), (-1,-1), 0.4, sage_line),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 3),
-            ('RIGHTPADDING', (0,0), (-1,-1), 3),
-            ('TOPPADDING', (0,0), (-1,-1), 3),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, sage_50]),
-        ]))
-        story.append(t)
-        story.append(Spacer(1,6))
-
     # Section 5: Recent Bite Cases
-    story.append(section_header("5 &nbsp;·&nbsp; Recent Bite Cases <font color=\"#c8d8c6\" size=\"6\">— for reference</font>"))
+    story.append(section_header("Recent Bite Cases"))
     story.append(Spacer(1, 4))
     if bite_cases:
         case_headers = ["Case #", "Date", "Animal", "Exposure", "Status"]
-        case_data = [[cell(f"<b>{h}</b>", ParagraphStyle('ch', parent=s_td, alignment=TA_CENTER, textColor=colors.white, fontName='Helvetica-Bold')) for h in case_headers]]
+        case_data = [[cell(f"<b>{h}</b>", ParagraphStyle('ch', parent=s_td, alignment=TA_CENTER, textColor=emerald_950, fontName='Helvetica-Bold')) for h in case_headers]]
         for c in bite_cases:
             case_data.append([
                 cell(c.case_number, s_td_center),
@@ -1282,8 +1261,8 @@ def patient_print_pdf(request, pk):
         cw = [30*mm, 28*mm, 28*mm, 32*mm, 52*mm]
         ctbl = Table(case_data, colWidths=cw)
         ctbl.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), emerald_950),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('BACKGROUND', (0,0), (-1,0), sage_100),
+            ('TEXTCOLOR', (0,0), (-1,0), emerald_950),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('GRID', (0,0), (-1,-1), 0.4, sage_line),
@@ -1300,9 +1279,9 @@ def patient_print_pdf(request, pk):
 
     # Signature footer
     sig_data = [
-        [Paragraph("____________________________<br/><font size=\"6\" color=\"#5a6b63\"><b>Patient / Guardian</b><br/>Signature over printed name & date</font>", ParagraphStyle('sig', parent=styles['Normal'], alignment=TA_CENTER, leading=8)),
-         Paragraph("____________________________<br/><font size=\"6\" color=\"#5a6b63\"><b>Triage Nurse</b><br/>Signature & date/time</font>", ParagraphStyle('sig2', parent=styles['Normal'], alignment=TA_CENTER, leading=8)),
-         Paragraph("____________________________<br/><font size=\"6\" color=\"#5a6b63\"><b>Physician / ABTC Doctor</b><br/>Signature & PRC no.</font>", ParagraphStyle('sig3', parent=styles['Normal'], alignment=TA_CENTER, leading=8)),
+        [Paragraph("____________________________<br/><font size=\"6\" color=\"#496458\"><b>Patient / Guardian</b><br/>Signature over printed name & date</font>", ParagraphStyle('sig', parent=styles['Normal'], alignment=TA_CENTER, leading=8)),
+         Paragraph("____________________________<br/><font size=\"6\" color=\"#496458\"><b>Triage Nurse</b><br/>Signature & date/time</font>", ParagraphStyle('sig2', parent=styles['Normal'], alignment=TA_CENTER, leading=8)),
+         Paragraph("____________________________<br/><font size=\"6\" color=\"#496458\"><b>Physician / ABTC Doctor</b><br/>Signature & PRC no.</font>", ParagraphStyle('sig3', parent=styles['Normal'], alignment=TA_CENTER, leading=8)),
         ],
         [Paragraph("Date: ______ / ______ / ______", s_td_center), Paragraph("Time: ______ : ______", s_td_center), Paragraph("Date: ______ / ______ / ______", s_td_center)],
     ]
@@ -1317,22 +1296,8 @@ def patient_print_pdf(request, pk):
     ]))
     story.append(KeepTogether(sig_tbl))
     story.append(Spacer(1, 10))
-    story.append(HRFlowable(width="100%", thickness=0.4, color=sage_line, spaceAfter=4, spaceBefore=6))
-    story.append(Paragraph("ABTC · This sheet is system-generated and confidential. Bring this form at every visit. For questions, contact MHO Dumingag. · <b>ABTC System</b> · Page 1 of 1", s_footer))
-    story.append(Paragraph(f"Patient {pid} · Printed {datetime.now().strftime('%b %d, %Y %I:%M %p')} by {request.user.get_full_name() or request.user.username}", ParagraphStyle('foot2', parent=s_footer, fontSize=5.5, textColor=HexColor("#9bb5a0"))))
 
-    def _footer(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica', 5.5)
-        canvas.setFillColor(HexColor("#8aa589"))
-        canvas.drawString(10*mm, 8*mm, f"Page {doc.page}")
-        canvas.drawRightString(A4[0]-10*mm, 8*mm, f"{pid} · {pname} · ABTC Confidential")
-        canvas.setStrokeColor(sage_line)
-        canvas.setLineWidth(0.4)
-        canvas.line(10*mm, 9.5*mm, A4[0]-10*mm, 9.5*mm)
-        canvas.restoreState()
-
-    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    doc.build(story, canvasmaker=_NumberedCanvas)
     pdf_bytes = buf.getvalue()
     buf.close()
 
@@ -1383,6 +1348,20 @@ def patient_vital_create(request, pk):
     if request.headers.get('HX-Request'):
         return render(request, 'patients/vital_form_partial.html', context)
     return render(request, 'patients/vital_form.html', context)
+
+
+@login_required
+def patient_vital_form_print(request, pk):
+    """Official blank A4 Vital Signs Form for manual recording — admin only.
+
+    Read-only by design: it renders an empty writable form for the selected
+    patient and never creates, pre-fills, or modifies any VitalSign record, so
+    printing is safe even before any measurement has been taken.
+    """
+    if getattr(request.user, 'role', '') != 'admin':
+        raise PermissionDenied('Only the System Administrator can print vital signs forms.')
+    patient = get_object_or_404(Patient.objects.select_related('barangay'), pk=pk)
+    return render(request, 'patients/vital_form_print.html', {'patient': patient})
 
 
 @login_required

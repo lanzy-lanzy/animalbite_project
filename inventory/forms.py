@@ -18,6 +18,7 @@ class VaccineInventoryForm(forms.ModelForm):
             'batch_number': forms.TextInput(attrs={'class': 'form-input'}),
             'expiration_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
             'quantity_received': forms.NumberInput(attrs={'class': 'form-input'}),
+            'reorder_level': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
             'source_supplier': forms.TextInput(attrs={'class': 'form-input'}),
             'remarks': forms.Textarea(attrs={'rows': 3, 'class': 'form-textarea'}),
         }

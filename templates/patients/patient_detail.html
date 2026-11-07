@@ -3,6 +3,30 @@
 {% block title %}{{ patient.full_name }} - ABTC System{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/patient_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/print_official.css' %}">
+<style>
+{% if can_manage_portal and patient.account %}
+@media print {
+  @page { size: A4 portrait; margin: 15mm; }
+  body > div.flex.h-screen,
+  body > div.flex.h-screen > div.flex-1 {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  aside.sidebar-shell,
+  header.topbar,
+  .pd-wrap > *:not(.pd-cred-print) { display: none !important; }
+  main.app-canvas {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+  }
+  .pd-wrap { margin: 0 !important; padding: 0 !important; }
+  .pd-cred-print { display: block !important; }
+}
+{% endif %}
+</style>
 {% endblock %}
 {% block content %}
 <div class="pd-wrap">
@@ -626,34 +650,42 @@
             </div>
         </div>
         <div class="pd-section-body">
-            {% if temp_creds %}
+            {% if patient.account %}
             <div class="pd-cred-panel">
-                <h3>{% if temp_creds.reset %}Password Reset{% else %}Login Created{% endif %} — One-Time Credentials</h3>
+                <h3>{% if temp_creds %}{% if temp_creds.reset %}Password Reset{% else %}Login Created{% endif %} — One-Time Credentials{% else %}Patient Login Access{% endif %}</h3>
                 <p>Share these credentials securely with the patient. Ask them to change the password after first login via Profile → Change Password.</p>
                 <div class="pd-cred-grid">
                     <div class="pd-cred-tile">
                         <p class="pd-label">Username</p>
-                        <p class="pd-value">{{ temp_creds.username }}</p>
+                        <p class="pd-value">{{ patient.account.username }}</p>
                     </div>
                     <div class="pd-cred-tile">
-                        <p class="pd-label">Temporary Password (shown once)</p>
+                        <p class="pd-label">Temporary Password{% if temp_creds %} (shown once){% endif %}</p>
+                        {% if temp_creds %}
                         <p class="pd-value pd-value--secret">{{ temp_creds.password }}</p>
+                        {% else %}
+                        <p class="pd-value pd-value--muted">Shown only when created or reset</p>
+                        {% endif %}
                     </div>
                     <div class="pd-cred-tile">
                         <p class="pd-label">Login URL</p>
-                        <p class="pd-value" style="font-size:.72rem; word-break:break-all;">{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:login' %}</p>
+                        <p class="pd-value" style="font-size:.72rem; word-break:break-all;">{{ portal_login_url }}</p>
                     </div>
                 </div>
-                {% if creds_qr_data_uri %}
+                {% if portal_qr_data_uri %}
                 <div class="pd-cred-qr">
                     <div class="pd-grid pd-grid-2" style="align-items:center;">
-                        <img src="{{ creds_qr_data_uri }}" alt="Patient login QR code">
+                        <img src="{{ portal_qr_data_uri }}" alt="Patient login QR code">
                         <div>
                             <p class="pd-label">Scan for Login</p>
-                            <p class="pd-value" style="font-size:.78rem;">Point a phone camera at this QR to reveal the portal URL, username, and temporary password.</p>
-                            <pre>{{ creds_qr_payload }}</pre>
+                            <p class="pd-value" style="font-size:.78rem;">Point a phone camera at this QR code to open the Patient Portal login page.</p>
+                            <pre>ABTC Patient Portal
+Patient Name: {{ patient.full_name }}
+Login URL: {{ portal_login_url }}
+Username: {{ patient.account.username }}
+Change password after first login (Profile &gt; Change Password).</pre>
                             <div class="pd-empty-actions" style="justify-content:flex-start;">
-                                <a href="{{ creds_qr_data_uri }}" download="ABTC_login_{{ patient.patient_number }}.png" class="pd-mini-btn">Download QR</a>
+                                <a href="{{ portal_qr_data_uri }}" download="ABTC_login_{{ patient.patient_number }}.png" class="pd-mini-btn">Download QR</a>
                                 <button type="button" onclick="window.print()" class="pd-mini-btn">Print</button>
                             </div>
                         </div>
@@ -705,6 +737,40 @@
             {% endif %}
         </div>
     </section>
+    {% endif %}
+
+    {% if can_manage_portal and patient.account %}
+    <div class="abtc-print-only pd-cred-print">
+        {% include 'print/_official_head.html' with document_title="Patient Portal Login Information" show_printed_at=1 %}
+        <section class="abtc-section">
+            <h2 class="abtc-section-title">Patient Information</h2>
+            <div class="abtc-panel abtc-summary">
+                <div class="abtc-summary__row"><span>Patient Name</span><strong>{{ patient.full_name }}</strong></div>
+                <div class="abtc-summary__row"><span>Patient ID</span><strong>{{ patient.patient_number }}</strong></div>
+                <div class="abtc-summary__row"><span>Date Issued</span><strong>{% now "F d, Y · g:i A" %}</strong></div>
+                <div class="abtc-summary__row"><span>Credential Type</span><strong>{% if temp_creds %}{% if temp_creds.reset %}Password Reset{% else %}New Login{% endif %}{% else %}Existing Login{% endif %}</strong></div>
+            </div>
+        </section>
+        <section class="abtc-section">
+            <h2 class="abtc-section-title">{% if temp_creds %}One-Time Login Credentials{% else %}Patient Login Information{% endif %}</h2>
+            <div class="abtc-panel abtc-summary">
+                <div class="abtc-summary__row"><span>Username</span><strong>{{ patient.account.username }}</strong></div>
+                {% if temp_creds %}<div class="abtc-summary__row"><span>Temporary Password</span><strong>{{ temp_creds.password }}</strong></div>{% endif %}
+                <div class="abtc-summary__row abtc-summary__row--full"><span>Login URL</span><strong>{{ portal_login_url }}</strong></div>
+            </div>
+            <p class="abtc-note">Share these credentials securely. The patient should change the password after first login via Profile → Change Password.{% if not temp_creds %} The temporary password is shown only when the login is created or reset.{% endif %}</p>
+            {% if portal_qr_data_uri %}
+            <div class="abtc-panel abtc-panel--plain" style="display:flex;align-items:center;gap:14px;">
+                <img src="{{ portal_qr_data_uri }}" alt="Patient login QR code" style="width:38mm;height:38mm;object-fit:contain;">
+                <div>
+                    <p style="margin:0;font-weight:700;color:#08291F;">Scan for Login</p>
+                    <p class="abtc-note" style="margin:2px 0 0;">Point a phone camera at this QR code to open the Patient Portal login page.</p>
+                </div>
+            </div>
+            {% endif %}
+        </section>
+        {% include 'print/_official_footer.html' with confidential=True %}
+    </div>
     {% endif %}
 
 </div>

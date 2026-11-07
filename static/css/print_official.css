@@ -1,0 +1,442 @@
+/* ABTC Official Print Template — shared by every printable document. */
+@page {
+  size: A4 portrait;
+  margin: 15mm;
+}
+
+:root {
+  --abtc-ink: #08291F;
+  --abtc-subtitle: #496458;
+  --abtc-body: #26352F;
+  --abtc-cream: #FAF8F2;
+  --abtc-cream-border: #DFCDAA;
+  --abtc-table-head: #F3F0E7;
+  --abtc-grid: #D9DED9;
+  --abtc-table-grid: #C9D3CC;
+  --abtc-footer: #71847A;
+}
+
+.abtc-doc,
+.abtc-doc * {
+  box-sizing: border-box;
+}
+
+body.abtc-print-body {
+  margin: 0;
+  padding: 0;
+  background: #FFFFFF;
+  color: var(--abtc-body);
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.abtc-doc {
+  width: 180mm;
+  margin: 0 auto;
+  background: #FFFFFF;
+}
+
+/* ---------- Official letterhead ---------- */
+.abtc-letterhead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.abtc-logo {
+  width: 100px;
+  height: 100px;
+  flex: 0 0 100px;
+  object-fit: contain;
+}
+
+.abtc-letterhead__text {
+  min-width: 0;
+}
+
+.abtc-org {
+  margin: 0;
+  font-size: 20pt;
+  font-weight: 800;
+  letter-spacing: .03em;
+  line-height: 1.12;
+  color: var(--abtc-ink);
+  text-transform: uppercase;
+}
+
+.abtc-office {
+  margin: 2px 0 0;
+  font-size: 13.5pt;
+  font-weight: 600;
+  color: var(--abtc-subtitle);
+}
+
+.abtc-doc-title {
+  margin: 8px 0 0;
+  font-size: 18pt;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 1.15;
+  color: var(--abtc-ink);
+  text-transform: uppercase;
+}
+
+.abtc-doc-meta {
+  margin: 4px 0 0;
+  font-size: 10.5pt;
+  font-weight: 600;
+  color: var(--abtc-subtitle);
+}
+
+.abtc-rule {
+  height: 3px;
+  margin: 14px 0 18px;
+  background: var(--abtc-ink);
+}
+
+/* Title block below the official divider */
+.abtc-report-title {
+  margin: 0 0 4px;
+  font-size: 21pt;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--abtc-ink);
+}
+
+.abtc-report-meta {
+  margin: 0 0 18px;
+  font-size: 10.5pt;
+  font-weight: 600;
+  color: var(--abtc-subtitle);
+}
+
+/* ---------- Sections ---------- */
+.abtc-section {
+  margin: 0 0 18px;
+  break-inside: auto;
+}
+
+.abtc-section-title {
+  margin: 0 0 10px;
+  padding-left: 10px;
+  border-left: 4px solid var(--abtc-ink);
+  font-size: 14pt;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--abtc-ink);
+  text-transform: uppercase;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.abtc-subhead {
+  margin: 0 0 6px;
+  font-size: 12pt;
+  font-weight: 800;
+  letter-spacing: .05em;
+  color: var(--abtc-ink);
+  text-transform: uppercase;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.abtc-note {
+  margin: 0 0 12px;
+  font-size: 10pt;
+  font-weight: 500;
+  color: var(--abtc-subtitle);
+}
+
+.abtc-clinical-block {
+  margin: 0 0 12px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* ---------- Cream information panel ---------- */
+.abtc-panel {
+  background: var(--abtc-cream);
+  border: 1px solid var(--abtc-cream-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  color: var(--abtc-body);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.abtc-panel + .abtc-panel {
+  margin-top: 10px;
+}
+
+.abtc-panel--plain {
+  background: #FFFFFF;
+  border-color: var(--abtc-grid);
+}
+
+.abtc-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 28px;
+}
+
+.abtc-summary__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.abtc-summary__row span {
+  flex: 0 0 45%;
+  font-size: 10.5pt;
+  font-weight: 600;
+  color: var(--abtc-subtitle);
+}
+
+.abtc-summary__row strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11.5pt;
+  font-weight: 700;
+  color: var(--abtc-ink);
+  overflow-wrap: anywhere;
+}
+
+.abtc-summary__row--full {
+  grid-column: 1 / -1;
+}
+
+.abtc-summary__row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.abtc-summary__row--stacked span {
+  flex: 0 0 auto;
+}
+
+/* Two balanced halves, each label/value pair on its own row */
+.abtc-summary-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+.abtc-summary-col {
+  min-width: 0;
+}
+
+.abtc-summary-col--divided {
+  padding-left: 28px;
+  border-left: 1px solid var(--abtc-cream-border);
+}
+
+/* ---------- Tables ---------- */
+.abtc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5pt;
+  table-layout: auto;
+}
+
+.abtc-table thead {
+  display: table-header-group;
+}
+
+.abtc-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.abtc-table th,
+.abtc-table td {
+  border: 1px solid var(--abtc-table-grid);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.abtc-table th {
+  background: var(--abtc-table-head);
+  color: var(--abtc-ink);
+  font-size: 10.5pt;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.abtc-table td {
+  background: #FFFFFF;
+  color: var(--abtc-body);
+  font-weight: 500;
+}
+
+.abtc-cell-note {
+  margin-top: 2px;
+  font-size: 9.5pt;
+  font-weight: 500;
+  color: var(--abtc-subtitle);
+}
+
+/* Status labels — text always remains readable on its own */
+.abtc-status {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 10pt;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.abtc-status--completed { background: #E3F4EA; border-color: #B7DEC6; color: #14532D; }
+.abtc-status--scheduled { background: #E6EFFA; border-color: #BFD4EE; color: #173D6E; }
+.abtc-status--pending   { background: #FBF1DC; border-color: #E8D2A6; color: #6B4A0F; }
+.abtc-status--missed    { background: #FBE7E7; border-color: #EFC4C4; color: #7F1D1D; }
+.abtc-status--cancelled { background: #EDEFEE; border-color: #CDD5D0; color: #3F4F47; }
+
+.abtc-table td.abtc-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.abtc-table td.abtc-center {
+  text-align: center;
+}
+
+.abtc-empty {
+  padding: 14px;
+  text-align: center;
+  font-style: italic;
+  color: var(--abtc-subtitle);
+  background: var(--abtc-cream);
+  border: 1px dashed var(--abtc-cream-border);
+  border-radius: 8px;
+}
+
+/* ---------- Footer ---------- */
+.abtc-footer {
+  margin-top: 24px;
+  padding-top: 9px;
+  border-top: 1px solid var(--abtc-grid);
+  text-align: center;
+  font-size: 9pt;
+  line-height: 1.55;
+  color: var(--abtc-footer);
+}
+
+.abtc-footer p {
+  margin: 0;
+}
+
+.abtc-footer__page {
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* ---------- Screen preview / toolbar ---------- */
+@media screen {
+  body.abtc-print-body {
+    background: #EEF1ED;
+    padding: 24px 12px;
+  }
+
+  body.abtc-print-body .abtc-doc {
+    max-width: 210mm;
+    padding: 15mm;
+    box-shadow: 0 10px 30px rgba(8, 41, 31, .12);
+  }
+
+  .abtc-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 210mm;
+    margin: 0 auto 12px;
+    padding: 10px 14px;
+    background: #FFFFFF;
+    border: 1px solid var(--abtc-grid);
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--abtc-subtitle);
+  }
+
+  .abtc-toolbar button {
+    appearance: none;
+    border: 1px solid var(--abtc-ink);
+    border-radius: 999px;
+    background: var(--abtc-ink);
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 16px;
+    cursor: pointer;
+  }
+
+  .abtc-toolbar button.abtc-toolbar__ghost {
+    background: #FFFFFF;
+    color: var(--abtc-ink);
+    border-color: var(--abtc-grid);
+  }
+}
+
+/* Print-only blocks embedded inside application pages */
+.abtc-print-only {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #FFFFFF !important;
+  }
+
+  .abtc-print-body {
+    padding: 0 !important;
+  }
+
+  .abtc-doc {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .abtc-no-print,
+  .no-print {
+    display: none !important;
+  }
+
+  .abtc-print-only {
+    display: block !important;
+  }
+
+  .abtc-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .abtc-panel,
+  .abtc-summary,
+  .abtc-summary-split,
+  .abtc-clinical-block,
+  .abtc-footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

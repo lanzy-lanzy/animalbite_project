@@ -1,0 +1,69 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ document_title }} — ABTC</title>
+    <link rel="stylesheet" href="{% static 'css/print_official.css' %}">
+</head>
+<body class="abtc-print-body">
+    <div class="abtc-toolbar abtc-no-print">
+        <span>Official document preview · A4 Portrait</span>
+        <span>
+            <button type="button" onclick="window.print()">Print</button>
+            <button type="button" class="abtc-toolbar__ghost" onclick="window.close()">Close</button>
+        </span>
+    </div>
+
+    <main class="abtc-doc">
+        {% include 'print/_official_head.html' %}
+        <p class="abtc-note">
+            {{ document_meta }}{% if document_meta %} &nbsp;·&nbsp; {% endif %}Date Printed: {{ printed_at|date:"F d, Y · g:i A" }}
+        </p>
+
+        {% if summary_lines %}
+        <section class="abtc-section">
+            <h2 class="abtc-section-title">Report Summary</h2>
+            <div class="abtc-panel abtc-summary">
+                {% for label, value in summary_lines %}
+                <div class="abtc-summary__row"><span>{{ label }}</span><strong>{{ value }}</strong></div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="abtc-section">
+            <h2 class="abtc-section-title">Report Details</h2>
+            <table class="abtc-table">
+                <thead>
+                    <tr>{% for header in headers %}<th>{{ header }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>{% for cell in row %}<td>{{ cell|default:"—" }}</td>{% endfor %}</tr>
+                    {% empty %}
+                    <tr><td colspan="{{ headers|length }}">No records match this report.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        {% include 'print/_official_footer.html' with confidential=True %}
+    </main>
+
+    <script>
+        (function () {
+            var printed = false;
+            function openPrintDialog() {
+                if (printed) return;
+                printed = true;
+                window.setTimeout(function () { window.print(); }, 350);
+            }
+            window.addEventListener('load', openPrintDialog, { once: true });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') window.close();
+            });
+        })();
+    </script>
+</body>
+</html>

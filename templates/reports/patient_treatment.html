@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Patient and Treatment Report — ABTC{% endblock %}
+{% block content %}
+<div x-data="reportPreview()" class="space-y-5">
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <a href="{% url 'reports:reports_index' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Reports Center
+            </a>
+            <h1 class="font-display text-2xl font-bold text-ink mt-1">Patient and Treatment Report</h1>
+            <p class="text-sm font-medium text-muted">{{ label }} · <span class="text-ink font-bold">{{ summary.total_cases }}</span> case{{ summary.total_cases|pluralize }} · <span class="text-ink font-bold">{{ summary.total_patients }}</span> patient{{ summary.total_patients|pluralize }}</p>
+        </div>
+        {% include 'reports/_report_toolbar.html' %}
+    </div>
+
+    {% include 'reports/_case_filters.html' %}
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Total Patients</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ summary.total_patients }}</p>
+            <p class="text-xs font-medium text-muted mt-1">Unique patients</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Bite Cases</p>
+            <p class="font-display text-2xl font-bold text-ink">{{ summary.total_cases }}</p>
+            <p class="text-xs font-medium text-muted mt-1">Each incident once</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Completed</p>
+            <p class="font-display text-2xl font-bold text-emerald-800">{{ summary.completed }}</p>
+            <p class="text-xs font-medium text-muted mt-1">Full treatment plans</p>
+        </div>
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">Under Treatment</p>
+            <p class="font-display text-2xl font-bold text-amber-700">{{ summary.under_treatment }}</p>
+            <p class="text-xs font-medium text-muted mt-1">Ongoing cases</p>
+        </div>
+    </div>
+
+    <div id="report-print-area" class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Patient and Treatment · {{ label }}</h3>
+                <p class="text-xs font-medium text-muted">{{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}</p>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-700 bg-white border border-line px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live preview
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Patient Name</th>
+                        <th class="table-header">Patient ID</th>
+                        <th class="table-header">Case Number</th>
+                        <th class="table-header">Barangay</th>
+                        <th class="table-header">Animal Type</th>
+                        <th class="table-header">Date of Bite Incident</th>
+                        <th class="table-header">Treatment Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for case in page_obj %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell font-bold text-ink">{{ case.patient.full_name }}</td>
+                        <td class="table-cell text-xs font-mono text-muted">{{ case.patient.patient_number }}</td>
+                        <td class="table-cell text-xs font-mono">{{ case.case_number }}</td>
+                        <td class="table-cell">{{ case.report_barangay }}</td>
+                        <td class="table-cell">{{ case.report_animal }}</td>
+                        <td class="table-cell text-muted">{{ case.date_time_bite|date:'M d, Y' }}</td>
+                        <td class="table-cell">
+                            {% if case.report_status == 'Completed' %}
+                            <span class="status-badge bg-emerald-100 text-emerald-800">{{ case.report_status }}</span>
+                            {% elif case.report_status == 'Under Treatment' %}
+                            <span class="status-badge bg-amber-100 text-amber-800">{{ case.report_status }}</span>
+                            {% elif case.report_status == 'Archived' %}
+                            <span class="status-badge bg-sage-100 text-muted">{{ case.report_status }}</span>
+                            {% else %}
+                            <span class="status-badge bg-white border border-line text-ink">{{ case.report_status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-12">
+                        <p class="text-sm font-semibold text-ink">No cases found for this period.</p>
+                        <p class="text-xs text-muted mt-1">Try a different search or reporting period.</p>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-between px-5 py-3 border-t border-line bg-sage-50">
+            <p class="text-xs font-medium text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+            <div class="flex gap-2">
+                {% if page_obj.has_previous %}<a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="btn-secondary btn-xs">Previous</a>{% endif %}
+                {% if page_obj.has_next %}<a href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="btn-secondary btn-xs">Next</a>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="px-5 py-3 border-t border-line bg-white flex flex-wrap gap-2 text-xs font-medium text-muted">
+            <span>Generated {% now "M d, Y h:i A" %}</span>
+            <span class="opacity-40">·</span>
+            <span>ABTC System · Confidential</span>
+            <span class="ml-auto hidden sm:inline">Completed means the prescribed dose plan is fully administered.</span>
+        </div>
+    </div>
+
+    {% include 'reports/_pdf_modal.html' %}
+</div>
+{% endblock %}

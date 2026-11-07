@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Stock Alerts Report — ABTC{% endblock %}
+{% block content %}
+<div x-data="reportPreview()" class="space-y-5">
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <a href="{% url 'reports:reports_index' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-ink">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Reports Center
+            </a>
+            <h1 class="font-display text-2xl font-bold text-ink mt-1">Stock Alerts Report</h1>
+            <p class="text-sm font-medium text-muted">{{ label }} · <span class="text-ink font-bold">{{ total }}</span> active alert{{ total|pluralize }}</p>
+        </div>
+        {% include 'reports/_report_toolbar.html' %}
+    </div>
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+        Current inventory snapshot as of {{ snapshot_date|date:'M d, Y' }}. Expired batches are never counted as usable stock. Viewing this report does not change any quantity.
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {% for section in sections %}
+        <div class="card text-center p-4">
+            <p class="text-[11px] font-bold tracking-widest uppercase text-muted">{{ section.title }}</p>
+            <p class="font-display text-2xl font-bold {% if section.key == 'expired' or section.key == 'out_of_stock' %}text-red-600{% else %}text-amber-700{% endif %}">{{ section.rows|length }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="report-print-area" class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-line bg-sage-50 flex items-center justify-between">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">Grouped stock alerts</h3>
+                <p class="text-xs font-medium text-muted">Vaccines and medicines · no duplicate product alerts</p>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-emerald-700 bg-white border border-line px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live snapshot
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-line bg-sage-50">
+                        <th class="table-header">Inventory Type</th>
+                        <th class="table-header">Product Name</th>
+                        <th class="table-header">Batch Number</th>
+                        <th class="table-header">Available / Affected Quantity</th>
+                        <th class="table-header">Expiration Date</th>
+                        <th class="table-header">Stock Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-sage-100">
+                    {% for section in sections %}
+                    <tr class="bg-sage-100">
+                        <td colspan="6" class="px-4 py-2.5">
+                            <p class="text-xs font-bold tracking-widest uppercase text-ink">{{ section.title }}</p>
+                            <p class="text-[11px] font-medium text-muted">{{ section.description }}</p>
+                        </td>
+                    </tr>
+                    {% for row in section.rows %}
+                    <tr class="hover:bg-sage-50">
+                        <td class="table-cell">
+                            <span class="text-xs font-bold {% if row.module == 'vaccine' %}text-emerald-800{% else %}text-amber-700{% endif %}">{{ row.module_label }}</span>
+                        </td>
+                        <td class="table-cell font-bold text-ink">{{ row.product }}</td>
+                        <td class="table-cell text-xs font-mono">{{ row.batch }}</td>
+                        <td class="table-cell">{{ row.quantity }}{% if row.threshold %} <span class="text-xs text-muted">(min {{ row.threshold }})</span>{% endif %}</td>
+                        <td class="table-cell {% if section.key == 'expired' or section.key == 'expiring' %}font-semibold{% else %}text-muted{% endif %}">
+                            {% if row.expiration %}{{ row.expiration|date:'M d, Y' }}{% else %}—{% endif %}
+                        </td>
+                        <td class="table-cell"><span class="status-badge {{ row.status_class }}">{{ row.status }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-6 text-xs font-medium text-muted">No {{ section.title|lower }} alerts.</td></tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-5 py-3 border-t border-line bg-white flex flex-wrap gap-2 text-xs font-medium text-muted">
+            <span>Generated {% now "M d, Y h:i A" %}</span>
+            <span class="opacity-40">·</span>
+            <span>ABTC System · Confidential</span>
+        </div>
+    </div>
+
+    {% include 'reports/_pdf_modal.html' %}
+</div>
+{% endblock %}

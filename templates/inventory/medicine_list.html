@@ -75,6 +75,9 @@
         <a href="{% url 'inventory:medicine_create' %}" class="btn-primary btn-sm">+ Stock In</a>
     </div>
 </div>
+{% if request.user.role == 'nurse' %}
+{% include 'inventory/_alerts_section.html' %}
+{% endif %}
 <div class="card mb-6">
     <form method="GET" class="flex flex-wrap gap-3">
         <input type="text" name="q" value="{{ query }}" placeholder="Search medicine, generic, strength, batch..." class="form-input flex-1 min-w-[200px]">

@@ -10,11 +10,15 @@ from django.utils import timezone
 from bite_cases.models import AnimalBiteCase
 from doctor.models import ClinicalAssessment, Prescription
 from patients.models import Patient
+from settings_app.models import SystemSetting
 from vaccination.models import VaccinationSchedule, VaccineDose
 
 from .models import (
     MedicineInventory, MedicineStockMovement, VaccineInventory,
     VaccineStockMovement,
+)
+from .notifications import (
+    EXPIRY_SETTING_KEY, get_inventory_alerts, medicine_alerts, vaccine_alerts,
 )
 
 U = get_user_model()
@@ -209,7 +213,6 @@ class VaccineInventoryViewButtonTests(InventoryTestCase):
             f'<a href="{self.detail_url}" class="btn-secondary btn-xs">View</a>',
             content)
         self.assertNotIn("btn-view-vaccine", content)
-        self.assertNotIn("#157A61", content)
 
     def test_nurse_view_button_still_opens_the_detail_page(self):
         self.client.force_login(self.nurse)
@@ -406,7 +409,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
             "1. Vaccine Information",
             "2. Stock Summary",
             "3. Stock Transaction History",
-            "4. Dispensing History",
+            "4. Vaccination Administration History",
         )
         positions = [content.index(heading) for heading in headings]
         self.assertEqual(positions, sorted(positions))
@@ -427,7 +430,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         content = self.client.get(self.url).content.decode()
         history = content[
             content.index("3. Stock Transaction History"):
-            content.index("4. Dispensing History")
+            content.index("4. Vaccination Administration History")
         ]
         headers = re.findall(
             r'<th class="table-header">([^<]+)</th>', history)
@@ -454,7 +457,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         content = self.client.get(self.url).content.decode()
         history = content[
             content.index("3. Stock Transaction History"):
-            content.index("4. Dispensing History")
+            content.index("4. Vaccination Administration History")
         ]
         row = next(
             r for r in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
@@ -471,7 +474,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         content = self.client.get(self.url).content.decode()
         history = content[
             content.index("3. Stock Transaction History"):
-            content.index("4. Dispensing History")
+            content.index("4. Vaccination Administration History")
         ]
         row = next(
             r for r in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
@@ -489,7 +492,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         content = self.client.get(self.url).content.decode()
         history = content[
             content.index("3. Stock Transaction History"):
-            content.index("4. Dispensing History")
+            content.index("4. Vaccination Administration History")
         ]
         for hidden in ("Reference", "Recorded By", "PO-2026-01", "med.nurse"):
             self.assertNotIn(hidden, history)
@@ -549,7 +552,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         content = self.client.get(self.url).content.decode()
         history = content[
             content.index("3. Stock Transaction History"):
-            content.index("4. Dispensing History")
+            content.index("4. Vaccination Administration History")
         ]
         for value in ("DOH Region IX", "ABC Pharma", "VAC-1", "VAC-2",
                       "Jun 01, 2027", "Sep 01, 2027"):
@@ -570,18 +573,39 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         )
         self.client.force_login(self.nurse)
         content = self.client.get(self.url).content.decode()
-        dispensing = content[content.index("4. Dispensing History"):]
+        dispensing = content[
+            content.index("4. Vaccination Administration History"):]
         self.assertIn("1st Dose", dispensing)
         self.assertIn("2nd Dose", dispensing)
 
-    def test_nurse_detail_shows_actual_dispensing_history(self):
+    def test_nurse_detail_shows_actual_administration_history(self):
         self.client.force_login(self.nurse)
         response = self.client.get(self.url)
+        content = response.content.decode()
+        dispensing = content[
+            content.index("4. Vaccination Administration History"):]
         for value in ("Mia Stock", "ABC-M0001", "1st Dose", "1 vial",
-                      "Nov 02, 2026 11:02 AM", "med.nurse"):
-            self.assertContains(response, value)
-        for header in ("Patient", "Case", "Dosage", "Qty", "Dispensed"):
-            self.assertContains(response, header)
+                      "Nov 02, 2026", "11:02 AM"):
+            self.assertIn(value, dispensing)
+        for header in ("Patient", "Case", "Dose", "Qty",
+                       "Date Administered", "Time"):
+            self.assertIn(header, dispensing)
+        for width in ("width: 21%", "width: 13%", "width: 27%",
+                      "width: 9%", "width: 19%"):
+            self.assertIn(width, content)
+        self.assertNotIn("med.nurse", dispensing)
+        self.assertNotIn("Administered By", dispensing)
+        self.assertNotIn("Dispensed By", dispensing)
+
+        row = next(
+            r for r in re.findall(r"<tr[^>]*>(.*?)</tr>", dispensing, re.S)
+            if "1st Dose" in r)
+        cells = [
+            re.sub(r'<[^>]+>', '', cell).strip()
+            for cell in re.findall(r'<td[^>]*>(.*?)</td>', row, re.S)
+        ]
+        self.assertEqual(cells[4], "Nov 02, 2026")
+        self.assertEqual(cells[5], "11:02 AM")
 
     def test_unadministered_dose_is_shown_as_pending(self):
         VaccineDose.objects.create(
@@ -601,8 +625,9 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         self.client.force_login(self.nurse)
         response = self.client.get(
             reverse("inventory:vaccine_detail", args=[empty.pk]))
-        self.assertContains(response, "No stock transaction history recorded yet.")
-        self.assertContains(response, "No dispensing history recorded yet.")
+        self.assertContains(response, "No stock receiving history recorded yet.")
+        self.assertContains(
+            response, "No vaccination administration history recorded yet.")
 
     def test_nurse_detail_has_no_edit_or_delete_controls(self):
         self.client.force_login(self.nurse)
@@ -615,7 +640,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         response = self.client.get(self.url)
         self.assertContains(response, "Stock Movement History")
         self.assertNotContains(response, "Vaccine Inventory Details")
-        self.assertNotContains(response, "4. Dispensing History")
+        self.assertNotContains(response, "4. Vaccination Administration History")
 
 
 class DispensingTests(InventoryTestCase):
@@ -1007,25 +1032,23 @@ class VaccineAddStockTests(InventoryTestCase):
         self.assertIn(self.vaccine, selectable)
         self.assertNotIn(expired, selectable)
 
-    def test_stock_out_row_does_not_inherit_a_supplier(self):
-        VaccineStockMovement.objects.create(
+    def test_stock_out_rows_are_hidden_from_stock_transaction_history(self):
+        stock_out = VaccineStockMovement.objects.create(
             vaccine=self.vaccine, movement_type="stock_out", quantity=2,
             reference=self.case.case_number, moved_by=self.nurse,
         )
         self.client.force_login(self.nurse)
-        response = self.client.get(
-            reverse("inventory:vaccine_detail", args=[self.vaccine.pk]))
-        content = response.content.decode()
-        match = re.search(
-            r"<tr[^>]*>(?:(?!</tr>).)*Stock Out.*?</tr>", content, re.S)
-        self.assertIsNotNone(match)
-        row = match.group(0)
-        self.assertIn("Batch 1", row)
-        self.assertNotIn(self.case.case_number, row)
-        self.assertNotIn("Lenrose", row)
-        self.assertIn("—", row)
-        movement = VaccineStockMovement.objects.get(movement_type="stock_out")
-        self.assertEqual(movement.reference, self.case.case_number)
+        content = self.client.get(
+            reverse("inventory:vaccine_detail", args=[self.vaccine.pk])
+        ).content.decode()
+        history = content[
+            content.index("3. Stock Transaction History"):
+            content.index("4. Vaccination Administration History")
+        ]
+        self.assertIn("Stock In", history)
+        self.assertNotIn("Stock Out", history)
+        self.assertTrue(
+            VaccineStockMovement.objects.filter(pk=stock_out.pk).exists())
 
     def test_doctors_cannot_record_vaccine_stock(self):
         self.client.force_login(self.doctor)
@@ -1498,7 +1521,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             medicine=self.medicine, movement_type="stock_in").time_received)
         self.assertEqual(cells[1], "—")
 
-    def test_dispensed_rows_keep_the_deduction_timestamp(self):
+    def test_dispensed_rows_are_hidden_from_stock_transaction_history(self):
         dispensed = MedicineStockMovement.objects.get(
             medicine=self.second, movement_type="dispense")
         self.client.force_login(self.nurse)
@@ -1507,36 +1530,30 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             content.index("3. Stock Transaction History"):
             content.index("4. Dispensing History")
         ]
-        row = next(
-            r for r in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
-            if "Dispensed" in r)
-        cells = [
-            re.sub(r'<[^>]+>', '', cell).strip()
-            for cell in re.findall(r'<td[^>]*>(.*?)</td>', row, re.S)
-        ]
-        self.assertEqual(
-            cells[1],
-            timezone.localtime(dispensed.created_at).strftime('%I:%M %p'))
+        self.assertIn("Stock In", history)
+        self.assertNotIn("Dispensed", history)
+        self.assertTrue(
+            MedicineStockMovement.objects.filter(pk=dispensed.pk).exists())
 
-    def test_stock_history_shows_stock_in_and_dispensed_transactions(self):
+    def test_stock_history_shows_only_stock_in_transactions(self):
         self.client.force_login(self.nurse)
         content = self.client.get(self.url).content.decode()
         history = content[
             content.index("3. Stock Transaction History"):
             content.index("4. Dispensing History")
         ]
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
+        rows = [
+            row for row in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
+            if "<td" in row
+        ]
+        self.assertEqual(len(rows), 2)
         stock_in = next(
             row for row in rows if "Stock In" in row and "MED-1" in row)
-        dispensed = next(row for row in rows if "Dispensed" in row)
-
         for value in ("+10", "DOH Region IX", "MED-1",
                       "Oct 01, 2026", "Jun 01, 2027"):
             self.assertIn(value, stock_in)
-        for value in ("-3", "MED-2", "Sep 01, 2027"):
-            self.assertIn(value, dispensed)
-        self.assertGreaterEqual(dispensed.count("—"), 2)
-        self.assertLess(history.index("Dispensed"), history.index("Stock In"))
+        self.assertFalse(any("Dispensed" in row for row in rows))
+        self.assertFalse(any("-3" in row for row in rows))
 
     def test_stock_history_hides_reference_and_recorded_by(self):
         self.client.force_login(self.nurse)
@@ -1558,11 +1575,39 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
         content = self.client.get(self.url).content.decode()
         dispensing = content[content.index("4. Dispensing History"):]
         for value in ("Mia Stock", "ABC-M0001", "1 capsule", "2 capsule",
-                      "3 capsule", "Pending", "med.nurse"):
+                      "3 capsule", "Pending"):
             self.assertIn(value, dispensing)
-        for header in ("Patient", "Case", "Dosage", "Qty", "Dispensed"):
+        for header in ("Patient", "Case", "Dosage", "Qty",
+                       "Date Dispensed", "Time"):
             self.assertIn(header, dispensing)
+        for width in ("width: 21%", "width: 13%", "width: 27%",
+                      "width: 9%", "width: 19%"):
+            self.assertIn(width, content)
+        self.assertNotIn("med.nurse", dispensing)
+        self.assertNotIn("Dispensed By", dispensing)
         self.assertNotIn("Excluded Dose", dispensing)
+
+    def test_dispensing_history_splits_date_and_time_and_hides_staff(self):
+        dispensed_at = timezone.localtime(self.dispensed_rx.dispensed_at)
+        self.client.force_login(self.nurse)
+        content = self.client.get(self.url).content.decode()
+        dispensing = content[content.index("4. Dispensing History"):]
+        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", dispensing, re.S)
+        row = next(r for r in rows if "3 capsule" in r)
+        cells = [
+            re.sub(r'<[^>]+>', '', cell).strip()
+            for cell in re.findall(r'<td[^>]*>(.*?)</td>', row, re.S)
+        ]
+        self.assertEqual(cells[4], dispensed_at.strftime('%b %d, %Y'))
+        self.assertEqual(cells[5], dispensed_at.strftime('%I:%M %p'))
+
+        pending_row = next(r for r in rows if "2 capsule" in r)
+        pending_cells = [
+            re.sub(r'<[^>]+>', '', cell).strip()
+            for cell in re.findall(r'<td[^>]*>(.*?)</td>', pending_row, re.S)
+        ]
+        self.assertIn("Pending", pending_cells[4])
+        self.assertEqual(pending_cells[5], "—")
 
     def test_pending_requests_do_not_reduce_stock_or_count_as_dispensed(self):
         self.medicine.refresh_from_db()
@@ -1573,7 +1618,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
         self.assertFalse(MedicineStockMovement.objects.filter(
             medicine=self.medicine, movement_type="dispense").exists())
 
-    def test_confirmed_dispensing_deducts_once_and_appears_in_history(self):
+    def test_confirmed_dispensing_deducts_once_and_stays_out_of_stock_history(self):
         self.client.force_login(self.nurse)
         dispense_url = reverse(
             "inventory:prescription_dispense", args=[self.pending_rx.pk])
@@ -1599,10 +1644,11 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             content.index("3. Stock Transaction History"):
             content.index("4. Dispensing History")
         ]
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
-        new_dispense = next(
-            row for row in rows if "Dispensed" in row and "MED-1" in row)
-        self.assertIn("-2", new_dispense)
+        rows = [
+            row for row in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
+            if "<td" in row
+        ]
+        self.assertFalse(any("Dispensed" in row for row in rows))
 
     def test_later_deliveries_keep_their_own_supplier_and_date(self):
         self.client.force_login(self.nurse)
@@ -1644,7 +1690,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
         self.client.force_login(self.nurse)
         response = self.client.get(
             reverse("inventory:medicine_detail", args=[empty.pk]))
-        self.assertContains(response, "No stock transaction history recorded yet.")
+        self.assertContains(response, "No stock receiving history recorded yet.")
         self.assertContains(response, "No dispensing history recorded yet.")
 
     def test_nurse_detail_is_read_only(self):
@@ -1892,3 +1938,213 @@ class MedicineProductGroupingTests(InventoryTestCase):
         self.assertEqual(len(rows), 6)
         for number in ("MED-1", "MED-2", "MED-3"):
             self.assertIn(number, content)
+
+
+class InventoryNotificationTests(InventoryTestCase):
+    """Automatic low-stock, expiry and out-of-stock alerts for the nurse portal."""
+
+    def _add_vaccine(self, name="Imovax", brand="Sanofi", batch="VX-1",
+                     days=90, qty=20, reorder=5):
+        return VaccineInventory.objects.create(
+            vaccine_name=name, brand=brand, batch_number=batch,
+            expiration_date=timezone.localdate() + datetime.timedelta(days=days),
+            quantity_received=qty, quantity_available=qty,
+            reorder_level=reorder,
+        )
+
+    def _kinds(self, alerts):
+        return [alert['kind'] for alert in alerts]
+
+    def test_vaccine_expiring_soon_alert_identifies_the_batch(self):
+        batch = self._add_vaccine(days=10, qty=16)
+        alerts = [alert for alert in vaccine_alerts()
+                  if alert['kind'] == 'expiring']
+        self.assertEqual(len(alerts), 1)
+        alert = alerts[0]
+        self.assertEqual(alert['module'], 'vaccine')
+        self.assertEqual(alert['batch'], batch.batch_number)
+        self.assertEqual(alert['days_left'], 10)
+        self.assertIn(batch.expiration_date.strftime('%b %d, %Y'),
+                      alert['message'])
+        self.assertIn('?batch=VX-1', alert['url'])
+
+    def test_medicine_expiring_soon_alert_identifies_the_batch(self):
+        self.medicine.expiration_date = (
+            timezone.localdate() + datetime.timedelta(days=12))
+        self.medicine.save(update_fields=['expiration_date'])
+        alerts = [alert for alert in medicine_alerts()
+                  if alert['kind'] == 'expiring']
+        self.assertEqual(len(alerts), 1)
+        self.assertEqual(alerts[0]['batch'], 'MED-1')
+        self.assertEqual(alerts[0]['days_left'], 12)
+
+    def test_expiry_warning_threshold_is_configurable(self):
+        self.medicine.expiration_date = (
+            timezone.localdate() + datetime.timedelta(days=45))
+        self.medicine.save(update_fields=['expiration_date'])
+        self.assertNotIn('expiring', self._kinds(medicine_alerts()))
+
+        SystemSetting.objects.filter(key=EXPIRY_SETTING_KEY).update(value='60')
+        self.assertIn('expiring', self._kinds(medicine_alerts()))
+
+    def test_low_stock_aggregates_batches_once(self):
+        self.medicine.quantity_available = 2
+        self.medicine.reorder_level = 5
+        self.medicine.save(update_fields=['quantity_available', 'reorder_level'])
+        MedicineInventory.objects.create(
+            medicine_name="Amoxicillin", generic_name="Amoxicillin trihydrate",
+            strength="500 mg", dosage_form="capsule", unit="capsule",
+            batch_number="MED-2",
+            expiration_date=timezone.localdate() + datetime.timedelta(days=120),
+            quantity_received=3, quantity_available=3, reorder_level=5,
+        )
+        low = [alert for alert in medicine_alerts()
+               if alert['kind'] == 'low_stock']
+        self.assertEqual(len(low), 1)
+        self.assertEqual(low[0]['quantity'], 5)
+        self.assertEqual(low[0]['threshold'], 5)
+        self.assertEqual(low[0]['batch'], '')
+
+    def test_out_of_stock_ignores_expired_stock(self):
+        self.medicine.quantity_available = 0
+        self.medicine.save(update_fields=['quantity_available'])
+        MedicineInventory.objects.create(
+            medicine_name="Amoxicillin", generic_name="Amoxicillin trihydrate",
+            strength="500 mg", dosage_form="capsule", unit="capsule",
+            batch_number="MED-OLD",
+            expiration_date=timezone.localdate() - datetime.timedelta(days=2),
+            quantity_received=7, quantity_available=7, reorder_level=3,
+        )
+        alerts = medicine_alerts()
+        kinds = self._kinds(alerts)
+        self.assertIn('out_of_stock', kinds)
+        self.assertIn('expired', kinds)
+        self.assertNotIn('low_stock', kinds)
+        out = next(a for a in alerts if a['kind'] == 'out_of_stock')
+        self.assertEqual(out['quantity'], 0)
+
+    def test_expired_batch_with_remaining_stock_links_to_the_batch(self):
+        batch = self._add_vaccine(batch="OLD-1", days=-4, qty=12)
+        VaccineStockMovement.objects.create(
+            vaccine=batch, movement_type='stock_in', quantity=12,
+            batch_number="OLD-1", expiration_date=batch.expiration_date,
+            moved_by=self.nurse,
+        )
+        alert = next(a for a in vaccine_alerts() if a['kind'] == 'expired')
+        self.assertEqual(alert['batch'], 'OLD-1')
+        self.assertEqual(alert['quantity'], 12)
+        self.assertIn('?batch=OLD-1', alert['url'])
+
+        self.client.force_login(self.nurse)
+        response = self.client.get(alert['url'])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'vd-row-highlight')
+        self.assertContains(response, 'OLD-1')
+
+    def test_alerts_clear_when_stock_is_restored(self):
+        batch = self._add_vaccine(qty=2, reorder=5)
+        self.assertIn('low_stock', self._kinds(vaccine_alerts()))
+        batch.quantity_available = 50
+        batch.save(update_fields=['quantity_available'])
+        self.assertNotIn('low_stock', self._kinds(vaccine_alerts()))
+
+        batch.quantity_available = 0
+        batch.save(update_fields=['quantity_available'])
+        self.assertIn('out_of_stock', self._kinds(vaccine_alerts()))
+        batch.quantity_available = 50
+        batch.save(update_fields=['quantity_available'])
+        self.assertNotIn('out_of_stock', self._kinds(vaccine_alerts()))
+
+    def test_vaccine_low_stock_uses_the_product_threshold(self):
+        batch = self._add_vaccine(qty=8, reorder=10)
+        self.assertIn('low_stock', self._kinds(vaccine_alerts()))
+        batch.reorder_level = 5
+        batch.save(update_fields=['reorder_level'])
+        self.assertNotIn('low_stock', self._kinds(vaccine_alerts()))
+
+    def test_bell_combines_modules_and_pages_are_scoped(self):
+        self._add_vaccine(qty=2, reorder=5)
+        self.medicine.quantity_available = 2
+        self.medicine.save(update_fields=['quantity_available'])
+        self.client.force_login(self.nurse)
+
+        response = self.client.get(reverse('inventory:vaccine_list'))
+        self.assertEqual(response.context['inventory_alert_total'], 2)
+        self.assertEqual(
+            {alert['module'] for alert in response.context['alerts']},
+            {'vaccine'})
+        content = response.content.decode()
+        self.assertIn('aria-label="Inventory Alerts', content)
+        self.assertIn('Inventory Alerts', content)
+        self.assertIn('Amoxicillin', content)
+        self.assertIn('Imovax', content)
+
+        response = self.client.get(reverse('inventory:medicine_list'))
+        self.assertEqual(response.context['inventory_alert_total'], 2)
+        self.assertEqual(
+            {alert['module'] for alert in response.context['alerts']},
+            {'medicine'})
+        self.assertIn('Inventory Alerts', response.content.decode())
+
+    def test_bell_is_only_rendered_for_nurses(self):
+        self._add_vaccine(qty=2, reorder=5)
+        self.client.force_login(self.doctor)
+        response = self.client.get(reverse('inventory:vaccine_list'))
+        self.assertNotIn('inventory_alerts', response.context)
+        self.assertNotIn('Inventory Alerts', response.content.decode())
+
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('inventory:vaccine_list'))
+        self.assertNotIn('inventory_alerts', response.context)
+        self.assertNotIn('Inventory Alerts', response.content.decode())
+
+    def test_viewing_alerts_does_not_change_stock_or_create_transactions(self):
+        self._add_vaccine(qty=2, reorder=5, days=10)
+        self.medicine.quantity_available = 0
+        self.medicine.save(update_fields=['quantity_available'])
+        before_medicine = MedicineInventory.objects.get(pk=self.medicine.pk)
+        before_vaccine = list(VaccineInventory.objects.values(
+            'pk', 'quantity_available', 'quantity_received', 'quantity_used'))
+        movement_counts = (
+            MedicineStockMovement.objects.count(),
+            VaccineStockMovement.objects.count(),
+        )
+        get_inventory_alerts()
+        get_inventory_alerts(module='vaccine')
+
+        self.client.force_login(self.nurse)
+        self.client.get(reverse('inventory:vaccine_list'))
+        self.client.get(reverse('inventory:medicine_list'))
+
+        after_medicine = MedicineInventory.objects.get(pk=self.medicine.pk)
+        self.assertEqual(
+            after_medicine.quantity_available, before_medicine.quantity_available)
+        self.assertEqual(
+            list(VaccineInventory.objects.values(
+                'pk', 'quantity_available', 'quantity_received', 'quantity_used')),
+            before_vaccine,
+        )
+        self.assertEqual(
+            movement_counts,
+            (MedicineStockMovement.objects.count(),
+             VaccineStockMovement.objects.count()),
+        )
+
+    def test_confirmed_dispensing_refreshes_the_low_stock_alert(self):
+        self.medicine.quantity_available = 5
+        self.medicine.reorder_level = 3
+        self.medicine.save(update_fields=['quantity_available', 'reorder_level'])
+        self.assertNotIn('low_stock', self._kinds(medicine_alerts()))
+
+        prescription = self._prescription(quantity=2)
+        self.client.force_login(self.nurse)
+        self.client.post(
+            reverse('inventory:prescription_dispense', args=[prescription.pk]),
+            follow=True,
+        )
+        self.medicine.refresh_from_db()
+        self.assertEqual(self.medicine.quantity_available, 3)
+        low = [alert for alert in medicine_alerts()
+               if alert['kind'] == 'low_stock']
+        self.assertEqual(len(low), 1)
+        self.assertEqual(low[0]['quantity'], 3)

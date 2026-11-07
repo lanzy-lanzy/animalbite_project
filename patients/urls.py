@@ -16,6 +16,7 @@ urlpatterns = [
     path('<int:pk>/print/', views.patient_print, name='patient_print'),
     path('<int:pk>/print/pdf/', views.patient_print_pdf, name='patient_print_pdf'),
     path('<int:pk>/vitals/add/', views.patient_vital_create, name='patient_vital_create'),
+    path('<int:pk>/vitals/print-form/', views.patient_vital_form_print, name='patient_vital_form_print'),
     path('vitals/<int:vital_id>/edit/', views.patient_vital_edit, name='patient_vital_edit'),
     path('vitals/<int:vital_id>/delete/', views.patient_vital_delete, name='patient_vital_delete'),
 ]

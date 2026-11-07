@@ -38,10 +38,9 @@
         }
     },
     printPreview(){
-    const el=document.getElementById('report-print-area');
-    const w=window.open('', '_blank');
-    w.document.write('<html><head><title>Missed Follow-Ups</title><link rel=\'stylesheet\' href=\'/static/css/output.css\'><style>@media print{ .no-print{display:none!important} }</style></head><body>'+el.innerHTML+'</body></html>');
-    w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+    const params=new URLSearchParams(window.location.search);
+    params.delete('preview'); params.set('export','print');
+    window.open(window.location.pathname+'?'+params.toString(), '_blank');
 } }" class="space-y-5">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -62,36 +61,7 @@
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card">
-        <div class="flex flex-wrap gap-2 mb-4">
-            <a href="?type=daily" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Daily</a>
-            <a href="?type=weekly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Weekly</a>
-            <a href="?type=monthly" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Monthly</a>
-            <a href="?type=last7" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last7' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Last 7</a>
-            <a href="?type=last30" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'last30' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line{% endif %}">Last 30</a>
-            <a href="?type=custom" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'custom' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">Custom</a>
-        </div>
-        <form method="GET" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div>
-                <label class="form-label">Start date</label>
-                <input type="date" name="start_date" value="{{ start_date }}" class="form-input">
-            </div>
-            <div>
-                <label class="form-label">End date</label>
-                <input type="date" name="end_date" value="{{ end_date }}" class="form-input">
-            </div>
-            <div class="sm:col-span-2">
-                <label class="form-label">Search patient / case #</label>
-                <div class="flex gap-2">
-                    <input type="text" name="q" value="{{ q }}" placeholder="e.g., AB-2024-001 or Juan" class="form-input flex-1">
-                    <input type="hidden" name="type" value="{{ report_type }}">
-                    <button type="submit" class="btn-primary">Apply</button>
-                    <a href="{% url 'reports:missed_appointments' %}" class="btn-secondary">Clear</a>
-                </div>
-            </div>
-        </form>
-    </div>
+    {% include 'reports/_case_filters.html' with filter_note='Case statistics follow the selected reporting period.' %}
 
     <!-- Summary -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -136,7 +106,7 @@
                         <td class="table-cell">{{ r.bite_case.patient.contact_number }}</td>
                         <td class="table-cell text-right"><a href="{% url 'bite_cases:case_detail' r.bite_case.pk %}" class="btn-secondary btn-xs">View</a></td>
                     </tr>
-                    {% empty %}<tr><td colspan="6" class="text-center py-12"><p class="text-sm font-semibold text-ink">No missed appointments for this filter.</p><p class="text-xs text-muted">Great adherence — try a different date range.</p></td></tr>{% endfor %}
+                    {% empty %}<tr><td colspan="6" class="text-center py-12"><p class="text-sm font-semibold text-ink">No missed appointments for this period.</p><p class="text-xs text-muted">Great adherence — try a different search or reporting period.</p></td></tr>{% endfor %}
                 </tbody>
             </table>
         </div>

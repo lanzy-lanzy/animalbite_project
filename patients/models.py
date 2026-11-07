@@ -109,6 +109,19 @@ class Patient(models.Model):
         from utils.phone import format_display_09
         return format_display_09(self.emergency_contact_number) if self.emergency_contact_number else ''
 
+    @property
+    def formatted_address(self):
+        """Address as saved, with repeated comma/line-separated parts shown once."""
+        seen = set()
+        parts = []
+        for chunk in (self.address or '').replace('\r', '\n').replace('\n', ',').split(','):
+            part = ' '.join(chunk.split())
+            key = part.casefold()
+            if part and key not in seen:
+                seen.add(key)
+                parts.append(part)
+        return ', '.join(parts)
+
     def get_latest_vitals(self):
         return self.vital_signs.order_by('-taken_at', '-created_at').first()
 

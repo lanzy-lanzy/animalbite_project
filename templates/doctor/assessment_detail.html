@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Assessment Details — {{ patient.full_name }}{% endblock %}
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/print_official.css' %}">
 <style>
   /* Patient hero — forest-green summary header */
   .patient-hero {
@@ -221,9 +223,9 @@
     .patient-hero__meta { grid-template-columns: 1fr; }
   }
 
-  /* A4 portrait print sheet */
+  /* A4 portrait print sheet — only the official document is printed. */
   @media print {
-    @page { size: A4 portrait; margin: 14mm 12mm; }
+    @page { size: A4 portrait; margin: 15mm; }
 
     html, body {
       height: auto !important;
@@ -253,98 +255,318 @@
       width: 100% !important;
       margin: 0 !important;
     }
-
-    .patient-hero {
-      display: block !important;
-      min-height: 0 !important;
-      padding: 12px 14px !important;
-      margin-bottom: 8px !important;
-      border: 2px solid #063d2e !important;
-      border-radius: 8px !important;
-      background: #fff !important;
-      color: #063d2e !important;
+    .assessment-screen { display: none !important; }
+    .abtc-print-only { display: block !important; }
+    .official-assessment.abtc-doc {
+      width: auto !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
     }
-    .patient-hero__waves { display: none !important; }
-    .patient-hero__top { display: flex !important; gap: 12px !important; }
-    .patient-hero__avatar {
-      width: 54px !important;
-      height: 54px !important;
-      border: 1.5px solid #063d2e !important;
-      border-radius: 10px !important;
-      background: #fff !important;
-    }
-    .patient-hero__initials { color: #063d2e !important; font-size: 21px !important; }
-    .patient-hero__divider { height: 40px !important; margin: 0 14px !important; background: #9bb5a9 !important; }
-    .patient-hero__name { color: #063d2e !important; font-size: 22px !important; }
-    .patient-hero__eyebrow { color: #5b7266 !important; font-size: 9px !important; }
-    .patient-hero__badges { margin-left: auto !important; gap: 4px !important; }
-    .badge-hero {
-      padding: 2px 8px !important;
-      border: 1px solid #063d2e !important;
-      background: #fff !important;
-      color: #063d2e !important;
-      font-size: 9px !important;
-    }
-    .patient-hero__meta {
-      padding-top: 8px !important;
-      margin-top: 10px !important;
-      gap: 4px 12px !important;
-      border-top-color: #c9d7d0 !important;
-    }
-    .hero-meta-label { color: #5b7266 !important; font-size: 8.5px !important; }
-    .hero-meta-value { color: #111 !important; font-size: 11px !important; }
-
-    section.card {
-      border: 1px solid #a9b8b0 !important;
-      border-radius: 6px !important;
-      margin-bottom: 8px !important;
-      overflow: visible !important;
-      background: #fff !important;
-    }
-    .section-head {
-      padding: 6px 10px !important;
-      background: #fff !important;
-      color: #063d2e !important;
-      border-bottom: 1.5px solid #063d2e !important;
-    }
-    .section-head h3, .section-head span { color: #063d2e !important; }
-    .section-num { background: #063d2e !important; color: #fff !important; }
-    .section-note { color: #5b7266 !important; font-size: 8.5px !important; }
-    .section-body { padding: 8px 10px !important; }
-    .section-body hr { border-color: #d8d1c1 !important; }
-
-    .info-tile {
-      padding: 6px 8px !important;
-      border: 1px solid #d8d1c1 !important;
-      border-radius: 6px !important;
-      background: #fff !important;
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-    .info-label { color: #7a5c14 !important; font-size: 8.5px !important; }
-    .info-value { color: #111 !important; font-size: 10.5px !important; }
-
-    .subhead { color: #063d2e !important; font-size: 9px !important; }
-    .dose-table { border-color: #a9b8b0 !important; border-radius: 4px !important; font-size: 10px !important; }
-    .dose-table th {
-      padding: 4px 6px !important;
-      background: #f2eee4 !important;
-      color: #063d2e !important;
-      font-size: 8.5px !important;
-    }
-    .dose-table td { padding: 4px 6px !important; font-size: 10px !important; }
-    .dose-table tr, .rx-line {
+    .official-assessment .abtc-section-title,
+    .official-assessment .abtc-subhead { break-after: avoid; page-break-after: avoid; }
+    .official-assessment .abtc-panel,
+    .official-assessment .abtc-summary-split,
+    .official-assessment .abtc-table tr,
+    .official-assessment .abtc-footer {
       break-inside: avoid;
       page-break-inside: avoid;
     }
     thead { display: table-header-group; }
     a { color: inherit !important; text-decoration: none !important; }
   }
+
+  /* Section E — product header above a three-column detail row. */
+  .official-assessment .abtc-vaccine-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 20px;
+    padding: 14px 16px;
+  }
+  .official-assessment .abtc-vaccine-summary .abtc-summary__row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 0;
+  }
+  .official-assessment .abtc-vaccine-summary .abtc-summary__row span,
+  .official-assessment .abtc-vaccine-summary .abtc-summary__row strong {
+    flex: 0 0 auto;
+  }
+  .official-assessment .abtc-vaccine-lot {
+    margin: 0;
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #496458;
+  }
+  .official-assessment .abtc-vaccine-lot span {
+    white-space: nowrap;
+  }
 </style>
 {% endblock %}
 {% block content %}
 <div class="max-w-[980px] mx-auto assessment-sheet">
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-4 no-print">
+  <div class="abtc-print-only abtc-doc official-assessment">
+    {% include 'print/_official_head.html' with document_title="Clinical Assessment Sheet" %}
+
+    <h1 class="abtc-report-title">Clinical Assessment Sheet</h1>
+    <p class="abtc-report-meta">Assessment Date: {{ assessment.encounter_date|date:"F d, Y · g:i A" }} &nbsp;·&nbsp; Date Printed: {% now "F d, Y · g:i A" %}</p>
+
+    <!-- ASSESSMENT SUMMARY -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Assessment Summary</h2>
+      <div class="abtc-panel abtc-summary-split">
+        <div class="abtc-summary-col">
+          <div class="abtc-summary__row"><span>Patient Full Name</span><strong>{{ patient.full_name }}</strong></div>
+          <div class="abtc-summary__row"><span>Patient ID</span><strong>{{ patient.patient_number }}</strong></div>
+          <div class="abtc-summary__row"><span>Case Number</span><strong>{{ bite_case.case_number|default:"General encounter" }}</strong></div>
+        </div>
+        <div class="abtc-summary-col abtc-summary-col--divided">
+          <div class="abtc-summary__row"><span>Assessment Date</span><strong>{{ assessment.encounter_date|date:"F d, Y · g:i A" }}</strong></div>
+          <div class="abtc-summary__row"><span>Attending Doctor</span><strong>{{ assessment.assessed_by.get_full_name|default:assessment.assessed_by.username|default:"Not Recorded" }}</strong></div>
+          <div class="abtc-summary__row"><span>Assessment Status</span><strong>{{ assessment.get_status_display }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATIENT INFORMATION -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Patient Information</h2>
+      <div class="abtc-panel abtc-summary">
+        <div class="abtc-summary__row"><span>Patient Full Name</span><strong>{{ patient.full_name }}</strong></div>
+        <div class="abtc-summary__row"><span>Patient ID</span><strong>{{ patient.patient_number }}</strong></div>
+        <div class="abtc-summary__row"><span>Birthdate</span><strong>{{ patient.birthdate|date:"F j, Y"|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Age</span><strong>{% if patient.age is not None %}{{ patient.age }} years{% else %}Not Recorded{% endif %}</strong></div>
+        <div class="abtc-summary__row"><span>Sex</span><strong>{{ patient.get_sex_display|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Civil Status</span><strong>{{ patient.get_civil_status_display|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Contact Number</span><strong>{{ patient.contact_display|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Barangay</span><strong>{{ patient.barangay|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Parent / Guardian</span><strong>{{ patient.parent_guardian|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Emergency Contact</span><strong>{% if patient.emergency_contact_name %}{{ patient.emergency_contact_name }}{% if patient.emergency_contact_number %} · {{ patient.emergency_contact_display }}{% endif %}{% else %}Not Recorded{% endif %}</strong></div>
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Complete Address</span><strong>{{ patient.formatted_address|default:"Not Recorded" }}</strong></div>
+      </div>
+    </section>
+
+    <!-- MEDICAL HISTORY -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Medical History</h2>
+      <div class="abtc-panel abtc-summary">
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Medical History</span><strong>{{ patient.medical_history|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Allergies</span><strong>{{ patient.allergy_info|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Previous Rabies Vaccination</span><strong>{{ patient.previous_rabies_vax|default:"Not Recorded" }}</strong></div>
+        {% if patient.remarks %}
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Remarks</span><strong>{{ patient.remarks }}</strong></div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ANIMAL BITE INFORMATION -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Animal Bite Information</h2>
+      {% if bite_case %}
+      <div class="abtc-panel abtc-summary">
+        <div class="abtc-summary__row"><span>Case Number</span><strong>{{ bite_case.case_number }}</strong></div>
+        <div class="abtc-summary__row"><span>Case Status</span><strong>{{ bite_case.get_case_status_display }}</strong></div>
+        <div class="abtc-summary__row"><span>Date of Bite</span><strong>{{ bite_case.date_time_bite|date:"F j, Y" }}</strong></div>
+        <div class="abtc-summary__row"><span>Time of Bite</span><strong>{{ bite_case.date_time_bite|date:"g:i A" }}</strong></div>
+        <div class="abtc-summary__row"><span>Animal Type</span><strong>{{ bite_case.get_animal_type_display }}{% if bite_case.animal_other %} · {{ bite_case.animal_other }}{% endif %}</strong></div>
+        <div class="abtc-summary__row"><span>Animal Ownership</span><strong>{{ bite_case.get_animal_ownership_display }}</strong></div>
+        <div class="abtc-summary__row"><span>Animal Condition</span><strong>{{ bite_case.get_animal_condition_display }}</strong></div>
+        <div class="abtc-summary__row"><span>Animal Vaccination Status</span><strong>{{ bite_case.get_animal_vax_status_display }}</strong></div>
+        <div class="abtc-summary__row"><span>Exposure Type</span><strong>{{ bite_case.get_exposure_type_display }}</strong></div>
+        <div class="abtc-summary__row"><span>Body Part Affected</span><strong>{{ bite_case.body_part_affected|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Number of Wounds</span><strong>{{ bite_case.number_of_wounds }}</strong></div>
+        <div class="abtc-summary__row"><span>Wound Washed Immediately</span><strong>{{ bite_case.wound_washed_immediately|yesno:"Yes,No" }}</strong></div>
+        <div class="abtc-summary__row"><span>Place of Incident</span><strong>{{ bite_case.place_of_incident|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Barangay</span><strong>{{ bite_case.incident_barangay|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>First Aid Given</span><strong>{{ bite_case.first_aid_given|default:"Not Recorded" }}</strong></div>
+        {% if bite_case.wound_description %}
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Wound Description</span><strong>{{ bite_case.wound_description }}</strong></div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="abtc-panel abtc-panel--plain">
+        <p class="abtc-note" style="margin:0">No bite case is linked to this encounter. This is a general clinical assessment.</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- VITAL SIGNS -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Vital Signs</h2>
+      {% if latest_vitals %}
+      <table class="abtc-table">
+        <thead>
+          <tr><th style="width:42%">Vital Sign</th><th>Recorded Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Date &amp; Time Taken</td><td>{{ latest_vitals.taken_at|date:"F j, Y · g:i A" }}</td></tr>
+          <tr><td>Recorded By</td><td>{{ latest_vitals.taken_by.get_full_name|default:latest_vitals.taken_by.username|default:"Not Recorded" }}</td></tr>
+          <tr><td>Blood Pressure</td><td>{% if latest_vitals.bp_systolic or latest_vitals.bp_diastolic %}{{ latest_vitals.bp_display }} mmHg{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>Temperature</td><td>{% if latest_vitals.temperature %}{{ latest_vitals.temperature }} °C{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>Pulse Rate</td><td>{% if latest_vitals.pulse_rate %}{{ latest_vitals.pulse_rate }} bpm{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>Respiratory Rate</td><td>{% if latest_vitals.respiratory_rate %}{{ latest_vitals.respiratory_rate }} /min{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>SpO₂</td><td>{% if latest_vitals.spo2 %}{{ latest_vitals.spo2 }} %{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>Weight</td><td>{% if latest_vitals.weight %}{{ latest_vitals.weight }} kg{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>Height</td><td>{% if latest_vitals.height %}{{ latest_vitals.height }} cm{% else %}Not Recorded{% endif %}</td></tr>
+          <tr><td>BMI</td><td>{{ latest_vitals.bmi|default_if_none:"Not Recorded" }}</td></tr>
+          <tr><td>Pain Scale</td><td>{% if latest_vitals.pain_score is not None %}{{ latest_vitals.pain_score }} / 10{% else %}Not Recorded{% endif %}</td></tr>
+          {% if latest_vitals.blood_glucose %}
+          <tr><td>Blood Glucose</td><td>{{ latest_vitals.blood_glucose }} mg/dL{% if latest_vitals.glucose_type %} · {{ latest_vitals.get_glucose_type_display }}{% endif %}</td></tr>
+          {% endif %}
+          {% if latest_vitals.notes %}
+          <tr><td>Notes</td><td>{{ latest_vitals.notes }}</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="abtc-panel abtc-panel--plain">
+        <p class="abtc-note" style="margin:0">No vital signs have been recorded for this patient.</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- CLINICAL ASSESSMENT A–F -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Clinical Assessment</h2>
+
+      <div class="abtc-clinical-block">
+        <h3 class="abtc-subhead">A. Chief Complaint</h3>
+        <div class="abtc-panel abtc-summary">
+          <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Chief Complaint</span><strong>{{ assessment.chief_complaint|default:"Not Recorded" }}</strong></div>
+        </div>
+      </div>
+
+      <div class="abtc-clinical-block">
+        <h3 class="abtc-subhead">B. Exposure Narrative (Verified)</h3>
+        <div class="abtc-panel abtc-summary">
+          <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Narrative as Verified by the Doctor</span><strong>{{ assessment.exposure_narrative|default:"Not Recorded" }}</strong></div>
+        </div>
+      </div>
+
+      <div class="abtc-clinical-block">
+        <h3 class="abtc-subhead">C. WHO Bite Category</h3>
+        <div class="abtc-panel abtc-summary">
+          <div class="abtc-summary__row"><span>WHO Bite Category</span><strong>{{ assessment.category_label|default:"Not Recorded" }}</strong></div>
+        </div>
+      </div>
+
+      <div class="abtc-clinical-block">
+        <h3 class="abtc-subhead">D. Dose Schedule &amp; Vaccine</h3>
+        <div class="abtc-panel abtc-summary">
+          <div class="abtc-summary__row"><span>Dose Schedule</span><strong>{% if assessment.dose_protocol %}{{ assessment.get_dose_protocol_display }}{% if assessment.dose_schedule_plan %} · {{ assessment.dose_schedule_plan }}{% endif %}{% elif assessment.dose_schedule_plan %}{{ assessment.dose_schedule_plan }}{% elif dose_schedule_label %}{{ dose_schedule_label }}{% else %}Not Recorded{% endif %}</strong></div>
+          <div class="abtc-summary__row"><span>Required Doses</span><strong>{{ dose_schedule_label|default:"Not Recorded" }}</strong></div>
+          <div class="abtc-summary__row"><span>First Dose Date</span><strong>{{ first_dose_date|date:"F j, Y"|default:"Not Recorded" }}</strong></div>
+        </div>
+      </div>
+
+      <div class="abtc-clinical-block">
+        <h3 class="abtc-subhead">E. Vaccine Brand / Recorded Biological Product</h3>
+        {% with vi=assessment.vaccine_inventory %}
+        <div class="abtc-panel abtc-summary abtc-vaccine-summary">
+          <div class="abtc-summary__row abtc-summary__row--full">
+            <span>{% if 'immunoglobulin' in vi.vaccine_name|lower or 'immunoglobulin' in vi.brand|lower or 'rig' in vi.vaccine_name|lower or 'rig' in vi.brand|lower %}Recorded Biological Product{% else %}Vaccine Brand / Product{% endif %}</span>
+            <strong>{% if vi %}{{ vi.vaccine_name }}{% if vi.brand %} · {{ vi.brand }}{% endif %}{% elif assessment.vaccine_brand_plan %}{{ assessment.vaccine_brand_plan }}{% else %}Not Recorded{% endif %}</strong>
+            {% if assessment.vaccine_lot_number or vi.batch_number %}
+            <p class="abtc-vaccine-lot">Lot / Batch: <span>{% if assessment.vaccine_lot_number %}{{ assessment.vaccine_lot_number }}{% else %}{{ vi.batch_number }}{% endif %}</span></p>
+            {% endif %}
+          </div>
+          <div class="abtc-summary__row"><span>Volume per Dose</span><strong>{% if assessment.vaccine_dose_ml %}{{ assessment.vaccine_dose_ml }} mL{% else %}Not Recorded{% endif %}</strong></div>
+          <div class="abtc-summary__row"><span>Quantity (Vials / Doses)</span><strong>{{ assessment.vaccine_quantity|default_if_none:"Not Recorded" }}</strong></div>
+          <div class="abtc-summary__row"><span>First Dose Date</span><strong>{{ first_dose_date|date:"F j, Y"|default:"Not Recorded" }}</strong></div>
+        </div>
+        {% endwith %}
+      </div>
+
+      <div class="abtc-clinical-block">
+        <h3 class="abtc-subhead">F. Treatment &amp; Prescription</h3>
+        <div class="abtc-panel abtc-summary">
+          <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Treatment Plan</span><strong>{{ assessment.treatment_plan|default:"Not Recorded" }}</strong></div>
+        </div>
+
+        <h3 class="abtc-subhead" style="margin-top:10px">Prescription</h3>
+        {% if prescriptions %}
+        <table class="abtc-table">
+          <thead><tr><th style="width:70%">Medicine</th><th>Quantity</th></tr></thead>
+          <tbody>
+            {% for rx in prescriptions %}
+            <tr>
+              <td><strong>{{ rx.medicine.label|default:"Medicine record unavailable" }}</strong><div class="abtc-cell-note">{{ rx.get_status_display }}</div></td>
+              <td>{{ rx.quantity_display|default:rx.quantity }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% elif assessment.prescription %}
+        <div class="abtc-panel abtc-panel--plain"><p class="abtc-note" style="margin:0">{{ assessment.prescription }}</p></div>
+        {% else %}
+        <div class="abtc-panel abtc-panel--plain"><p class="abtc-note" style="margin:0">Not Recorded</p></div>
+        {% endif %}
+
+        <div class="abtc-panel abtc-summary" style="margin-top:10px">
+          <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Dosage Instructions — Frequency &amp; Duration</span><strong>{{ assessment.dosage_instructions|default:"Not Recorded" }}</strong></div>
+          <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Follow-up Instructions</span><strong>{{ assessment.follow_up_instructions|default:"Not Recorded" }}</strong></div>
+          <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Additional Notes / Allergy Re-check</span><strong>{{ assessment.additional_notes|default:"Not Recorded" }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VACCINATION SCHEDULE -->
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Vaccination Schedule</h2>
+      {% if schedule %}
+      <h3 class="abtc-subhead">Dose Schedule Records</h3>
+      {% if doses %}
+      <table class="abtc-table">
+        <thead>
+          <tr>
+            <th style="width:30%">Dose</th>
+            <th style="width:24%">Scheduled Date</th>
+            <th style="width:24%">Date Administered</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dose in doses %}
+          <tr>
+            <td>
+              <strong>{{ dose.number_label }}</strong>
+              {% if dose.protocol_day is not None %}<div class="abtc-cell-note">Day {{ dose.protocol_day }}</div>{% endif %}
+              {% if dose.vaccine_brand or dose.batch_number %}<div class="abtc-cell-note">{% if dose.vaccine_brand %}{{ dose.vaccine_brand }}{% endif %}{% if dose.batch_number %} · Batch {{ dose.batch_number }}{% endif %}</div>{% endif %}
+            </td>
+            <td>{% if dose.scheduled_date %}{{ dose.scheduled_date|date:"F j, Y" }}{% else %}<span class="abtc-cell-note">Pending Scheduling</span>{% endif %}</td>
+            <td>{% if dose.actual_date %}{{ dose.actual_date|date:"F j, Y" }}{% if dose.actual_time %} · {{ dose.actual_time|time:"g:i A" }}{% endif %}{% else %}<span class="abtc-cell-note">Not administered</span>{% endif %}</td>
+            <td>
+              <span class="abtc-status {% if dose.dose_status == 'completed' %}abtc-status--completed{% elif dose.dose_status == 'scheduled' %}abtc-status--scheduled{% elif dose.dose_status == 'missed' %}abtc-status--missed{% elif dose.dose_status == 'cancelled' %}abtc-status--cancelled{% elif dose.dose_status == 'rescheduled' %}abtc-status--scheduled{% else %}abtc-status--pending{% endif %}">{{ dose.clinical_status }}</span>
+              {% if dose.administered_by %}<div class="abtc-cell-note">By {{ dose.administered_by.get_full_name|default:dose.administered_by.username }}</div>{% endif %}
+              {% if dose.remarks %}<div class="abtc-cell-note">{{ dose.remarks }}</div>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="abtc-panel abtc-panel--plain"><p class="abtc-note" style="margin:0">No doses have been created for this schedule — <strong>Pending Scheduling</strong>.</p></div>
+      {% endif %}
+
+      {% if schedule.doctor_notes or schedule.other_medicine %}
+      <div class="abtc-panel abtc-summary" style="margin-top:10px">
+        {% if schedule.doctor_notes %}
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Doctor Notes</span><strong>{{ schedule.doctor_notes }}</strong></div>
+        {% endif %}
+        {% if schedule.other_medicine %}
+        <div class="abtc-summary__row abtc-summary__row--full abtc-summary__row--stacked"><span>Other Medicine</span><strong>{{ schedule.other_medicine }}</strong></div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="abtc-panel abtc-panel--plain"><p class="abtc-note" style="margin:0">No vaccination schedule has been generated for this case.</p></div>
+      {% endif %}
+    </section>
+
+    {% include 'print/_official_footer.html' with confidential=True document_label="Clinical Assessment Document" %}
+  </div>
+  <div class="assessment-screen no-print">
     <div class="flex items-center gap-2">
       <a href="{% url 'doctor:assessment_list' %}" class="p-2 rounded-lg hover:bg-white border border-transparent hover:border-line">← Back</a>
       <h1 class="text-lg font-bold text-ink">Assessment Details</h1>
@@ -355,7 +577,6 @@
       <a href="{% url 'bite_cases:case_detail' bite_case.pk %}" class="px-3 py-1.5 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Case {{ bite_case.case_number }}</a>
       {% endif %}
     </div>
-  </div>
 
   <!-- Assessment summary header -->
   <header class="patient-hero patient-hero--detail" aria-label="Assessment summary">
@@ -606,8 +827,8 @@
             <div class="space-y-2">
               {% for rx in prescriptions %}
               <div class="rx-line grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div class="info-tile"><div class="min-w-0"><p class="info-label">Prescription (from medicine inventory)</p><p class="info-value">{{ rx.medicine.label }}</p></div></div>
-                <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity</p><p class="info-value">{{ rx.quantity_display }}</p></div></div>
+                <div class="info-tile"><div class="min-w-0"><p class="info-label">Prescription (from medicine inventory)</p><p class="info-value">{{ rx.medicine.label|default:"Medicine record unavailable" }}</p></div></div>
+                <div class="info-tile"><div class="min-w-0"><p class="info-label">Quantity</p><p class="info-value">{{ rx.quantity_display|default:rx.quantity }}</p></div></div>
               </div>
               {% endfor %}
             </div>
@@ -632,6 +853,8 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>
       Print Sheet
     </button>
+  </div>
+
   </div>
 </div>
 {% endblock %}

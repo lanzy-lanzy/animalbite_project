@@ -487,6 +487,12 @@ class VaccinationRecordViewTests(TestCase):
         self.assertContains(response, "Print Sheet")
         self.assertContains(response, "window.print()")
         self.assertContains(response, "@page { size: A4 portrait")
+        self.assertContains(response, "abtc-print-only")
+        self.assertContains(response, "abtc-letterhead")
+        self.assertContains(response, "abtc-footer")
+        self.assertContains(response, "print_official.css")
+        self.assertContains(response, "Animal Bite Treatment Center")
+        self.assertContains(response, "System-Generated Document")
 
     # -------------------------------------------------- empty states
     def test_no_assessment_and_no_vitals_empty_states(self):
@@ -1302,7 +1308,12 @@ class NurseVaccinationManageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("/static/images/lgu_dumingag_logo.png", content)
         self.assertIn("size: A4 portrait", content)
-        self.assertIn("width: 60px", content)
+        self.assertIn("abtc-logo", content)
+        for marker in (
+            "print_official.css", "abtc-letterhead", "abtc-footer",
+            "Animal Bite Treatment Center", "System-Generated Document",
+        ):
+            self.assertIn(marker, content)
         for text in (
             "Animal Bite Treatment Center", "Municipal Health Office",
             "Patient Vaccination Schedule", "Patient Information",

@@ -72,6 +72,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.settings_context",
                 "config.context_processors.doctor_notifications",
+                "config.context_processors.inventory_notifications",
             ],
         },
     },

@@ -1,0 +1,166 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ patient.patient_number }} — Patient Vital Signs Form</title>
+  <link rel="stylesheet" href="{% static 'css/print_official.css' %}">
+  <style>
+    @page { size: A4 portrait; margin: 15mm; }
+
+    /* Writable recording fields — blank boxes sized for pen-and-paper entry. */
+    .vf-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px 12px; }
+    .vf-field { min-width: 0; break-inside: avoid; page-break-inside: avoid; }
+    .vf-field--span2 { grid-column: span 2; }
+    .vf-field--full { grid-column: 1 / -1; }
+    .vf-label { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin: 0 0 5px; font-size: 9pt; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--abtc-ink); }
+    .vf-unit { font-size: 8pt; font-weight: 600; letter-spacing: .01em; text-transform: none; color: var(--abtc-subtitle); white-space: nowrap; }
+    .vf-box { border: 1px solid var(--abtc-table-grid); border-radius: 6px; background: #FFFFFF; min-height: 42px; }
+    .vf-box--tall { min-height: 74px; }
+    .vf-bp { display: flex; align-items: center; gap: 8px; }
+    .vf-bp__cell { flex: 1 1 0; min-width: 0; }
+    .vf-bp__cell .vf-box { width: 100%; }
+    .vf-bp__slash { font-size: 16pt; font-weight: 800; color: var(--abtc-subtitle); line-height: 1; }
+    .vf-hint { display: block; margin-top: 3px; font-size: 7.5pt; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--abtc-subtitle); text-align: center; }
+    .vf-checks { display: flex; flex-wrap: wrap; gap: 7px 16px; margin-top: 8px; }
+    .vf-check { display: inline-flex; align-items: center; gap: 6px; font-size: 9.5pt; font-weight: 700; color: var(--abtc-body); }
+    .vf-check__box { width: 13px; height: 13px; border: 1.5px solid var(--abtc-ink); border-radius: 3px; background: #FFFFFF; flex: 0 0 auto; }
+    .vf-other { margin-top: 8px; border-bottom: 1px solid var(--abtc-table-grid); min-height: 22px; }
+    .vf-assess-line { display: inline-block; min-width: 240px; height: 1.15em; border-bottom: 1px solid var(--abtc-ink); }
+    .vf-sign { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; break-inside: avoid; page-break-inside: avoid; }
+    .vf-sign__line { height: 1.5px; background: var(--abtc-ink); margin: 30px 0 6px; }
+    .vf-sign__label { font-size: 9.5pt; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--abtc-ink); }
+    .vf-sign__sub { margin-top: 2px; font-size: 8.5pt; font-weight: 500; color: var(--abtc-subtitle); }
+
+    @media (max-width: 640px) {
+      .vf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .vf-sign { grid-template-columns: 1fr; gap: 16px; }
+    }
+    @media print {
+      .vf-grid { gap: 11px 10px; }
+      .vf-box { min-height: 40px; }
+      .vf-box--tall { min-height: 70px; }
+    }
+  </style>
+</head>
+<body class="abtc-print-body">
+  <div class="abtc-toolbar no-print">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+      <button type="button" class="abtc-toolbar__ghost" onclick="window.location.href='{% url 'patients:patient_detail' patient.pk %}'">← Back to Patient</button>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ patient.patient_number }} · {{ patient.full_name }}</span>
+    </div>
+    <button type="button" onclick="window.print()" style="display:inline-flex;align-items:center;gap:7px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print Form
+    </button>
+  </div>
+
+  <main class="abtc-doc">
+    {% include 'print/_official_head.html' with document_title="Patient Vital Signs Form" show_printed_at=1 %}
+    <p class="abtc-note">Official recording form — complete each field in ink at the time of measurement. Leave a field blank if the measurement was not taken. Transfer the completed values into the ABTC system after the encounter.</p>
+
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Patient Information</h2>
+      <div class="abtc-panel abtc-summary">
+        <div class="abtc-summary__row abtc-summary__row--full"><span>Patient Full Name</span><strong>{{ patient.full_name }}</strong></div>
+        <div class="abtc-summary__row"><span>Patient ID</span><strong>{{ patient.patient_number }}</strong></div>
+        <div class="abtc-summary__row"><span>Sex</span><strong>{{ patient.get_sex_display|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Date of Birth</span><strong>{{ patient.birthdate|date:"F j, Y"|default:"Not Recorded" }}</strong></div>
+        <div class="abtc-summary__row"><span>Age</span><strong>{% if patient.age %}{{ patient.age }} years old{% else %}Not Recorded{% endif %}</strong></div>
+        <div class="abtc-summary__row abtc-summary__row--full"><span>Date of Assessment</span><strong><span class="vf-assess-line"></span></strong></div>
+      </div>
+    </section>
+
+    <section class="abtc-section">
+      <h2 class="abtc-section-title">Vital Signs</h2>
+      <div class="vf-grid">
+        <div class="vf-field vf-field--span2">
+          <p class="vf-label">Date &amp; Time Taken <span class="vf-unit">mm/dd/yyyy · hh:mm</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field vf-field--span2">
+          <p class="vf-label">Blood Pressure <span class="vf-unit">mmHg</span></p>
+          <div class="vf-bp">
+            <div class="vf-bp__cell"><div class="vf-box"></div><span class="vf-hint">Systolic</span></div>
+            <span class="vf-bp__slash">/</span>
+            <div class="vf-bp__cell"><div class="vf-box"></div><span class="vf-hint">Diastolic</span></div>
+          </div>
+        </div>
+
+        <div class="vf-field">
+          <p class="vf-label">Temperature <span class="vf-unit">°C</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field">
+          <p class="vf-label">Pulse Rate <span class="vf-unit">bpm</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field">
+          <p class="vf-label">Respiratory Rate <span class="vf-unit">/min</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field">
+          <p class="vf-label">SpO₂ <span class="vf-unit">%</span></p>
+          <div class="vf-box"></div>
+        </div>
+
+        <div class="vf-field">
+          <p class="vf-label">Weight <span class="vf-unit">kg</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field">
+          <p class="vf-label">Height <span class="vf-unit">cm</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field">
+          <p class="vf-label">BMI <span class="vf-unit">kg/m²</span></p>
+          <div class="vf-box"></div>
+        </div>
+        <div class="vf-field">
+          <p class="vf-label">Pain Scale <span class="vf-unit">0–10</span></p>
+          <div class="vf-box"></div>
+        </div>
+
+        <div class="vf-field vf-field--span2">
+          <p class="vf-label">Blood Glucose <span class="vf-unit">mg/dL</span></p>
+          <div class="vf-box"></div>
+          <div class="vf-checks">
+            <span class="vf-check"><span class="vf-check__box"></span>Random</span>
+            <span class="vf-check"><span class="vf-check__box"></span>Fasting</span>
+          </div>
+        </div>
+        <div class="vf-field vf-field--span2">
+          <p class="vf-label">General Appearance</p>
+          <div class="vf-checks" style="margin-top:2px;">
+            <span class="vf-check"><span class="vf-check__box"></span>Well</span>
+            <span class="vf-check"><span class="vf-check__box"></span>Ill</span>
+            <span class="vf-check"><span class="vf-check__box"></span>Toxic</span>
+          </div>
+          <div class="vf-other"></div>
+          <span class="vf-hint" style="text-align:left;">Other observations</span>
+        </div>
+
+        <div class="vf-field vf-field--full">
+          <p class="vf-label">Additional Notes / Allergy Re-check</p>
+          <div class="vf-box vf-box--tall"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="vf-sign">
+      <div>
+        <div class="vf-sign__line"></div>
+        <div class="vf-sign__label">Recorded By</div>
+        <div class="vf-sign__sub">Signature over printed name · Position</div>
+      </div>
+      <div>
+        <div class="vf-sign__line"></div>
+        <div class="vf-sign__label">Date / Time Recorded</div>
+        <div class="vf-sign__sub">Date and time of recording</div>
+      </div>
+    </div>
+
+    {% include 'print/_official_footer.html' with confidential=True document_label="Vital Signs Form" %}
+  </main>
+</body>
+</html>

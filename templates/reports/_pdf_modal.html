@@ -1,0 +1,77 @@
+<script>
+    function reportPreview() {
+        return {
+            previewOpen: false,
+            previewSrc: '',
+            previewBlob: '',
+            isLoading: false,
+            previewError: '',
+            async openPreview(url) {
+                this.previewSrc = url;
+                this.previewBlob = '';
+                this.previewError = '';
+                this.isLoading = true;
+                this.previewOpen = true;
+                try {
+                    const res = await fetch(url, { credentials: 'same-origin' });
+                    if (!res.ok) throw new Error('Server ' + res.status);
+                    const blob = await res.blob();
+                    if (!blob.type.includes('pdf') && blob.size < 500) throw new Error('Invalid PDF');
+                    this.previewBlob = URL.createObjectURL(blob);
+                    this.$nextTick(() => {
+                        const frame = this.$refs.pdfFrame;
+                        if (frame) frame.src = this.previewBlob;
+                        this.isLoading = false;
+                    });
+                } catch (e) {
+                    console.error(e);
+                    this.previewError = e.message;
+                    this.isLoading = false;
+                    this.$nextTick(() => {
+                        const frame = this.$refs.pdfFrame;
+                        if (frame) frame.src = url;
+                    });
+                }
+            },
+            printPreview() {
+                const params = new URLSearchParams(window.location.search);
+                params.delete('preview');
+                params.set('export', 'print');
+                window.open(window.location.pathname + '?' + params.toString(), '_blank');
+            }
+        };
+    }
+</script>
+
+<div x-show="previewOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div @click="previewOpen = false" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-5xl h-[85vh] bg-white rounded-2xl shadow-2xl border border-line overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-line bg-sage-50">
+            <div>
+                <h3 class="font-display text-sm font-bold text-ink">PDF Preview — {{ pdf_title|default:"Report" }}</h3>
+                <p class="text-xs font-medium text-muted">Review before download or print.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a :href="previewSrc.replace('preview=1', '')" class="px-3 py-1.5 rounded-full bg-emerald-950 text-white text-xs font-bold">Download</a>
+                <button type="button" @click="previewOpen = false" class="w-8 h-8 rounded-full bg-white border border-line flex items-center justify-center text-muted hover:text-ink">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 relative bg-white overflow-hidden">
+            <div x-show="isLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                <svg class="w-8 h-8 animate-spin text-emerald-700" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                <p class="text-sm font-semibold text-ink mt-3">Loading PDF preview…</p>
+            </div>
+            <div x-show="previewError" x-cloak class="absolute inset-0 flex flex-col items-center justify-center bg-sage-50 p-6 text-center z-10">
+                <p class="text-sm font-bold text-ink">Preview failed — download instead</p>
+                <p class="text-xs text-muted mt-1" x-text="previewError"></p>
+                <div class="flex gap-2 mt-4">
+                    <a :href="previewSrc" class="px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold">Download PDF</a>
+                    <a :href="previewSrc" target="_blank" class="px-4 py-2 rounded-full bg-white border border-line text-xs font-bold text-ink">Open in new tab</a>
+                </div>
+            </div>
+            <iframe x-ref="pdfFrame" class="w-full h-full border-0 bg-white" title="PDF preview"></iframe>
+        </div>
+    </div>
+</div>
