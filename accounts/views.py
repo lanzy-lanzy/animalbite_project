@@ -91,19 +91,85 @@ def patient_portal(request):
     if request.user.role != 'patient':
         return redirect('dashboard:index')
 
-    from vaccination.models import VaccineDose
+    from django.utils import timezone
 
+    patient = getattr(request.user, 'patient_profile', None)
+    patient_age = None
+    if patient and patient.birthdate:
+        today = timezone.localdate()
+        b = patient.birthdate
+        patient_age = today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+    return render(request, 'accounts/patient_portal.html', {
+        'patient': patient,
+        'patient_age': patient_age,
+    })
+
+
+@login_required
+def patient_bite_records(request):
+    if request.user.role != 'patient':
+        return redirect('dashboard:index')
+
+    patient = getattr(request.user, 'patient_profile', None)
+    cases = patient.bite_cases.all().order_by('-created_at') if patient else []
     pre_registrations = request.user.pre_registrations.select_related(
         'converted_case', 'converted_patient'
     ).order_by('-submitted_at')
-    cases = request.user.patient_profile.bite_cases.all().order_by('-created_at') if hasattr(request.user, 'patient_profile') else []
+    return render(request, 'accounts/patient_bite_records.html', {
+        'cases': cases,
+        'pre_registrations': pre_registrations,
+    })
+
+
+@login_required
+def patient_vaccination_schedule(request):
+    if request.user.role != 'patient':
+        return redirect('dashboard:index')
+
+    from django.utils import timezone
+    from django.db.models import F
+    from vaccination.models import VaccineDose
+
     doses = VaccineDose.objects.filter(
         schedule__bite_case__patient__account=request.user
-    ).select_related('schedule__bite_case').order_by('scheduled_date')
-    return render(request, 'accounts/patient_portal.html', {
-        'pre_registrations': pre_registrations,
-        'cases': cases,
+    ).select_related('schedule__bite_case').order_by(F('scheduled_date').asc(nulls_last=True), 'id')
+    return render(request, 'accounts/patient_vaccination_schedule.html', {
         'doses': doses,
+        'today': timezone.localdate(),
+    })
+
+
+@login_required
+def patient_vaccination_history(request):
+    if request.user.role != 'patient':
+        return redirect('dashboard:index')
+
+    from vaccination.models import VaccineDose
+
+    doses = VaccineDose.objects.filter(
+        schedule__bite_case__patient__account=request.user,
+        dose_status='completed',
+        actual_date__isnull=False,
+    ).select_related('schedule__bite_case').order_by('-actual_date', '-id')
+    return render(request, 'accounts/patient_vaccination_history.html', {'doses': doses})
+
+
+@login_required
+def patient_qr(request):
+    if request.user.role != 'patient':
+        return redirect('dashboard:index')
+
+    patient = getattr(request.user, 'patient_profile', None)
+    qr_uri = None
+    if patient:
+        from utils.qr import build_patient_payload, qr_data_uri
+        try:
+            qr_uri = qr_data_uri(build_patient_payload(patient))
+        except Exception:
+            qr_uri = None
+    return render(request, 'accounts/patient_qr.html', {
+        'patient': patient,
+        'qr_data_uri': qr_uri,
     })
 
 @login_required

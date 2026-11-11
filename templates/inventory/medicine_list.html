@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Medicine Inventory - ABTC System{% endblock %}
 {% block extra_head %}
-{% if request.user.role == 'nurse' %}
+{% if shared_inventory %}
 <style>
     .btn-view-medicine {
         display: inline-flex;
@@ -75,13 +75,13 @@
         <a href="{% url 'inventory:medicine_create' %}" class="btn-primary btn-sm">+ Stock In</a>
     </div>
 </div>
-{% if request.user.role == 'nurse' %}
+{% if shared_inventory %}
 {% include 'inventory/_alerts_section.html' %}
 {% endif %}
 <div class="card mb-6">
     <form method="GET" class="flex flex-wrap gap-3">
         <input type="text" name="q" value="{{ query }}" placeholder="Search medicine, generic, strength, batch..." class="form-input flex-1 min-w-[200px]">
-        {% if request.user.role != 'nurse' %}
+        {% if not shared_inventory %}
         <select name="status" class="form-input max-w-[160px]">
             <option value="">All stock</option>
             <option value="low" {% if state == 'low' %}selected{% endif %}>Low Stock</option>
@@ -90,7 +90,7 @@
         </select>
         {% endif %}
         <button type="submit" class="btn-primary btn-sm">Search</button>
-        {% if request.user.role != 'nurse' %}
+        {% if not shared_inventory %}
         <a href="{% url 'inventory:medicine_list' %}" class="btn-secondary btn-sm">Reset</a>
         {% endif %}
     </form>
@@ -103,7 +103,7 @@
                     <th class="table-header">Medicine</th>
                     <th class="table-header">Form</th>
                     <th class="table-header">Unit</th>
-                    {% if request.user.role == 'nurse' %}
+                    {% if shared_inventory %}
                     <th class="table-header">Batches</th>
                     {% else %}
                     <th class="table-header">Batch</th>
@@ -121,9 +121,9 @@
                         <p class="font-medium">{{ item.medicine_name }}{% if item.strength %} <span class="text-muted">{{ item.strength }}</span>{% endif %}</p>
                         {% if item.generic_name %}<p class="text-xs text-muted">{{ item.generic_name }}</p>{% endif %}
                     </td>
-                    <td class="table-cell">{% if request.user.role == 'nurse' %}{{ item.dosage_form_display }}{% else %}{{ item.get_dosage_form_display }}{% endif %}</td>
+                    <td class="table-cell">{% if shared_inventory %}{{ item.dosage_form_display }}{% else %}{{ item.get_dosage_form_display }}{% endif %}</td>
                     <td class="table-cell">{{ item.unit }}</td>
-                    {% if request.user.role == 'nurse' %}
+                    {% if shared_inventory %}
                     <td class="table-cell text-muted">{{ item.batch_label }}</td>
                     <td class="table-cell"><span class="font-semibold {% if item.quantity_available <= 0 %}text-red-600{% elif item.status_label == 'Low Stock' %}text-orange-600{% else %}text-emerald-700{% endif %}">{{ item.quantity_available }}</span></td>
                     <td class="table-cell text-muted" title="{{ item.expiry_title }}">{{ item.expiry_label }}</td>
@@ -134,7 +134,7 @@
                     <td class="table-cell text-muted">{{ item.expiration_date|date:'M d, Y' }}</td>
                     <td class="table-cell"><span class="status-badge {{ item.stock_status_class }}">{{ item.stock_status }}</span></td>
                     {% endif %}
-                    {% if request.user.role == 'nurse' %}
+                    {% if shared_inventory %}
                     <td class="table-cell table-cell--actions text-right">
                         <div class="medicine-actions">
                             <a href="{% url 'inventory:medicine_detail' item.pk %}" class="btn-view-medicine">View <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M13 6l6 6-6 6"/></svg></a>

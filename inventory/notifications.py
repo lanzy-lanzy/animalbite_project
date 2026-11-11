@@ -87,6 +87,7 @@ def _expiry_alerts(module, batch, product, subtitle, unit,
     quantity_label = _quantity_label(batch.quantity_available, unit)
     if batch.expiration_date < today:
         days_past = (today - batch.expiration_date).days
+        quantity_verb = 'is' if batch.quantity_available == 1 else 'are'
         alerts.append({
             'key': f'{module}-expired-{batch.pk}',
             'kind': 'expired',
@@ -102,13 +103,12 @@ def _expiry_alerts(module, batch, product, subtitle, unit,
             'unit': unit,
             'threshold': None,
             'message': (
-                f'Expired Stock: {product} — Batch {batch.batch_number} '
-                f'expired on {batch.expiration_date:%b %d, %Y} with '
-                f'{quantity_label} remaining.'
+                f'{product} - Batch {batch.batch_number} has expired. '
+                f'{quantity_label} {quantity_verb} pending pull-out.'
             ),
             'short_message': (
                 f'Expired on {batch.expiration_date:%b %d, %Y} · '
-                f'{quantity_label} remaining.'
+                f'{quantity_label} pending pull-out.'
             ),
             'badge_class': BADGE_CLASSES['expired'],
             'url': _detail_url(module, batch.pk, batch.batch_number),
@@ -219,23 +219,29 @@ def vaccine_alerts(today=None, expiry_days=None):
         get_expiry_warning_days() if expiry_days is None else expiry_days))
 
     groups = _group_by(
-        VaccineInventory.objects.all().order_by('vaccine_name', 'brand', 'id'),
+        VaccineInventory.objects.all().order_by(
+            'vaccine_name', 'brand', 'strength', 'dosage_form', 'unit', 'id'),
         lambda batch: (
             batch.vaccine_name.strip().casefold(),
             batch.brand.strip().casefold(),
+            batch.strength.strip().casefold(),
+            batch.dosage_form,
+            batch.unit.strip().casefold(),
         ),
     )
     alerts = []
     for group in groups.values():
         product = group[0].vaccine_name
         subtitle = f'Vaccine · {group[0].brand}'
+        if group[0].strength:
+            subtitle += f' · {group[0].strength}'
         threshold = max((batch.reorder_level for batch in group), default=5)
         for batch in group:
             alerts.extend(_expiry_alerts(
-                'vaccine', batch, product, subtitle, 'unit',
+                'vaccine', batch, product, subtitle, batch.unit,
                 today, warning_end))
         alerts.extend(_product_alerts(
-            'vaccine', group, product, subtitle, 'unit', today, threshold))
+            'vaccine', group, product, subtitle, group[0].unit, today, threshold))
     return alerts
 
 

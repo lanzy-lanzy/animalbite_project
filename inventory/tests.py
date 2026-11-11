@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from audit.models import AuditLog
 from bite_cases.models import AnimalBiteCase
 from doctor.models import ClinicalAssessment, Prescription
 from patients.models import Patient
@@ -147,19 +148,169 @@ class MedicineInventoryTests(InventoryTestCase):
         cleared = self.client.get(reverse("inventory:medicine_list"), {"q": ""})
         self.assertContains(cleared, "Amoxicillin")
 
-    def test_admin_keeps_stock_filter_and_reset(self):
+    def test_admin_search_section_matches_nurse(self):
         self.client.force_login(self.admin)
         content = self.client.get(reverse("inventory:medicine_list")).content.decode()
         start = content.index('<form method="GET"')
         form = content[start:content.index("</form>", start)]
-        self.assertIn('name="status"', form)
-        self.assertIn("All stock", form)
-        self.assertIn("Reset", form)
+        self.assertIn('name="q"', form)
+        self.assertIn(">Search</button>", form)
+        self.assertNotIn('name="status"', form)
+        self.assertNotIn("All stock", form)
+        self.assertNotIn("Reset", form)
 
     def test_patients_cannot_open_medicine_inventory(self):
         self.client.force_login(self.patient_user)
         response = self.client.get(reverse("inventory:medicine_list"))
         self.assertRedirects(response, reverse("accounts:patient_portal"))
+
+
+class VaccineCreateFormTests(InventoryTestCase):
+
+    def test_vaccine_form_matches_medicine_layout_and_exposes_product_fields(self):
+        self.client.force_login(self.nurse)
+        response = self.client.get(reverse("inventory:vaccine_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "inventory/vaccine_form.html")
+        content = response.content.decode()
+
+        labels = (
+            "Vaccine Name *", "Generic / Brand Name", "Strength",
+            "Dosage Form *", "Unit of Measurement *", "Lot / Batch Number *",
+            "Expiration Date *", "Quantity Received *", "Reorder Level",
+            "Source / Supplier", "Remarks",
+        )
+        positions = [content.index(label) for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        for marker in (
+            "max-w-2xl mx-auto",
+            "grid grid-cols-1 md:grid-cols-2 gap-4",
+            "grid grid-cols-1 md:grid-cols-3 gap-4",
+            "Stock at or below this level is flagged Low Stock.",
+            'name="dosage_form"',
+            '<option value="tablet">Tablet</option>',
+            '<option value="capsule">Capsule</option>',
+            '<option value="syrup">Syrup</option>',
+            '<option value="injectable" selected>Injectable</option>',
+            '<option value="drops">Drops</option>',
+            '<option value="ointment">Ointment / Cream</option>',
+            '<option value="other">Other</option>',
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, content)
+
+    def test_vaccine_stock_in_saves_product_batch_and_movement(self):
+        self.client.force_login(self.nurse)
+        response = self.client.post(
+            reverse("inventory:vaccine_create"),
+            {
+                "vaccine_name": "Anti-Rabies Vaccine",
+                "brand": "Verorab",
+                "strength": "0.5 mL",
+                "dosage_form": "injectable",
+                "unit": "vial",
+                "batch_number": "RAB-2026-01",
+                "expiration_date": "2027-08-01",
+                "quantity_received": "40",
+                "reorder_level": "5",
+                "source_supplier": "DOH Region IX",
+                "remarks": "Keep refrigerated.",
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("inventory:vaccine_list"))
+        item = VaccineInventory.objects.get(batch_number="RAB-2026-01")
+        self.assertEqual(
+            (
+                item.vaccine_name, item.brand, item.strength, item.dosage_form,
+                item.unit, item.quantity_received, item.quantity_available,
+                item.quantity_used, item.reorder_level, item.source_supplier,
+                item.remarks, item.created_by,
+            ),
+            (
+                "Anti-Rabies Vaccine", "Verorab", "0.5 mL", "injectable",
+                "vial", 40, 40, 0, 5, "DOH Region IX",
+                "Keep refrigerated.", self.nurse,
+            ),
+        )
+        movement = VaccineStockMovement.objects.get(vaccine=item)
+        self.assertEqual(movement.movement_type, "stock_in")
+        self.assertEqual(movement.quantity, 40)
+        self.assertEqual(movement.batch_number, "RAB-2026-01")
+        self.assertEqual(movement.expiration_date, datetime.date(2027, 8, 1))
+        self.assertEqual(movement.supplier, "DOH Region IX")
+        self.assertEqual(movement.moved_by, self.nurse)
+        self.assertEqual(movement.date_received, timezone.localdate())
+
+    def test_vaccine_stock_in_existing_batch_adds_stock_without_duplicate_product(self):
+        existing = VaccineInventory.objects.create(
+            vaccine_name="Anti-Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
+            batch_number="RAB-2026-02", expiration_date=datetime.date(2027, 8, 1),
+            quantity_received=10, quantity_available=6, quantity_used=4,
+        )
+        self.client.force_login(self.nurse)
+
+        response = self.client.post(
+            reverse("inventory:vaccine_create"),
+            {
+                "vaccine_name": "Anti-Rabies Vaccine",
+                "brand": "Verorab",
+                "strength": "0.5 mL",
+                "dosage_form": "injectable",
+                "unit": "vial",
+                "batch_number": "RAB-2026-02",
+                "expiration_date": "2027-08-01",
+                "quantity_received": "15",
+                "reorder_level": "5",
+                "source_supplier": "Supplier B",
+                "remarks": "Additional delivery.",
+            },
+        )
+
+        existing.refresh_from_db()
+        self.assertRedirects(response, reverse("inventory:vaccine_list"))
+        self.assertEqual(
+            VaccineInventory.objects.filter(
+                vaccine_name="Anti-Rabies Vaccine", batch_number="RAB-2026-02",
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            (existing.quantity_received, existing.quantity_available, existing.quantity_used),
+            (25, 21, 4),
+        )
+        movement = VaccineStockMovement.objects.get(vaccine=existing)
+        self.assertEqual((movement.quantity, movement.supplier), (15, "Supplier B"))
+
+    def test_vaccine_stock_in_requires_positive_quantity(self):
+        self.client.force_login(self.nurse)
+        response = self.client.post(
+            reverse("inventory:vaccine_create"),
+            {
+                "vaccine_name": "Anti-Rabies Vaccine",
+                "brand": "Verorab",
+                "strength": "0.5 mL",
+                "dosage_form": "injectable",
+                "unit": "vial",
+                "batch_number": "RAB-2026-03",
+                "expiration_date": "2027-08-01",
+                "quantity_received": "0",
+                "reorder_level": "5",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(VaccineInventory.objects.filter(batch_number="RAB-2026-03").exists())
+        self.assertContains(response, "Ensure this value is greater than or equal to 1.")
+
+    def test_only_nurse_and_admin_can_add_vaccine_stock(self):
+        self.client.force_login(self.doctor)
+        response = self.client.get(reverse("inventory:vaccine_create"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("dashboard:index"))
+        self.assertEqual(VaccineInventory.objects.count(), 0)
 
 
 class VaccineInventoryViewButtonTests(InventoryTestCase):
@@ -169,6 +320,7 @@ class VaccineInventoryViewButtonTests(InventoryTestCase):
         super().setUp()
         self.vaccine = VaccineInventory.objects.create(
             vaccine_name="Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
             batch_number="VAC-1", expiration_date=datetime.date(2027, 6, 1),
             quantity_received=10, quantity_available=10,
         )
@@ -206,13 +358,13 @@ class VaccineInventoryViewButtonTests(InventoryTestCase):
         self.assertContains(detail, "Rabies Vaccine")
         self.assertContains(detail, "Verorab")
 
-    def test_admin_keeps_the_original_view_button(self):
+    def test_admin_sees_the_same_emerald_view_button_as_nurse(self):
         self.client.force_login(self.admin)
         content = self.client.get(reverse("inventory:vaccine_list")).content.decode()
         self.assertIn(
-            f'<a href="{self.detail_url}" class="btn-secondary btn-xs">View</a>',
-            content)
-        self.assertNotIn("btn-view-vaccine", content)
+            f'<a href="{self.detail_url}" class="btn-view-vaccine">View <svg', content)
+        self.assertIn("btn-add-stock-vaccine", content)
+        self.assertNotIn('class="btn-secondary btn-xs">View</a>', content)
 
     def test_nurse_view_button_still_opens_the_detail_page(self):
         self.client.force_login(self.nurse)
@@ -272,6 +424,31 @@ class VaccineProductGroupingTests(InventoryTestCase):
         self.assertNotIn(">Batch 2<", content)
         self.assertIn("3 batches", content)
         self.assertIn("1 batch", content)
+
+    def test_products_with_different_strength_or_form_are_not_grouped_together(self):
+        VaccineInventory.objects.create(
+            vaccine_name="Imovax", brand="Sanofi", strength="0.5 mL",
+            dosage_form="injectable", unit="dose", batch_number="Different Form",
+            expiration_date=datetime.date(2027, 12, 1),
+            quantity_received=4, quantity_available=4,
+        )
+        self.client.force_login(self.nurse)
+
+        content = self.client.get(self.list_url).content.decode()
+
+        rows = [
+            row for row in re.findall(r"<tr[^>]*>(.*?)</tr>", content, re.S)
+            if ">Imovax<" in row and ">Sanofi<" in row
+        ]
+        self.assertEqual(len(rows), 2)
+        batch_counts = []
+        for row in rows:
+            cells = [
+                re.sub(r'<[^>]+>', '', cell).strip()
+                for cell in re.findall(r'<td[^>]*>(.*?)</td>', row, re.S)
+            ]
+            batch_counts.append(cells[2])
+        self.assertEqual(sorted(batch_counts), ["1 batch", "3 batches"])
 
     def test_product_group_sums_quantities_and_labels_multiple_expiries(self):
         self.client.force_login(self.nurse)
@@ -367,12 +544,15 @@ class VaccineProductGroupingTests(InventoryTestCase):
         self.assertIn(
             reverse("inventory:vaccine_add_stock", args=[self.batch1.pk]), content)
 
-    def test_admin_list_still_shows_each_batch(self):
+    def test_admin_list_groups_batches_like_nurse(self):
         self.client.force_login(self.admin)
         content = self.client.get(self.list_url).content.decode()
-        self.assertEqual(content.count(">Imovax<"), 4)
-        for number in ("Batch 1", "Batch 2", "Batch 3"):
-            self.assertIn(number, content)
+        self.assertEqual(content.count(">Imovax<"), 2)
+        self.assertEqual(content.count(">Verorab<"), 1)
+        self.assertNotIn(">Batch 1<", content)
+        self.assertNotIn(">Batch 2<", content)
+        self.assertIn("3 batches", content)
+        self.assertIn("1 batch", content)
 
 
 class VaccineInventoryDetailRedesignTests(InventoryTestCase):
@@ -382,6 +562,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         super().setUp()
         self.vaccine = VaccineInventory.objects.create(
             vaccine_name="Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
             batch_number="VAC-1", expiration_date=datetime.date(2027, 6, 1),
             quantity_received=10, quantity_available=4, quantity_used=6,
             source_supplier="DOH Region IX", remarks="Keep refrigerated.",
@@ -419,6 +600,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         self.client.force_login(self.nurse)
         response = self.client.get(self.url)
         for value in ("Rabies Vaccine", "Verorab", "VAC-1", "DOH Region IX",
+                      "0.5 mL", "Injectable", "vial",
                       "Stock In"):
             self.assertContains(response, value)
         for header in ("Date Received", "Time", "Type", "Supplier",
@@ -500,7 +682,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         self.assertEqual(movement.reference, "PO-2026-01")
         self.assertEqual(movement.moved_by, self.nurse)
 
-    def test_vaccine_information_shows_only_name_and_brand(self):
+    def test_vaccine_information_shows_product_fields_without_batch_history(self):
         self.client.force_login(self.nurse)
         content = self.client.get(self.url).content.decode()
         info = content[
@@ -508,7 +690,10 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
             content.index("2. Stock Summary")
         ]
         self.assertIn("Vaccine Name", info)
-        self.assertIn("Brand", info)
+        self.assertIn("Generic / Brand Name", info)
+        self.assertIn("0.5 mL", info)
+        self.assertIn("Injectable", info)
+        self.assertIn("vial", info)
         for hidden in ("Batch Number", "Supplier", "Date Received",
                        "Expiration Date", "Remarks", "Keep refrigerated."):
             self.assertNotIn(hidden, info)
@@ -516,6 +701,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
     def test_stock_summary_totals_every_batch_of_the_product(self):
         VaccineInventory.objects.create(
             vaccine_name="Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
             batch_number="VAC-2", expiration_date=datetime.date(2027, 9, 1),
             quantity_received=15, quantity_available=12, quantity_used=3,
             source_supplier="ABC Pharma",
@@ -532,12 +718,13 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
             content.index("3. Stock Transaction History")
         ]
         values = re.findall(r'vd-stock-value[^>]*>\s*(\d+)\s*<', summary)
-        self.assertEqual(values, ["25", "9", "16"])
+        self.assertEqual(values, ["25", "9", "16", "0", "0"])
         self.assertNotIn("100", summary)
 
     def test_stock_history_combines_batch_deliveries_with_their_own_details(self):
         second = VaccineInventory.objects.create(
             vaccine_name="Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
             batch_number="VAC-2", expiration_date=datetime.date(2027, 9, 1),
             quantity_received=15, quantity_available=12, quantity_used=3,
             source_supplier="ABC Pharma",
@@ -562,6 +749,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
     def test_dispensing_history_includes_doses_from_every_batch(self):
         VaccineInventory.objects.create(
             vaccine_name="Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
             batch_number="VAC-2", expiration_date=datetime.date(2027, 9, 1),
             quantity_received=15, quantity_available=15,
         )
@@ -625,7 +813,7 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         self.client.force_login(self.nurse)
         response = self.client.get(
             reverse("inventory:vaccine_detail", args=[empty.pk]))
-        self.assertContains(response, "No stock receiving history recorded yet.")
+        self.assertContains(response, "No stock transactions recorded yet.")
         self.assertContains(
             response, "No vaccination administration history recorded yet.")
 
@@ -635,12 +823,20 @@ class VaccineInventoryDetailRedesignTests(InventoryTestCase):
         self.assertNotContains(response, "Delete")
         self.assertNotContains(response, reverse("inventory:vaccine_create"))
 
-    def test_admin_detail_keeps_the_existing_layout(self):
+    def test_admin_detail_uses_the_same_four_section_layout(self):
         self.client.force_login(self.admin)
         response = self.client.get(self.url)
-        self.assertContains(response, "Stock Movement History")
-        self.assertNotContains(response, "Vaccine Inventory Details")
-        self.assertNotContains(response, "4. Vaccination Administration History")
+        self.assertContains(response, "Vaccine Inventory Details")
+        content = response.content.decode()
+        headings = (
+            "1. Vaccine Information",
+            "2. Stock Summary",
+            "3. Stock Transaction History",
+            "4. Vaccination Administration History",
+        )
+        positions = [content.index(heading) for heading in headings]
+        self.assertEqual(positions, sorted(positions))
+        self.assertNotContains(response, "Stock Movement History")
 
 
 class DispensingTests(InventoryTestCase):
@@ -788,15 +984,17 @@ class VaccineAddStockTests(InventoryTestCase):
         self.assertContains(response, "+ Stock In")
         self.assertContains(response, 'name="q"')
 
-    def test_admin_actions_keep_the_existing_view_button(self):
+    def test_admin_actions_match_nurse_view_and_add_stock(self):
         self.client.force_login(self.admin)
         response = self.client.get(reverse("inventory:vaccine_list"))
-        self.assertNotContains(response, self.url)
-        self.assertContains(
-            response,
-            f'<a href="{reverse("inventory:vaccine_detail", args=[self.vaccine.pk])}" '
-            'class="btn-secondary btn-xs">View</a>',
+        content = response.content.decode()
+        self.assertIn(self.url, content)
+        self.assertIn("btn-add-stock-vaccine", content)
+        self.assertIn(
+            f'<a href="{reverse("inventory:vaccine_detail", args=[self.vaccine.pk])}" class="btn-view-vaccine">',
+            content,
         )
+        self.assertNotIn('class="btn-secondary btn-xs">View</a>', content)
 
     def test_form_identifies_the_selected_vaccine(self):
         self.client.force_login(self.nurse)
@@ -1032,7 +1230,7 @@ class VaccineAddStockTests(InventoryTestCase):
         self.assertIn(self.vaccine, selectable)
         self.assertNotIn(expired, selectable)
 
-    def test_stock_out_rows_are_hidden_from_stock_transaction_history(self):
+    def test_stock_out_rows_are_kept_in_stock_transaction_history(self):
         stock_out = VaccineStockMovement.objects.create(
             vaccine=self.vaccine, movement_type="stock_out", quantity=2,
             reference=self.case.case_number, moved_by=self.nurse,
@@ -1046,7 +1244,7 @@ class VaccineAddStockTests(InventoryTestCase):
             content.index("4. Vaccination Administration History")
         ]
         self.assertIn("Stock In", history)
-        self.assertNotIn("Stock Out", history)
+        self.assertIn("Stock Out", history)
         self.assertTrue(
             VaccineStockMovement.objects.filter(pk=stock_out.pk).exists())
 
@@ -1097,15 +1295,15 @@ class MedicineAddStockTests(InventoryTestCase):
         self.assertIn("border: 1.5px solid #157A61", content)
         self.assertIn('class="medicine-actions"', content)
 
-    def test_admin_keeps_the_legacy_view_without_add_stock(self):
+    def test_admin_sees_view_and_add_stock_like_nurse(self):
         self.client.force_login(self.admin)
         content = self.client.get(reverse("inventory:medicine_list")).content.decode()
         self.assertIn(
-            f'<a href="{self.detail_url}" class="btn-secondary btn-xs">View</a>',
-            content)
-        self.assertNotIn("btn-view-medicine", content)
-        self.assertNotIn("btn-add-stock-medicine", content)
-        self.assertNotIn(self.add_url, content)
+            f'<a href="{self.detail_url}" class="btn-view-medicine">View <svg', content)
+        self.assertIn(
+            f'<a href="{self.add_url}" class="btn-add-stock-medicine">', content)
+        self.assertIn('class="medicine-actions"', content)
+        self.assertNotIn('class="btn-secondary btn-xs">View</a>', content)
 
     def test_add_stock_page_shows_selected_medicine_details(self):
         self.client.force_login(self.nurse)
@@ -1343,7 +1541,155 @@ class MedicineAddStockTests(InventoryTestCase):
         self.client.force_login(self.patient_user)
         self.assertNotEqual(self.client.get(self.add_url).status_code, 200)
         self.client.post(self.add_url, self._payload())
-        self.assertFalse(MedicineInventory.objects.filter(batch_number="MED-2").exists())
+        self.assertFalse(
+            MedicineInventory.objects.filter(batch_number="MED-2").exists())
+
+
+class ExpiredStockPullOutTests(InventoryTestCase):
+
+    def setUp(self):
+        super().setUp()
+        yesterday = timezone.localdate() - datetime.timedelta(days=1)
+        self.expired_medicine = MedicineInventory.objects.create(
+            medicine_name="Paracetamol", generic_name="Acetaminophen",
+            strength="500 mg", dosage_form="tablet", unit="tablet",
+            batch_number="MED-EXPIRED-1", expiration_date=yesterday,
+            quantity_received=100, quantity_available=60,
+            quantity_dispensed=40, source_supplier="Clinic Supplier",
+        )
+        self.expired_vaccine = VaccineInventory.objects.create(
+            vaccine_name="Rabies Vaccine", brand="Verorab",
+            strength="0.5 mL", dosage_form="injectable", unit="vial",
+            batch_number="VAC-EXPIRED-1", expiration_date=yesterday,
+            quantity_received=10, quantity_available=6, quantity_used=4,
+        )
+
+    def _pull_out(self, module, batch, quantity, token=None, **extra):
+        model_name = f"inventory:{module}_pull_out"
+        return self.client.post(reverse(model_name, args=[batch.pk]), {
+            "quantity": str(quantity),
+            "reason": "Expired Stock",
+            "remarks": "",
+            "submission_token": str(token or uuid.uuid4()),
+            **extra,
+        })
+
+    def test_expired_stock_summary_and_batch_card_use_actual_batch_values(self):
+        self.client.force_login(self.nurse)
+        response = self.client.get(reverse(
+            "inventory:medicine_detail", args=[self.expired_medicine.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["totals"]["received"], 100)
+        self.assertEqual(response.context["totals"]["dispensed"], 40)
+        self.assertEqual(response.context["totals"]["available"], 0)
+        self.assertEqual(response.context["totals"]["expired_quantity"], 60)
+        self.assertEqual(response.context["totals"]["pulled_out"], 0)
+        self.assertEqual(response.context["expired_batches"], [self.expired_medicine])
+        for value in (
+            "Expired Stock Batches", "MED-EXPIRED-1", "Pending Pull Out",
+            "Pull Out Expired Stock", "Pull-Out Quantity", "Authorized Personnel",
+        ):
+            self.assertContains(response, value)
+        self.assertContains(response, 'class="vd-stock-grid vd-stock-grid--secondary"')
+        self.assertContains(response, "width: 100%")
+
+    def test_medicine_pull_out_updates_only_physical_stock_and_is_audited(self):
+        self.client.force_login(self.nurse)
+        token = uuid.uuid4()
+        response = self._pull_out(
+            "medicine", self.expired_medicine, 60, token=token,
+            remarks="Separated from usable inventory",
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.expired_medicine.refresh_from_db()
+        self.assertEqual(self.expired_medicine.quantity_available, 0)
+        self.assertEqual(self.expired_medicine.quantity_received, 100)
+        self.assertEqual(self.expired_medicine.quantity_dispensed, 40)
+        movement = MedicineStockMovement.objects.get(
+            submission_token=token)
+        self.assertEqual(movement.movement_type, "expired_pull_out")
+        self.assertEqual(movement.quantity, 60)
+        self.assertEqual(movement.batch_number, "MED-EXPIRED-1")
+        self.assertEqual(movement.expiration_date, self.expired_medicine.expiration_date)
+        self.assertEqual(movement.moved_by, self.nurse)
+        self.assertIn("Reason: Expired Stock", movement.notes)
+        self.assertIn("Separated from usable inventory", movement.notes)
+        self.assertTrue(AuditLog.objects.filter(
+            action="EXPIRED_STOCK_PULL_OUT",
+            target_id=self.expired_medicine.pk,
+            user=self.nurse,
+        ).exists())
+        self.assertFalse(any(
+            alert["kind"] == "expired"
+            and alert["batch"] == "MED-EXPIRED-1"
+            for alert in get_inventory_alerts(module="medicine")
+        ))
+
+        detail = self.client.get(reverse(
+            "inventory:medicine_detail", args=[self.expired_medicine.pk]))
+        self.assertEqual(detail.context["totals"]["expired_quantity"], 60)
+        self.assertEqual(detail.context["totals"]["pulled_out"], 60)
+        self.assertEqual(detail.context["totals"]["expired_remaining"], 0)
+        self.assertContains(detail, "Pulled Out")
+        self.assertContains(detail, "Expired Stock Pull Out")
+        self.assertNotContains(detail, "Confirm Pull Out")
+
+    def test_invalid_pull_out_quantities_do_not_change_stock(self):
+        self.client.force_login(self.nurse)
+        for quantity in (0, -1, 61):
+            with self.subTest(quantity=quantity):
+                response = self._pull_out(
+                    "medicine", self.expired_medicine, quantity)
+                self.assertEqual(response.status_code, 302)
+                self.expired_medicine.refresh_from_db()
+                self.assertEqual(self.expired_medicine.quantity_available, 60)
+        self.assertFalse(MedicineStockMovement.objects.filter(
+            movement_type="expired_pull_out").exists())
+
+    def test_duplicate_submission_token_does_not_repeat_a_partial_pull_out(self):
+        self.client.force_login(self.nurse)
+        token = uuid.uuid4()
+        self._pull_out("medicine", self.expired_medicine, 10, token=token)
+        self._pull_out("medicine", self.expired_medicine, 10, token=token)
+        self.expired_medicine.refresh_from_db()
+        self.assertEqual(self.expired_medicine.quantity_available, 50)
+        self.assertEqual(MedicineStockMovement.objects.filter(
+            submission_token=token).count(), 1)
+
+    def test_vaccine_pull_out_records_a_batch_specific_transaction(self):
+        self.client.force_login(self.admin)
+        response = self._pull_out("vaccine", self.expired_vaccine, 6)
+        self.assertEqual(response.status_code, 302)
+        self.expired_vaccine.refresh_from_db()
+        self.assertEqual(self.expired_vaccine.quantity_available, 0)
+        self.assertEqual(self.expired_vaccine.quantity_received, 10)
+        self.assertEqual(self.expired_vaccine.quantity_used, 4)
+        movement = VaccineStockMovement.objects.get(
+            movement_type="expired_pull_out")
+        self.assertEqual(movement.quantity, 6)
+        self.assertEqual(movement.vaccine, self.expired_vaccine)
+        self.assertEqual(movement.moved_by, self.admin)
+
+    def test_other_batches_and_unauthorized_staff_are_not_affected(self):
+        other_batch = MedicineInventory.objects.create(
+            medicine_name="Paracetamol", generic_name="Acetaminophen",
+            strength="500 mg", dosage_form="tablet", unit="tablet",
+            batch_number="MED-EXPIRED-2",
+            expiration_date=self.expired_medicine.expiration_date,
+            quantity_received=20, quantity_available=20,
+        )
+        self.client.force_login(self.doctor)
+        response = self._pull_out("medicine", self.expired_medicine, 10)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("dashboard:index"))
+        self.expired_medicine.refresh_from_db()
+        other_batch.refresh_from_db()
+        self.assertEqual(self.expired_medicine.quantity_available, 60)
+        self.assertEqual(other_batch.quantity_available, 20)
+        self.assertFalse(MedicineStockMovement.objects.filter(
+            movement_type="expired_pull_out").exists())
 
 
 class MedicineInventoryDetailRedesignTests(InventoryTestCase):
@@ -1457,7 +1803,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             content.index("3. Stock Transaction History")
         ]
         values = re.findall(r'vd-stock-value[^>]*>\s*(\d+)\s*<', summary)
-        self.assertEqual(values, ["25", "3", "22"])
+        self.assertEqual(values, ["25", "3", "22", "0", "0"])
         self.assertNotIn("100", summary)
 
     def test_stock_history_columns_are_ordered_with_type_last(self):
@@ -1521,7 +1867,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             medicine=self.medicine, movement_type="stock_in").time_received)
         self.assertEqual(cells[1], "—")
 
-    def test_dispensed_rows_are_hidden_from_stock_transaction_history(self):
+    def test_dispensed_rows_are_in_stock_transaction_history(self):
         dispensed = MedicineStockMovement.objects.get(
             medicine=self.second, movement_type="dispense")
         self.client.force_login(self.nurse)
@@ -1531,11 +1877,11 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             content.index("4. Dispensing History")
         ]
         self.assertIn("Stock In", history)
-        self.assertNotIn("Dispensed", history)
+        self.assertIn("Dispensed", history)
         self.assertTrue(
             MedicineStockMovement.objects.filter(pk=dispensed.pk).exists())
 
-    def test_stock_history_shows_only_stock_in_transactions(self):
+    def test_stock_history_shows_receipt_and_dispensing_transactions(self):
         self.client.force_login(self.nurse)
         content = self.client.get(self.url).content.decode()
         history = content[
@@ -1546,14 +1892,14 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             row for row in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
             if "<td" in row
         ]
-        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(rows), 3)
         stock_in = next(
             row for row in rows if "Stock In" in row and "MED-1" in row)
         for value in ("+10", "DOH Region IX", "MED-1",
                       "Oct 01, 2026", "Jun 01, 2027"):
             self.assertIn(value, stock_in)
-        self.assertFalse(any("Dispensed" in row for row in rows))
-        self.assertFalse(any("-3" in row for row in rows))
+        self.assertTrue(any("Dispensed" in row for row in rows))
+        self.assertTrue(any("-3" in row for row in rows))
 
     def test_stock_history_hides_reference_and_recorded_by(self):
         self.client.force_login(self.nurse)
@@ -1638,7 +1984,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
         ]
         self.assertEqual(
             re.findall(r'vd-stock-value[^>]*>\s*(\d+)\s*<', summary),
-            ["25", "5", "20"],
+            ["25", "5", "20", "0", "0"],
         )
         history = content[
             content.index("3. Stock Transaction History"):
@@ -1648,7 +1994,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
             row for row in re.findall(r"<tr[^>]*>(.*?)</tr>", history, re.S)
             if "<td" in row
         ]
-        self.assertFalse(any("Dispensed" in row for row in rows))
+        self.assertTrue(any("Dispensed" in row for row in rows))
 
     def test_later_deliveries_keep_their_own_supplier_and_date(self):
         self.client.force_login(self.nurse)
@@ -1690,7 +2036,7 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
         self.client.force_login(self.nurse)
         response = self.client.get(
             reverse("inventory:medicine_detail", args=[empty.pk]))
-        self.assertContains(response, "No stock receiving history recorded yet.")
+        self.assertContains(response, "No stock transactions recorded yet.")
         self.assertContains(response, "No dispensing history recorded yet.")
 
     def test_nurse_detail_is_read_only(self):
@@ -1703,13 +2049,19 @@ class MedicineInventoryDetailRedesignTests(InventoryTestCase):
         self.assertNotContains(
             response, reverse("inventory:medicine_add_stock", args=[self.medicine.pk]))
 
-    def test_admin_detail_keeps_the_existing_layout(self):
+    def test_admin_detail_uses_the_same_four_section_layout(self):
         self.client.force_login(self.admin)
         response = self.client.get(self.url)
-        self.assertContains(response, "Stock Transaction History")
-        self.assertContains(response, "Medicine Information")
-        self.assertNotContains(response, "Medicine Inventory Details")
-        self.assertNotContains(response, "4. Dispensing History")
+        self.assertContains(response, "Medicine Inventory Details")
+        content = response.content.decode()
+        headings = (
+            "1. Medicine Information",
+            "2. Stock Summary",
+            "3. Stock Transaction History",
+            "4. Dispensing History",
+        )
+        positions = [content.index(heading) for heading in headings]
+        self.assertEqual(positions, sorted(positions))
 
 
 class MedicineProductGroupingTests(InventoryTestCase):
@@ -1918,7 +2270,7 @@ class MedicineProductGroupingTests(InventoryTestCase):
         ]
         self.assertEqual(
             re.findall(r'vd-stock-value[^>]*>\s*(\d+)\s*<', summary),
-            ["130", "10", "30"],
+            ["130", "10", "30", "90", "0"],
         )
 
     def test_group_actions_open_the_product_detail_and_add_stock(self):
@@ -1931,13 +2283,15 @@ class MedicineProductGroupingTests(InventoryTestCase):
             reverse("inventory:medicine_add_stock", args=[self.medicine.pk]),
             content)
 
-    def test_admin_list_still_shows_each_batch(self):
+    def test_admin_list_groups_batches_like_nurse(self):
         self.client.force_login(self.admin)
         content = self.client.get(self.list_url).content.decode()
         rows = self._rows(content)
-        self.assertEqual(len(rows), 6)
-        for number in ("MED-1", "MED-2", "MED-3"):
-            self.assertIn(number, content)
+        self.assertEqual(len(rows), 4)
+        self.assertNotIn(">MED-2<", content)
+        self.assertNotIn(">MED-3<", content)
+        self.assertIn("3 Batches", content)
+        self.assertIn("1 Batch", content)
 
 
 class InventoryNotificationTests(InventoryTestCase):
@@ -2091,12 +2445,15 @@ class InventoryNotificationTests(InventoryTestCase):
         self.client.force_login(self.doctor)
         response = self.client.get(reverse('inventory:vaccine_list'))
         self.assertNotIn('inventory_alerts', response.context)
-        self.assertNotIn('Inventory Alerts', response.content.decode())
+        self.assertNotIn('class="inv-bell', response.content.decode())
 
+        # The navbar bell stays nurse-only, but admin shares the on-page alerts
+        # section because both portals render the same inventory UI.
         self.client.force_login(self.admin)
         response = self.client.get(reverse('inventory:vaccine_list'))
         self.assertNotIn('inventory_alerts', response.context)
-        self.assertNotIn('Inventory Alerts', response.content.decode())
+        self.assertNotIn('class="inv-bell', response.content.decode())
+        self.assertIn('inv-alerts', response.content.decode())
 
     def test_viewing_alerts_does_not_change_stock_or_create_transactions(self):
         self._add_vaccine(qty=2, reorder=5, days=10)
@@ -2148,3 +2505,275 @@ class InventoryNotificationTests(InventoryTestCase):
                if alert['kind'] == 'low_stock']
         self.assertEqual(len(low), 1)
         self.assertEqual(low[0]['quantity'], 3)
+
+
+class AdminNurseInventoryParityTests(InventoryTestCase):
+    """Admin and Nurse render one shared inventory backed by the same records."""
+
+    def setUp(self):
+        super().setUp()
+        self.vax_a1 = VaccineInventory.objects.create(
+            vaccine_name="Imovax", brand="Sanofi", batch_number="IMX-1",
+            expiration_date=datetime.date(2027, 10, 15),
+            quantity_received=10, quantity_available=10, quantity_used=0,
+            reorder_level=5, source_supplier="Lenrose",
+            date_received=datetime.date(2026, 10, 15),
+        )
+        self.vax_a2 = VaccineInventory.objects.create(
+            vaccine_name="Imovax", brand="Sanofi", batch_number="IMX-2",
+            expiration_date=datetime.date(2027, 11, 5),
+            quantity_received=100, quantity_available=90, quantity_used=10,
+            reorder_level=5,
+        )
+        self.vax_b = VaccineInventory.objects.create(
+            vaccine_name="Verorab", brand="Sanofi", batch_number="VR-1",
+            expiration_date=datetime.date(2027, 5, 1),
+            quantity_received=50, quantity_available=50,
+        )
+        for batch in (self.vax_a1, self.vax_a2, self.vax_b):
+            VaccineStockMovement.objects.create(
+                vaccine=batch, movement_type="stock_in",
+                quantity=batch.quantity_received,
+                batch_number=batch.batch_number,
+                expiration_date=batch.expiration_date, moved_by=self.nurse,
+            )
+        self.schedule = VaccinationSchedule.objects.create(
+            bite_case=self.case, created_by=self.nurse)
+        self.dose = VaccineDose.objects.create(
+            schedule=self.schedule, dose_label="1st Dose",
+            batch_number="IMX-2", vaccine_brand="Sanofi",
+            dose_status="completed", actual_date=datetime.date(2026, 11, 2),
+            actual_time=datetime.time(11, 2), administered_by=self.nurse,
+        )
+        self.med2 = MedicineInventory.objects.create(
+            medicine_name="Amoxicillin", generic_name="Amoxicillin trihydrate",
+            strength="500 mg", dosage_form="capsule", unit="capsule",
+            batch_number="MED-2", expiration_date=datetime.date(2027, 9, 1),
+            quantity_received=15, quantity_available=12, quantity_dispensed=3,
+            reorder_level=3, source_supplier="ABC Pharma",
+            date_received=datetime.date(2026, 10, 20),
+        )
+        MedicineStockMovement.objects.create(
+            medicine=self.medicine, movement_type="stock_in", quantity=10,
+            batch_number="MED-1",
+            expiration_date=self.medicine.expiration_date, moved_by=self.nurse,
+        )
+        MedicineStockMovement.objects.create(
+            medicine=self.med2, movement_type="stock_in", quantity=15,
+            batch_number="MED-2",
+            expiration_date=self.med2.expiration_date, moved_by=self.nurse,
+        )
+        self.rx = self._prescription(
+            quantity=3, medicine=self.med2, status="dispensed")
+        self.rx.dispensed_at = timezone.now()
+        self.rx.dispensed_by = self.nurse
+        self.rx.save(update_fields=["dispensed_at", "dispensed_by"])
+        MedicineStockMovement.objects.create(
+            medicine=self.med2, movement_type="dispense", quantity=3,
+            reference=self.case.case_number, moved_by=self.nurse,
+        )
+        self.vaccine_list_url = reverse("inventory:vaccine_list")
+        self.medicine_list_url = reverse("inventory:medicine_list")
+        self.vaccine_detail_url = reverse(
+            "inventory:vaccine_detail", args=[self.vax_a1.pk])
+        self.medicine_detail_url = reverse(
+            "inventory:medicine_detail", args=[self.medicine.pk])
+
+    def _get(self, user, url, **kwargs):
+        self.client.force_login(user)
+        return self.client.get(url, **kwargs)
+
+    def _stock_values(self, content):
+        return re.findall(
+            r'class="vd-stock-value[^"]*"[^>]*>\s*(\d+)', content)
+
+    def _detail_block(self, content):
+        start = content.index('<div class="vd-wrap">')
+        return content[start:content.rindex('</section>')]
+
+    def test_vaccine_list_shows_the_same_grouped_products_and_alerts(self):
+        nurse = self._get(self.nurse, self.vaccine_list_url)
+        admin = self._get(self.admin, self.vaccine_list_url)
+        self.assertTrue(nurse.context['shared_inventory'])
+        self.assertTrue(admin.context['shared_inventory'])
+        self.assertEqual(
+            list(nurse.context['items'].object_list),
+            list(admin.context['items'].object_list))
+        self.assertEqual(nurse.context['alerts'], admin.context['alerts'])
+        for content in (nurse.content.decode(), admin.content.decode()):
+            self.assertEqual(content.count(">Imovax<"), 1)
+            self.assertEqual(content.count(">Verorab<"), 1)
+            self.assertIn("2 batches", content)
+            self.assertIn("btn-view-vaccine", content)
+            self.assertIn("btn-add-stock-vaccine", content)
+            self.assertIn("inv-alerts", content)
+            self.assertNotIn(">IMX-1<", content)
+
+    def test_medicine_list_shows_the_same_grouped_products_and_alerts(self):
+        nurse = self._get(self.nurse, self.medicine_list_url)
+        admin = self._get(self.admin, self.medicine_list_url)
+        self.assertTrue(nurse.context['shared_inventory'])
+        self.assertTrue(admin.context['shared_inventory'])
+        self.assertEqual(
+            list(nurse.context['items'].object_list),
+            list(admin.context['items'].object_list))
+        self.assertEqual(nurse.context['alerts'], admin.context['alerts'])
+        for content in (nurse.content.decode(), admin.content.decode()):
+            self.assertIn("2 Batches", content)
+            self.assertIn("btn-view-medicine", content)
+            self.assertIn("btn-add-stock-medicine", content)
+            self.assertIn("inv-alerts", content)
+            self.assertNotIn(">MED-2<", content)
+
+    def test_vaccine_detail_context_and_layout_match(self):
+        nurse = self._get(self.nurse, self.vaccine_detail_url)
+        admin = self._get(self.admin, self.vaccine_detail_url)
+        self.assertTemplateUsed(admin, 'inventory/vaccine_detail_nurse.html')
+        self.assertEqual(nurse.context['totals'], admin.context['totals'])
+        self.assertEqual(nurse.context['stock_status'], admin.context['stock_status'])
+        self.assertEqual(
+            [m.pk for m in nurse.context['movements']],
+            [m.pk for m in admin.context['movements']])
+        self.assertEqual(
+            [d.pk for d in nurse.context['dispensing_records']],
+            [d.pk for d in admin.context['dispensing_records']])
+        self.assertEqual(
+            self._stock_values(nurse.content.decode()),
+            self._stock_values(admin.content.decode()))
+        headings = (
+            "1. Vaccine Information", "2. Stock Summary",
+            "3. Stock Transaction History",
+            "4. Vaccination Administration History",
+        )
+        for response in (nurse, admin):
+            content = response.content.decode()
+            positions = [content.index(h) for h in headings]
+            self.assertEqual(positions, sorted(positions))
+            self.assertEqual(content.count('class="vd-section-head"'), 5)
+            self.assertIn("Mia Stock", content)
+            self.assertNotIn('<button', self._detail_block(content))
+
+    def test_medicine_detail_context_and_layout_match(self):
+        nurse = self._get(self.nurse, self.medicine_detail_url)
+        admin = self._get(self.admin, self.medicine_detail_url)
+        self.assertTemplateUsed(admin, 'inventory/medicine_detail_nurse.html')
+        self.assertEqual(nurse.context['totals'], admin.context['totals'])
+        self.assertEqual(nurse.context['stock_status'], admin.context['stock_status'])
+        self.assertEqual(
+            [m.pk for m in nurse.context['movements']],
+            [m.pk for m in admin.context['movements']])
+        self.assertEqual(
+            [p.pk for p in nurse.context['prescriptions']],
+            [p.pk for p in admin.context['prescriptions']])
+        self.assertEqual(
+            self._stock_values(nurse.content.decode()),
+            self._stock_values(admin.content.decode()))
+        headings = (
+            "1. Medicine Information", "2. Stock Summary",
+            "3. Stock Transaction History", "4. Dispensing History",
+        )
+        for response in (nurse, admin):
+            content = response.content.decode()
+            positions = [content.index(h) for h in headings]
+            self.assertEqual(positions, sorted(positions))
+            self.assertEqual(content.count('class="vd-section-head"'), 5)
+            self.assertIn("Mia Stock", content)
+            self.assertNotIn('<button', self._detail_block(content))
+
+    def test_nurse_stock_in_is_visible_to_admin_without_duplication(self):
+        before = VaccineStockMovement.objects.count()
+        self.client.force_login(self.nurse)
+        response = self.client.post(
+            reverse("inventory:vaccine_add_stock", args=[self.vax_a1.pk]),
+            {
+                "batch_number": "IMX-3",
+                "quantity_received": "25",
+                "source_supplier": "ABC Pharma",
+                "date_received": "2026-11-03",
+                "time_received": "09:30",
+                "expiration_date": "2028-12-15",
+                "remarks": "Shared delivery.",
+                "submission_token": str(uuid.uuid4()),
+            },
+            follow=True,
+        )
+        self.assertContains(response, "Stock added successfully.")
+        self.assertEqual(VaccineStockMovement.objects.count(), before + 1)
+        new_batch = VaccineInventory.objects.get(batch_number="IMX-3")
+        movement = VaccineStockMovement.objects.get(batch_number="IMX-3")
+        self.assertEqual(movement.moved_by, self.nurse)
+
+        admin_list = self._get(self.admin, self.vaccine_list_url)
+        nurse_list = self._get(self.nurse, self.vaccine_list_url)
+        self.assertEqual(
+            list(admin_list.context['items'].object_list),
+            list(nurse_list.context['items'].object_list))
+        admin_detail = self._get(self.admin, self.vaccine_detail_url)
+        self.assertIn(new_batch.pk, [b.pk for b in VaccineInventory.objects.filter(
+            vaccine_name="Imovax", brand="Sanofi")])
+        self.assertContains(admin_detail, "IMX-3")
+        self.assertContains(admin_detail, "09:30 AM")
+        self.assertEqual(
+            [m.pk for m in admin_detail.context['movements']],
+            [m.pk for m in self._get(
+                self.nurse, self.vaccine_detail_url).context['movements']])
+        self.assertEqual(VaccineStockMovement.objects.count(), before + 1)
+
+    def test_viewing_both_portals_never_changes_stock_or_clinical_records(self):
+        vaccine_before = list(VaccineInventory.objects.values(
+            'pk', 'quantity_available', 'quantity_received', 'quantity_used'))
+        medicine_before = list(MedicineInventory.objects.values(
+            'pk', 'quantity_available', 'quantity_received', 'quantity_dispensed'))
+        movements_before = (
+            VaccineStockMovement.objects.count(),
+            MedicineStockMovement.objects.count(),
+        )
+        clinical_before = (
+            Patient.objects.count(), AnimalBiteCase.objects.count(),
+            ClinicalAssessment.objects.count(), Prescription.objects.count(),
+            VaccineDose.objects.count(),
+        )
+        patient_before = (self.patient.first_name, self.patient.last_name,
+                          self.patient.contact_number)
+        for url in (self.vaccine_list_url, self.medicine_list_url,
+                    self.vaccine_detail_url, self.medicine_detail_url):
+            self._get(self.admin, url)
+            self._get(self.nurse, url)
+        self.assertEqual(
+            list(VaccineInventory.objects.values(
+                'pk', 'quantity_available', 'quantity_received', 'quantity_used')),
+            vaccine_before)
+        self.assertEqual(
+            list(MedicineInventory.objects.values(
+                'pk', 'quantity_available', 'quantity_received',
+                'quantity_dispensed')),
+            medicine_before)
+        self.assertEqual(movements_before, (
+            VaccineStockMovement.objects.count(),
+            MedicineStockMovement.objects.count()))
+        self.assertEqual(clinical_before, (
+            Patient.objects.count(), AnimalBiteCase.objects.count(),
+            ClinicalAssessment.objects.count(), Prescription.objects.count(),
+            VaccineDose.objects.count()))
+        self.patient.refresh_from_db()
+        self.assertEqual(patient_before, (
+            self.patient.first_name, self.patient.last_name,
+            self.patient.contact_number))
+
+    def test_shared_ui_and_permissions_are_preserved(self):
+        from .views import _uses_shared_inventory, can_dispense
+        self.assertTrue(_uses_shared_inventory(self.admin))
+        self.assertTrue(_uses_shared_inventory(self.nurse))
+        self.assertFalse(_uses_shared_inventory(self.doctor))
+        # Admin keeps the pre-existing dispensing permission; nothing is granted
+        # to roles outside the shared inventory UI.
+        self.assertTrue(can_dispense(self.admin))
+        self.assertFalse(can_dispense(self.doctor))
+
+        add_url = reverse("inventory:vaccine_add_stock", args=[self.vax_a1.pk])
+        self.assertEqual(self._get(self.admin, add_url).status_code, 200)
+        doctor_response = self._get(self.doctor, add_url)
+        self.assertEqual(doctor_response.status_code, 302)
+        # Doctor keeps the simpler batch-level view, not the shared product UI.
+        doctor_list = self._get(self.doctor, self.vaccine_list_url)
+        self.assertNotIn('shared_inventory', doctor_list.context)

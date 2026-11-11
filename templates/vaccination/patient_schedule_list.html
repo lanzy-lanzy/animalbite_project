@@ -21,6 +21,43 @@
     .vr-add:hover { background: #106B55; }
 </style>
 {% endif %}
+{% if request.user.role == 'admin' %}
+<style>
+    .vaccination-view-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #157A61;
+        color: #FFFFFF;
+        border: 1px solid transparent;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25rem;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(12, 84, 63, 0.18);
+        text-decoration: none;
+        transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .vaccination-view-btn:hover {
+        background: #0C543F;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(12, 84, 63, 0.22);
+    }
+    .vaccination-view-btn:focus-visible {
+        outline: 3px solid #A8DCC5;
+        outline-offset: 3px;
+    }
+    .vaccination-view-btn:active { transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) {
+        .vaccination-view-btn { transition: none; }
+        .vaccination-view-btn:hover { transform: none; }
+    }
+</style>
+{% endif %}
 {% endblock %}
 {% block content %}
 <div class="space-y-5">
@@ -116,6 +153,11 @@
                                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m18 2 4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="m17 7 3-3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 11 4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 19-3 3"/><path stroke-linecap="round" stroke-linejoin="round" d="m14 4 6 6"/></svg>
                                     Administer
                                 </a>
+                                {% elif request.user.role == 'admin' %}
+                                <a href="{% url 'vaccination:schedule_detail' p.schedule_pk %}" class="vaccination-view-btn">
+                                    View
+                                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.5-6.5 9.75-6.5 9.75 6.5 9.75 6.5-3.5 6.5-9.75 6.5-9.75-6.5-9.75-6.5Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                                </a>
                                 {% else %}
                                 <a href="{% url 'vaccination:assessment_detail' p.schedule_pk %}" class="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm whitespace-nowrap">
                                     View
@@ -197,6 +239,11 @@
                     <a href="{% url 'vaccination:nurse_schedule_manage' p.schedule_pk %}" class="vr-act vr-add flex-1 justify-center">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m18 2 4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="m17 7 3-3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 11 4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 19-3 3"/><path stroke-linecap="round" stroke-linejoin="round" d="m14 4 6 6"/></svg>
                         Administer
+                    </a>
+                    {% elif request.user.role == 'admin' %}
+                    <a href="{% url 'vaccination:schedule_detail' p.schedule_pk %}" class="vaccination-view-btn flex-1">
+                        View
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.5-6.5 9.75-6.5 9.75 6.5 9.75 6.5-3.5 6.5-9.75 6.5-9.75-6.5-9.75-6.5Z"/><circle cx="12" cy="12" r="2.75"/></svg>
                     </a>
                     {% else %}
                     <a href="{% url 'vaccination:assessment_detail' p.schedule_pk %}" class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-emerald-950 text-white text-xs font-bold hover:bg-emerald-900 shadow-sm">

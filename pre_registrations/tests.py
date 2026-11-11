@@ -202,6 +202,22 @@ class PublicPreRegistrationTests(TestCase):
             "consent_given": "on",
         }
 
+    def test_first_aid_reminder_uses_the_green_theme(self):
+        response = self.client.get(reverse("pre_registrations:public_create"))
+        self.assertContains(response, "First aid reminder")
+        self.assertContains(
+            response,
+            "Wash the wound immediately with soap and running water for at least "
+            "15 minutes, then proceed to the nearest health facility or Animal "
+            "Bite Treatment Center.")
+        self.assertContains(response, "background:#E8F5EE;border-color:#77C7A1;")
+        self.assertContains(response, "color:#157A61;")
+        self.assertContains(response, "color:#0D624C;")
+        self.assertContains(response, "color:#245B48;")
+        self.assertNotContains(response, "border-amber-300")
+        self.assertNotContains(response, "bg-amber-50")
+        self.assertNotContains(response, "text-amber-900")
+
     def test_public_form_requires_consent(self):
         payload = self.valid_payload()
         payload.pop("consent_given")
@@ -870,12 +886,14 @@ class StaffPreRegistrationTests(TestCase):
 
         self.client.logout()
         self.client.login(username="rico.patient", password="SafePatient!2026")
-        response = self.client.get(reverse("accounts:patient_portal"))
+        records = self.client.get(reverse("accounts:patient_bite_records"))
+        schedule_page = self.client.get(reverse("accounts:patient_vaccination_schedule"))
 
         self.assertEqual(self.record.converted_patient.account, patient_account)
-        self.assertContains(response, self.record.converted_case.case_number)
-        self.assertContains(response, "Day 3")
-        self.assertContains(response, "Aug 17, 2026")
+        self.assertContains(records, self.record.converted_case.case_number)
+        self.assertContains(schedule_page, "1st Dose")
+        self.assertContains(schedule_page, "Aug 17, 2026")
+        self.assertNotContains(schedule_page, "Day 3")
 
     def test_patient_account_is_redirected_away_from_staff_pages(self):
         patient_account = get_user_model().objects.create_user(
@@ -1090,24 +1108,38 @@ class OnlineRegistrationDeleteTests(TestCase):
     def _messages(self, response):
         return [str(message) for message in response.context["messages"]]
 
-    def test_only_admin_sees_delete_button_and_modal(self):
+    def test_delete_button_is_hidden_for_all_roles(self):
         delete_url = reverse("pre_registrations:staff_delete", args=[self.record.pk])
-        for user, visible in (
-            (self.admin, True),
-            (self.encoder, False),
-            (self.doctor, False),
-            (self.nurse, False),
-        ):
+        detail_url = reverse("pre_registrations:staff_detail", args=[self.record.pk])
+        for user in (self.admin, self.encoder, self.doctor, self.nurse):
             self.client.force_login(user)
             response = self.client.get(reverse("pre_registrations:staff_list"))
             self.assertEqual(response.status_code, 200)
             html = response.content.decode()
-            self.assertEqual(delete_url in html, visible, user.role)
-            self.assertEqual("Delete Online Registration?" in html, visible, user.role)
+            self.assertNotIn(delete_url, html, user.role)
+            self.assertNotIn("Delete this online registration", html, user.role)
+            self.assertIn(
+                f'<a href="{detail_url}" class="btn-secondary btn-sm">Open</a>',
+                html,
+                user.role,
+            )
 
         self.client.force_login(self.patient_user)
         self.assertEqual(
             self.client.get(reverse("pre_registrations:staff_list")).status_code, 302
+        )
+
+    def test_verified_row_keeps_badge_and_open_without_delete(self):
+        PreRegistration.objects.filter(pk=self.record.pk).update(
+            status=PreRegistration.Status.CONVERTED
+        )
+        self.client.force_login(self.admin)
+        html = self.client.get(reverse("pre_registrations:staff_list")).content.decode()
+        self.assertIn("Verified</span>", html)
+        self.assertIn(">Open</a>", html)
+        self.assertNotIn("Delete this online registration", html)
+        self.assertNotIn(
+            reverse("pre_registrations:staff_delete", args=[self.record.pk]), html
         )
 
     def test_non_admin_cannot_delete_or_archive(self):
@@ -1247,19 +1279,81 @@ class OnlineRegistrationDeleteTests(TestCase):
         listing = self.client.get(reverse("pre_registrations:staff_list"))
         self.assertNotContains(listing, self.record.pre_registration_number)
 
-    def test_modal_copy_and_fields_are_rendered(self):
+    def test_delete_modal_and_controls_are_not_rendered(self):
         self.client.force_login(self.admin)
         html = self.client.get(reverse("pre_registrations:staff_list")).content.decode()
-        self.assertIn("Delete Online Registration?", html)
+        for marker in (
+            "deleteRegistrationModal",
+            "deleteRegistrationForm",
+            "deleteRegistrationSubmit",
+            "openDeleteRegistrationModal",
+            "submitRegistrationArchive",
+            "Delete Online Registration?",
+            "Confirm Delete",
+            "Delete this online registration",
+            reverse("pre_registrations:staff_delete", args=[self.record.pk]),
+        ):
+            self.assertNotIn(marker, html)
         self.assertIn(
-            "Are you sure you want to delete this online registration record? "
-            "This action cannot be undone if permanently deleted.",
+            f'<a href="{reverse("pre_registrations:staff_detail", args=[self.record.pk])}" '
+            'class="btn-secondary btn-sm">Open</a>',
             html,
         )
-        self.assertIn("Registration Number", html)
-        self.assertIn("Patient Name", html)
-        self.assertIn("Registration Date", html)
-        self.assertIn("Registration Status", html)
-        self.assertIn("Cancel", html)
-        self.assertIn("Confirm Delete", html)
-        self.assertIn("csrfmiddlewaretoken", html)
+
+
+class PatientReportBiteTests(TestCase):
+    """The Report Another Bite flow preserves the patient link and creates a separate case."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.account = User.objects.create_user("patient.report", password="pass12345", role="patient")
+        self.patient = Patient.objects.create(
+            patient_number="PAT-R0001", first_name="Laila", last_name="Report",
+            birthdate=date(1992, 2, 2), sex="female", contact_number="09175550001",
+            address="Poblacion", account=self.account,
+        )
+        self.existing = AnimalBiteCase.objects.create(
+            case_number="ABC-00001", patient=self.patient, created_by=self.account,
+            animal_type="dog", exposure_type="bite",
+            date_time_bite=timezone.now(),
+        )
+        self.url = reverse("pre_registrations:patient_report")
+        self.payload = {
+            "date_time_bite": "2026-11-09T08:30",
+            "place_of_incident": "Market",
+            "incident_barangay": "Poblacion",
+            "animal_type": "cat",
+            "animal_ownership": "stray",
+            "animal_vax_status": "unknown",
+            "animal_condition": "missing",
+            "exposure_type": "scratch",
+            "body_part_affected": "Left forearm",
+            "number_of_wounds": 1,
+            "wound_description": "Minor scratch",
+            "wound_washed_immediately": "on",
+            "first_aid_given": "Washed with soap",
+        }
+
+    def test_report_creates_separate_case_linked_to_same_patient(self):
+        self.client.force_login(self.account)
+        response = self.client.post(self.url, self.payload, follow=True)
+        self.assertRedirects(response, reverse("accounts:patient_portal"))
+        case = AnimalBiteCase.objects.exclude(pk=self.existing.pk).get()
+        self.assertEqual(case.patient, self.patient)
+        self.assertEqual(case.created_by, self.account)
+        self.assertEqual(case.case_number, "ABC-00002")
+        self.assertEqual(Patient.objects.count(), 1)
+        self.assertFalse(VaccinationSchedule.objects.filter(bite_case=case).exists())
+        self.assertTrue(
+            AuditLog.objects.filter(user=self.account, action="PATIENT_REPORT_BITE").exists()
+        )
+        self.assertContains(response, "Check My Dashboard for updates.")
+        records = self.client.get(reverse("accounts:patient_bite_records"))
+        self.assertContains(records, "ABC-00002")
+
+    def test_staff_is_sent_to_public_form(self):
+        User = get_user_model()
+        nurse = User.objects.create_user("nurse.report", password="pass12345", role="nurse")
+        self.client.force_login(nurse)
+        response = self.client.get(self.url)
+        self.assertRedirects(response, reverse("pre_registrations:public_create"))

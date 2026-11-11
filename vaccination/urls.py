@@ -18,6 +18,7 @@ urlpatterns = [
     path('doses/<int:pk>/update/', views.dose_update, name='dose_update'),
     path('doses/<int:pk>/schedule/', views.dose_schedule, name='dose_schedule'),
     path('doses/<int:pk>/administer/', views.dose_administer, name='dose_administer'),
+    path('doses/<int:pk>/early-administration-request/', views.dose_early_administration_request, name='dose_early_administration_request'),
     path('follow-ups/', views.follow_up_list, name='follow_up_list'),
     path('follow-ups/create/<int:case_pk>/', views.follow_up_create, name='follow_up_create'),
     path('observations/create/<int:case_pk>/', views.observation_create, name='observation_create'),

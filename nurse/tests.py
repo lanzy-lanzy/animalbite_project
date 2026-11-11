@@ -17,6 +17,33 @@ from vaccination.schedule_utils import ensure_vaccination_schedule
 U = get_user_model()
 
 
+class NurseDashboardTests(TestCase):
+
+    def test_dashboard_loads_with_vaccine_inventory_product_fields(self):
+        nurse = U.objects.create_user(
+            username="nurse.dashboard",
+            password="test-password",
+            role="nurse",
+        )
+        VaccineInventory.objects.create(
+            vaccine_name="Anti-Rabies Vaccine",
+            brand="Verorab",
+            strength="0.5 mL",
+            dosage_form="injectable",
+            unit="vial",
+            batch_number="RAB-001",
+            expiration_date=datetime.date(2027, 1, 1),
+            quantity_received=5,
+            quantity_available=5,
+        )
+        self.client.force_login(nurse)
+
+        response = self.client.get(reverse("nurse:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["low_stock"], 1)
+
+
 class DoctorFindingDetailTests(TestCase):
 
     def setUp(self):

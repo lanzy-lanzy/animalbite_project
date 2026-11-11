@@ -2,10 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.db.models import Q, F, Sum
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.http import urlencode
 from django.views.decorators.http import require_POST
 from functools import wraps
-from datetime import date
+import uuid
 from .models import (
     VaccineInventory, SupplyInventory, VaccineStockMovement,
     MedicineInventory, MedicineStockMovement,
@@ -37,6 +41,172 @@ def staff_required(view_func):
 def can_dispense(user):
     return getattr(user, 'role', '') in DISPENSER_ROLES
 
+
+# Admin and Nurse share one product-level inventory UI backed by the same
+# records. Other staff roles keep the simpler batch-level view.
+SHARED_INVENTORY_ROLES = {'nurse', 'admin'}
+
+
+def _uses_shared_inventory(user):
+    return getattr(user, 'role', '') in SHARED_INVENTORY_ROLES
+
+
+def _expired_batch_details(batches, movement_model, relation_name, today):
+    expired = [batch for batch in batches if batch.expiration_date < today]
+    movement_totals = dict(
+        movement_model.objects.filter(
+            **{
+                f'{relation_name}__in': expired,
+                'movement_type': 'expired_pull_out',
+            }
+        )
+        .values(f'{relation_name}_id')
+        .annotate(total=Sum('quantity'))
+        .values_list(f'{relation_name}_id', 'total')
+    )
+    cards = []
+    historical_expired = 0
+    pulled_out = 0
+    remaining_physical = 0
+    for batch in expired:
+        batch.pulled_out_quantity = movement_totals.get(batch.pk, 0) or 0
+        batch.expired_quantity = batch.quantity_available + batch.pulled_out_quantity
+        historical_expired += batch.expired_quantity
+        pulled_out += batch.pulled_out_quantity
+        remaining_physical += batch.quantity_available
+        if batch.quantity_available > 0 or batch.pulled_out_quantity > 0:
+            batch.pull_out_state = (
+                'Pending Pull Out' if batch.quantity_available > 0
+                else 'Pulled Out'
+            )
+            batch.pull_out_token = uuid.uuid4()
+            cards.append(batch)
+    return cards, historical_expired, pulled_out, remaining_physical
+
+
+def _pull_out_expired_batch(request, module, pk):
+    if not _uses_shared_inventory(request.user):
+        messages.error(request, 'Not authorized to pull out expired stock.')
+        return redirect('dashboard:index')
+
+    if module == 'vaccine':
+        batch_model = VaccineInventory
+        movement_model = VaccineStockMovement
+        relation_name = 'vaccine'
+        detail_name = 'inventory:vaccine_detail'
+    else:
+        batch_model = MedicineInventory
+        movement_model = MedicineStockMovement
+        relation_name = 'medicine'
+        detail_name = 'inventory:medicine_detail'
+
+    batch = get_object_or_404(batch_model, pk=pk)
+    redirect_url = reverse(detail_name, args=[batch.pk])
+    redirect_url = f'{redirect_url}?{urlencode({"batch": batch.batch_number})}'
+
+    try:
+        submission_token = uuid.UUID(request.POST.get('submission_token', ''))
+    except (TypeError, ValueError):
+        messages.error(request, 'Invalid pull-out submission. Please refresh and try again.')
+        return redirect(redirect_url)
+
+    try:
+        quantity = int(request.POST.get('quantity', ''))
+    except (TypeError, ValueError):
+        messages.error(request, 'Enter a valid pull-out quantity.')
+        return redirect(redirect_url)
+    reason = request.POST.get('reason', '').strip()
+    remarks = request.POST.get('remarks', '').strip()
+    if quantity <= 0:
+        messages.error(request, 'Pull-out quantity must be greater than zero.')
+        return redirect(redirect_url)
+    if not reason or len(reason) > 100:
+        messages.error(request, 'Enter a valid pull-out reason.')
+        return redirect(redirect_url)
+    if len(remarks) > 2000:
+        messages.error(request, 'Remarks must be 2,000 characters or fewer.')
+        return redirect(redirect_url)
+
+    try:
+        with transaction.atomic():
+            batch = get_object_or_404(
+                batch_model.objects.select_for_update(), pk=pk)
+            if movement_model.objects.filter(
+                    submission_token=submission_token).exists():
+                messages.info(request, 'This pull-out was already recorded.')
+                return redirect(redirect_url)
+            today = timezone.localdate()
+            if batch.expiration_date >= today:
+                messages.error(request, 'Only expired stock can be pulled out.')
+                return redirect(redirect_url)
+            if batch.quantity_available <= 0:
+                messages.info(request, 'This batch has no remaining physical stock.')
+                return redirect(redirect_url)
+            if quantity > batch.quantity_available:
+                messages.error(
+                    request,
+                    f'Pull-out quantity cannot exceed the remaining '
+                    f'{batch.quantity_available} {batch.unit}.',
+                )
+                return redirect(redirect_url)
+
+            batch.quantity_available -= quantity
+            batch.save(update_fields=['quantity_available', 'updated_at'])
+            movement_model.objects.create(
+                **{
+                    relation_name: batch,
+                    'movement_type': 'expired_pull_out',
+                    'quantity': quantity,
+                    'reference': 'Expired Stock Pull Out',
+                    'batch_number': batch.batch_number,
+                    'expiration_date': batch.expiration_date,
+                    'moved_by': request.user,
+                    'notes': f'Reason: {reason}'
+                             + (f'\nRemarks: {remarks}' if remarks else ''),
+                    'submission_token': submission_token,
+                }
+            )
+            product_name = (
+                batch.vaccine_name if module == 'vaccine'
+                else batch.medicine_name
+            )
+            AuditLog.objects.create(
+                user=request.user,
+                action='EXPIRED_STOCK_PULL_OUT',
+                target_type='',
+                target_id=batch.pk,
+                description=(
+                    f'Pulled out {quantity} {batch.unit} of {product_name} '
+                    f'batch {batch.batch_number}. Reason: {reason}.'
+                    + (f' Remarks: {remarks}' if remarks else '')
+                ),
+            )
+    except IntegrityError:
+        if not movement_model.objects.filter(
+                submission_token=submission_token).exists():
+            raise
+        messages.info(request, 'This pull-out was already recorded.')
+    else:
+        messages.success(
+            request,
+            f'{quantity} {batch.unit} pulled out from expired batch '
+            f'{batch.batch_number}.',
+        )
+    return redirect(redirect_url)
+
+
+@login_required
+@require_POST
+def vaccine_pull_out(request, pk):
+    return _pull_out_expired_batch(request, 'vaccine', pk)
+
+
+@login_required
+@require_POST
+def medicine_pull_out(request, pk):
+    return _pull_out_expired_batch(request, 'medicine', pk)
+
+
 def _nurse_vaccine_groups(query=''):
     """Collapse batch rows into one row per vaccine product for the nurse list.
 
@@ -52,12 +222,21 @@ def _nurse_vaccine_groups(query=''):
     matching_keys = set()
     if needle:
         for batch in batches:
-            if (needle in batch.vaccine_name.lower()
-                    or needle in batch.brand.lower()
-                    or needle in batch.batch_number.lower()):
+            haystacks = (
+                batch.vaccine_name,
+                batch.brand,
+                batch.strength,
+                batch.get_dosage_form_display(),
+                batch.unit,
+                batch.batch_number,
+            )
+            if any(needle in value.casefold() for value in haystacks):
                 matching_keys.add((
                     batch.vaccine_name.strip().casefold(),
                     batch.brand.strip().casefold(),
+                    batch.strength.strip().casefold(),
+                    batch.dosage_form,
+                    batch.unit.strip().casefold(),
                 ))
 
     groups = {}
@@ -65,6 +244,9 @@ def _nurse_vaccine_groups(query=''):
         key = (
             batch.vaccine_name.strip().casefold(),
             batch.brand.strip().casefold(),
+            batch.strength.strip().casefold(),
+            batch.dosage_form,
+            batch.unit.strip().casefold(),
         )
         if needle and key not in matching_keys:
             continue
@@ -74,6 +256,9 @@ def _nurse_vaccine_groups(query=''):
                 'pk': batch.pk,
                 'vaccine_name': batch.vaccine_name,
                 'brand': batch.brand,
+                'strength': batch.strength,
+                'dosage_form_display': batch.get_dosage_form_display(),
+                'unit': batch.unit,
                 'batch_count': 0,
                 'quantity_used': 0,
                 'quantity_available': 0,
@@ -89,7 +274,7 @@ def _nurse_vaccine_groups(query=''):
         group['batch_expiries'].append((
             batch.batch_number, batch.expiration_date))
 
-    today = date.today()
+    today = timezone.localdate()
     for group in groups.values():
         group['batch_label'] = (
             f"{group['batch_count']} batch"
@@ -128,11 +313,11 @@ def _nurse_vaccine_groups(query=''):
 @login_required
 def vaccine_list(request):
     query = request.GET.get('q', '')
-    if getattr(request.user, 'role', '') == 'nurse':
+    if _uses_shared_inventory(request.user):
         paginator = Paginator(_nurse_vaccine_groups(query), 20)
         page = paginator.get_page(request.GET.get('page'))
         return render(request, 'inventory/vaccine_list.html',
-                      {'items': page, 'query': query,
+                      {'items': page, 'query': query, 'shared_inventory': True,
                        'alerts': get_inventory_alerts(module='vaccine')})
     items = VaccineInventory.objects.all()
     if query:
@@ -143,22 +328,78 @@ def vaccine_list(request):
 
 @login_required
 def vaccine_create(request):
+    if getattr(request.user, 'role', '') not in ('nurse', 'admin'):
+        messages.error(request, 'Not authorized to add vaccine stock.')
+        return redirect('dashboard:index')
+
     if request.method == 'POST':
         form = VaccineInventoryForm(request.POST)
         if form.is_valid():
             item = form.save(commit=False)
-            item.quantity_available = item.quantity_received
-            item.created_by = request.user
-            item.save()
-            VaccineStockMovement.objects.create(
-                vaccine=item, movement_type='stock_in', quantity=item.quantity_received,
-                supplier=item.source_supplier, date_received=item.date_received,
-                batch_number=item.batch_number, expiration_date=item.expiration_date,
-                moved_by=request.user, notes='Initial stock in'
-            )
-            AuditLog.objects.create(user=request.user, action='STOCK_IN', description=f'Added vaccine {item.vaccine_name} batch {item.batch_number}')
-            messages.success(request, 'Vaccine inventory added.')
-            return redirect('inventory:vaccine_list')
+            same_name_batch = VaccineInventory.objects.filter(
+                vaccine_name__iexact=item.vaccine_name.strip(),
+                brand__iexact=item.brand.strip(),
+                batch_number__iexact=item.batch_number.strip(),
+            ).order_by('id')
+            conflicting_batch = same_name_batch.exclude(
+                strength__iexact=item.strength.strip(),
+                dosage_form=item.dosage_form,
+                unit__iexact=item.unit.strip(),
+                expiration_date=item.expiration_date,
+            ).first()
+            if conflicting_batch:
+                form.add_error(
+                    None,
+                    'This vaccine name, brand, and batch number already exist '
+                    'with different product or expiry details. Verify the batch '
+                    'before recording stock.',
+                )
+            else:
+                with transaction.atomic():
+                    existing = same_name_batch.filter(
+                        strength__iexact=item.strength.strip(),
+                        dosage_form=item.dosage_form,
+                        unit__iexact=item.unit.strip(),
+                        expiration_date=item.expiration_date,
+                    ).select_for_update().first()
+                    if existing:
+                        existing.quantity_received += item.quantity_received
+                        existing.quantity_available += item.quantity_received
+                        existing.reorder_level = item.reorder_level
+                        if not existing.source_supplier:
+                            existing.source_supplier = item.source_supplier
+                        if not existing.remarks:
+                            existing.remarks = item.remarks
+                        existing.save(update_fields=[
+                            'quantity_received', 'quantity_available',
+                            'reorder_level', 'source_supplier', 'remarks',
+                            'updated_at',
+                        ])
+                        item = existing
+                    else:
+                        item.quantity_available = item.quantity_received
+                        item.created_by = request.user
+                        item.save()
+                    VaccineStockMovement.objects.create(
+                        vaccine=item, movement_type='stock_in',
+                        quantity=form.cleaned_data['quantity_received'],
+                        supplier=form.cleaned_data['source_supplier'],
+                        date_received=timezone.localdate(),
+                        batch_number=item.batch_number,
+                        expiration_date=item.expiration_date,
+                        moved_by=request.user,
+                        notes=form.cleaned_data['remarks'] or 'Initial stock in',
+                    )
+                    AuditLog.objects.create(
+                        user=request.user, action='STOCK_IN',
+                        description=(
+                            f'Recorded stock-in of '
+                            f'{form.cleaned_data["quantity_received"]} for '
+                            f'{item.vaccine_name} batch {item.batch_number}'
+                        ),
+                    )
+                messages.success(request, 'Vaccine inventory added.')
+                return redirect('inventory:vaccine_list')
     else:
         form = VaccineInventoryForm()
     return render(request, 'inventory/vaccine_form.html', {'form': form, 'title': 'Add Vaccine Stock'})
@@ -202,7 +443,7 @@ def vaccine_add_stock(request, pk):
 @login_required
 def vaccine_detail(request, pk):
     item = get_object_or_404(VaccineInventory, pk=pk)
-    if getattr(request.user, 'role', '') != 'nurse':
+    if not _uses_shared_inventory(request.user):
         movements = item.movements.select_related('moved_by').order_by('-created_at')
         return render(request, 'inventory/vaccine_detail.html', {'item': item, 'movements': movements})
 
@@ -211,19 +452,26 @@ def vaccine_detail(request, pk):
     product_batches = VaccineInventory.objects.filter(
         vaccine_name__iexact=item.vaccine_name,
         brand__iexact=item.brand,
+        strength__iexact=item.strength,
+        dosage_form=item.dosage_form,
+        unit__iexact=item.unit,
     )
     totals = product_batches.aggregate(
         received=Sum('quantity_received'),
         used=Sum('quantity_used'),
     )
-    live_batches = [batch for batch in product_batches if not batch.is_expired()]
+    batch_list = list(product_batches)
+    live_batches = [batch for batch in batch_list if not batch.is_expired()]
     live_available = sum(batch.quantity_available for batch in live_batches)
     totals['available'] = live_available
-    # Section 3 only lists deliveries; administration deductions stay in the
-    # database and in Section 4 so the same event is not shown twice.
+    (expired_batches, totals['expired_quantity'], totals['pulled_out'],
+     totals['expired_remaining']) = (
+        _expired_batch_details(
+            batch_list, VaccineStockMovement, 'vaccine', timezone.localdate())
+    )
     movements = (
         VaccineStockMovement.objects
-        .filter(vaccine__in=product_batches, movement_type='stock_in')
+        .filter(vaccine__in=product_batches)
         .select_related('moved_by', 'vaccine')
         .order_by('-created_at')
     )
@@ -274,6 +522,8 @@ def vaccine_detail(request, pk):
         'totals': totals,
         'movements': movements,
         'dispensing_records': dispensing_records,
+        'expired_batches': expired_batches,
+        'today': timezone.localdate(),
         'stock_status': stock_status,
         'highlight_batch': highlight_batch.casefold(),
         'highlight_item': highlight_item,
@@ -334,7 +584,7 @@ def _nurse_medicine_groups(query=''):
         group['batch_expiries'].append((
             batch.batch_number, batch.expiration_date))
 
-    today = date.today()
+    today = timezone.localdate()
     for group in groups.values():
         group['batch_label'] = (
             f"{group['batch_count']} Batch"
@@ -386,7 +636,7 @@ def medicine_list(request):
     query = request.GET.get('q', '')
     state = request.GET.get('status', '')
     pending_count = Prescription.objects.filter(status='pending').count()
-    if getattr(request.user, 'role', '') == 'nurse':
+    if _uses_shared_inventory(request.user):
         paginator = Paginator(_nurse_medicine_groups(query), 20)
         page = paginator.get_page(request.GET.get('page'))
         return render(request, 'inventory/medicine_list.html', {
@@ -394,6 +644,7 @@ def medicine_list(request):
             'query': query,
             'state': state,
             'pending_count': pending_count,
+            'shared_inventory': True,
             'alerts': get_inventory_alerts(module='medicine'),
         })
     items = MedicineInventory.objects.all()
@@ -410,7 +661,7 @@ def medicine_list(request):
     elif state == 'out':
         items = items.filter(quantity_available__lte=0)
     elif state == 'expired':
-        items = items.filter(expiration_date__lt=date.today())
+        items = items.filter(expiration_date__lt=timezone.localdate())
     paginator = Paginator(items.order_by('medicine_name', 'expiration_date'), 20)
     page = paginator.get_page(request.GET.get('page'))
     return render(request, 'inventory/medicine_list.html', {
@@ -494,7 +745,7 @@ def medicine_add_stock(request, pk):
 @staff_required
 def medicine_detail(request, pk):
     item = get_object_or_404(MedicineInventory, pk=pk)
-    if getattr(request.user, 'role', '') != 'nurse':
+    if not _uses_shared_inventory(request.user):
         movements = item.movements.select_related('moved_by').order_by('-created_at')
         prescriptions = item.prescriptions.select_related(
             'patient', 'bite_case', 'dispensed_by').order_by('-created_at')[:20]
@@ -515,11 +766,9 @@ def medicine_detail(request, pk):
         received=Sum('quantity_received'),
         dispensed=Sum('quantity_dispensed'),
     )
-    # Section 3 only lists deliveries; dispensing deductions stay in the
-    # database and in Section 4 so the same event is not shown twice.
     movements = (
         MedicineStockMovement.objects
-        .filter(medicine__in=product_batches, movement_type='stock_in')
+        .filter(medicine__in=product_batches)
         .select_related('moved_by', 'medicine')
         .order_by('-created_at')
     )
@@ -530,9 +779,15 @@ def medicine_detail(request, pk):
         .order_by('-created_at')
     )
 
-    live_batches = [batch for batch in product_batches if not batch.is_expired()]
+    batch_list = list(product_batches)
+    live_batches = [batch for batch in batch_list if not batch.is_expired()]
     live_available = sum(batch.quantity_available for batch in live_batches)
     totals['available'] = live_available
+    (expired_batches, totals['expired_quantity'], totals['pulled_out'],
+     totals['expired_remaining']) = (
+        _expired_batch_details(
+            batch_list, MedicineStockMovement, 'medicine', timezone.localdate())
+    )
     reorder_level = max(
         (batch.reorder_level for batch in product_batches), default=0)
     if not live_batches:
@@ -556,6 +811,8 @@ def medicine_detail(request, pk):
         'totals': totals,
         'movements': movements,
         'prescriptions': prescriptions,
+        'expired_batches': expired_batches,
+        'today': timezone.localdate(),
         'stock_status': stock_status,
         'highlight_batch': highlight_batch.casefold(),
         'highlight_item': highlight_item,

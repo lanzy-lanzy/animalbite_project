@@ -64,6 +64,41 @@ def _dose_count(value, days):
     return max(1, min(count, 5))
 
 
+def prescribed_minimum_date(dose):
+    """Return a dose's earliest date only when a finalized doctor chose a regimen."""
+    from datetime import timedelta
+
+    from doctor.models import ClinicalAssessment
+
+    assessment = ClinicalAssessment.objects.filter(
+        bite_case_id=dose.schedule.bite_case_id,
+        is_finalized=True,
+    ).first()
+    if not assessment or not assessment.dose_protocol:
+        return None
+
+    dose_ids = list(dose.schedule.doses.order_by('id').values_list('id', flat=True))
+    try:
+        position = dose_ids.index(dose.pk) + 1
+    except ValueError:
+        return None
+    if position <= 1:
+        return None
+
+    protocol_days = ClinicalAssessment.protocol_days(assessment.dose_protocol)
+    if position > len(protocol_days):
+        return None
+    first_dose = dose.schedule.doses.order_by('id').first()
+    if not first_dose or not first_dose.scheduled_date:
+        return None
+
+    return {
+        'date': first_dose.scheduled_date + timedelta(days=protocol_days[position - 1]),
+        'day': protocol_days[position - 1],
+        'protocol': assessment.get_dose_protocol_display(),
+    }
+
+
 def materialise_doses(schedule, days=None, base_date=None, dose_count=None):
     """Create the dose rows for a schedule that has none.
 

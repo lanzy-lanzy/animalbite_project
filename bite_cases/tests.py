@@ -243,11 +243,63 @@ class BiteCasePortalAccessVisibilityTests(BiteCaseDeleteTestCase):
         return self.client.get(
             reverse("bite_cases:case_detail", args=[self.case.pk]))
 
-    def test_admin_sees_portal_details_and_actions(self):
+    def test_admin_case_view_hides_portal_details_and_actions(self):
         content = self._detail(self.admin).content.decode()
-        self.assertIn(f"Patient Portal: {self.patient.full_name()}", content)
-        self.assertIn(self.portal.username, content)
-        self.assertIn(self.reset_url, content)
+        self.assertNotIn(f"Patient Portal: {self.patient.full_name()}", content)
+        self.assertNotIn(self.portal.username, content)
+        self.assertNotIn(self.reset_url, content)
+        self.assertNotIn("No portal login yet", content)
+
+    def test_admin_case_view_keeps_only_bite_incident_details(self):
+        content = self._detail(self.admin).content.decode()
+        self.assertIn("Bite Incident Details", content)
+        self.assertIn(self.case.case_number, content)
+        self.assertIn("&larr; Back", content)
+        for marker in (
+            "Quick Actions",
+            "Exposure Classification",
+            'id="clinical-assessment"',
+            "Medical Notes",
+            "Set Vaccination Schedule",
+            "Vaccination Progress",
+            reverse("bite_cases:classify_exposure", args=[self.case.pk]),
+            reverse("bite_cases:add_medical_note", args=[self.case.pk]),
+        ):
+            self.assertNotIn(marker, content)
+
+    def test_admin_case_view_uses_reference_card_layout(self):
+        content = self._detail(self.admin).content.decode()
+        for marker in (
+            "css/patient_detail.css",
+            'class="pd-section-num">3</span>',
+            "<h2>Bite Incident Details</h2>",
+            'pd-badge--gold">1 case</span>',
+            'class="pd-case-eyebrow">Bite Case 1 of 1</p>',
+            f'class="pd-case-number">{self.case.case_number}</p>',
+            "View Case &rarr;",
+            'class="pd-grid pd-grid-2"',
+        ):
+            self.assertIn(marker, content)
+        for label in (
+            "Case Number", "Case Status", "Date of Incident", "Time of Incident",
+            "Place of Incident", "Barangay", "Animal Type", "Ownership",
+            "Animal Condition", "Animal Vaccination Status", "Exposure Type",
+            "Body Part / Wounds", "Number of Wounds", "Date of Consultation",
+            "Wound Washed Immediately", "First Aid Given",
+        ):
+            self.assertIn(f'class="pd-label">{label}</p>', content)
+
+    def test_doctor_and_nurse_case_view_keeps_full_sections(self):
+        for user in (self.doctor, self.nurse):
+            with self.subTest(role=user.role):
+                content = self._detail(user).content.decode()
+                self.assertIn("Bite Incident Details", content)
+                self.assertIn("Quick Actions", content)
+                self.assertIn("Exposure Classification", content)
+                self.assertIn('id="clinical-assessment"', content)
+                self.assertIn("Medical Notes", content)
+                self.assertNotIn("pd-section-num", content)
+                self.assertNotIn("pd-grid pd-grid-2", content)
 
     def test_nurse_and_doctor_do_not_see_portal_details_or_actions(self):
         for user in (self.nurse, self.doctor):

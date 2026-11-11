@@ -124,6 +124,97 @@
     }
     .vd-stock-value--low { color: #B45309; }
     .vd-stock-value--out { color: #B91C1C; }
+    .vd-stock-grid--secondary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .vd-stock-card--amber { background: #FFFBEB; }
+    .vd-stock-card--red { background: #FEF2F2; }
+    .vd-stock-note { margin: 0; color: var(--color-muted-2); font-size: 11px; }
+
+    .vd-expired-batches { display: grid; gap: 12px; }
+    .vd-expired-card {
+        padding: 18px;
+        border: 1px solid rgba(201, 162, 39, .3);
+        border-radius: 16px;
+        background: #FFFFFF;
+        box-shadow: 0 10px 24px -22px rgba(8, 32, 26, .55);
+    }
+    .vd-expired-card-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .vd-expired-batch { margin: 0 0 7px; color: var(--color-emerald-900); font-size: 18px; font-weight: 800; }
+    .vd-expired-meta { margin: 3px 0; color: var(--color-muted-2); font-size: 13px; }
+    .vd-pull-out-button {
+        display: flex;
+        width: 100%;
+        min-height: 48px;
+        justify-content: center;
+        align-items: center;
+        gap: 9px;
+        padding: 12px 18px;
+        border: 0;
+        border-radius: 9999px;
+        background: #FF4040;
+        color: #FFFFFF;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background-color .15s ease, transform .15s ease;
+    }
+    .vd-pull-out-button:hover { background: #E62E2E; transform: translateY(-1px); }
+    .vd-pull-out-button svg { width: 19px; height: 19px; flex: none; }
+    .vd-expired-empty {
+        padding: 20px;
+        border: 1px solid rgba(201, 162, 39, .22);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, .6);
+        color: var(--color-muted-2);
+        text-align: center;
+        font-size: 13px;
+    }
+    .vd-pull-out-modal {
+        width: min(94vw, 540px);
+        max-height: 90vh;
+        padding: 0;
+        overflow: auto;
+        border: 0;
+        border-radius: 18px;
+        background: #FFFDF7;
+        color: var(--color-ink);
+        box-shadow: 0 24px 70px rgba(8, 32, 26, .3);
+    }
+    .vd-pull-out-modal::backdrop { background: rgba(8, 32, 26, .58); }
+    .vd-pull-out-form { padding: 22px; }
+    .vd-pull-out-form h2 { margin: 0 0 16px; color: var(--color-emerald-900); font-size: 20px; font-weight: 800; }
+    .vd-pull-out-details { display: grid; gap: 10px; margin: 0 0 18px; }
+    .vd-pull-out-details div { display: flex; justify-content: space-between; gap: 14px; font-size: 13px; }
+    .vd-pull-out-details dt { color: var(--color-muted-2); }
+    .vd-pull-out-details dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+    .vd-modal-label { display: block; margin: 12px 0 5px; font-size: 12px; font-weight: 700; color: var(--color-emerald-900); }
+    .vd-modal-input {
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 11px;
+        border: 1px solid rgba(8, 32, 26, .2);
+        border-radius: 9px;
+        background: #FFFFFF;
+        color: var(--color-ink);
+    }
+    .vd-modal-textarea { resize: vertical; }
+    .vd-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .vd-modal-cancel, .vd-modal-confirm {
+        min-height: 42px;
+        padding: 9px 16px;
+        border: 0;
+        border-radius: 9999px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .vd-modal-cancel { background: #F4EBD7; color: var(--color-emerald-900); }
+    .vd-modal-confirm { background: #FF4040; color: #FFFFFF; }
+    .vd-modal-confirm:hover { background: #E62E2E; }
 
     .vd-table {
         margin-top: 12px;
@@ -279,7 +370,21 @@
                 <p class="vd-stock-value {% if totals.available <= 0 %}vd-stock-value--out{% elif stock_status == 'low' %}vd-stock-value--low{% endif %}">{{ totals.available|default:0 }}</p>
             </div>
         </div>
+        <div class="vd-stock-grid vd-stock-grid--secondary">
+            <div class="vd-stock-card vd-stock-card--amber">
+                <p class="vd-stock-label">Expired Quantity</p>
+                <p class="vd-stock-value vd-stock-value--low">{{ totals.expired_quantity|default:0 }}</p>
+                <p class="vd-stock-note">{{ item.unit }} expired</p>
+            </div>
+            <div class="vd-stock-card vd-stock-card--red">
+                <p class="vd-stock-label">Pulled Out</p>
+                <p class="vd-stock-value vd-stock-value--out">{{ totals.pulled_out|default:0 }}</p>
+                <p class="vd-stock-note">Remaining physical: {{ totals.expired_remaining|default:0 }}</p>
+            </div>
+        </div>
     </section>
+
+    {% include 'inventory/_expired_stock_batches.html' with module='medicine' %}
 
     <section class="vd-section">
         <div class="vd-section-head">3. Stock Transaction History</div>
@@ -308,16 +413,16 @@
                 <tbody class="divide-y divide-sage-100">
                     {% for m in movements %}
                     <tr class="hover:bg-sage-50{% if highlight_batch and m.batch_number|lower == highlight_batch %} vd-row-highlight{% endif %}">
-                        <td class="table-cell vd-cell-date">{% if m.movement_type == 'stock_in' %}{{ m.date_received|default:m.medicine.date_received|date:'M d, Y' }}{% else %}—{% endif %}</td>
+                        <td class="table-cell vd-cell-date">{% if m.movement_type == 'stock_in' %}{{ m.date_received|default:m.medicine.date_received|date:'M d, Y' }}{% else %}{{ m.created_at|date:'M d, Y' }}{% endif %}</td>
                         <td class="table-cell vd-cell-time">{% if m.movement_type == 'stock_in' %}{% if m.time_received %}{{ m.time_received|time:'h:i A' }}{% else %}—{% endif %}{% else %}{{ m.created_at|time:'h:i A' }}{% endif %}</td>
                         <td class="table-cell">{% if m.movement_type == 'stock_in' %}{{ m.supplier|default:m.medicine.source_supplier|default:'—' }}{% else %}—{% endif %}</td>
                         <td class="table-cell font-mono text-xs">{{ m.batch_number|default:m.medicine.batch_number|default:'—' }}</td>
                         <td class="table-cell vd-cell-date">{{ m.expiration_date|default:m.medicine.expiration_date|date:'M d, Y' }}</td>
-                        <td class="table-cell vd-cell-qty font-medium">{% if m.movement_type == 'stock_in' %}+{% elif m.movement_type == 'dispense' %}-{% endif %}{{ m.quantity }}</td>
-                        <td class="table-cell vd-cell-type"><span class="status-badge {% if m.movement_type == 'stock_in' %}bg-green-100 text-green-800{% elif m.movement_type == 'dispense' %}bg-red-100 text-red-800{% else %}bg-sage-100 text-ink{% endif %}">{{ m.get_movement_type_display }}</span></td>
+                        <td class="table-cell vd-cell-qty font-medium">{% if m.movement_type == 'stock_in' %}+{% elif m.movement_type == 'dispense' or m.movement_type == 'expired_pull_out' %}-{% endif %}{{ m.quantity }}</td>
+                        <td class="table-cell vd-cell-type"><span class="status-badge {% if m.movement_type == 'stock_in' %}bg-green-100 text-green-800{% elif m.movement_type == 'expired_pull_out' %}bg-red-100 text-red-800{% elif m.movement_type == 'dispense' %}bg-sage-100 text-ink{% else %}bg-sage-100 text-ink{% endif %}">{{ m.get_movement_type_display }}</span></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="vd-empty">No stock receiving history recorded yet.</td></tr>
+                    <tr><td colspan="7" class="vd-empty">No stock transactions recorded yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -374,4 +479,26 @@
     });
 </script>
 {% endif %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-pull-out-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var modal = document.getElementById(button.dataset.pullOutOpen);
+                if (modal) { modal.showModal(); }
+            });
+        });
+        document.querySelectorAll('[data-pull-out-close]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var modal = button.closest('dialog');
+                if (modal) { modal.close(); }
+            });
+        });
+        document.querySelectorAll('.vd-pull-out-form').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                var submit = form.querySelector('[type="submit"]');
+                if (submit) { submit.disabled = true; }
+            });
+        });
+    });
+</script>
 {% endblock %}

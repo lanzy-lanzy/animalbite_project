@@ -94,7 +94,7 @@ def patient_report_bite(request):
             # it after assessing the case, so doses are never dated from an
             # unset consultation date.
             AuditLog.objects.create(user=request.user, action='PATIENT_REPORT_BITE', description=f'Patient {patient.patient_number} reported new bite as {case.case_number}')
-            messages.success(request, f'Bite reported successfully as {case.case_number}. Staff will review it and a nurse will set your vaccine schedule. Check My Treatment for updates.')
+            messages.success(request, f'Bite reported successfully as {case.case_number}. Staff will review it and a nurse will set your vaccine schedule. Check My Dashboard for updates.')
             return redirect('accounts:patient_portal')
     else:
         form = PatientBiteReportForm()

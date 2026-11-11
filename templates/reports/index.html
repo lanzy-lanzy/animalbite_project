@@ -96,6 +96,110 @@
     </div>
 </div>
 
+<!-- Global search -->
+<div class="card mb-5">
+    <h2 class="font-display text-sm font-bold text-ink mb-3">Search All Records</h2>
+    <form id="global-search-form" method="GET">
+        <input type="hidden" name="type" value="{{ report_type }}">
+        <label for="reports-search" class="form-label">Search patient, case, treatment, vaccination, or inventory information</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <input id="reports-search" type="search" name="q" value="{{ q }}" autocomplete="off"
+                   placeholder="Search name, barangay, sex, animal, case number..."
+                   class="form-input w-full min-w-0" style="height:2.75rem;">
+            <label class="sr-only" for="reports-search-field">Search field</label>
+            <select id="reports-search-field" name="search_field" class="form-input sm:w-52 shrink-0" style="height:2.75rem;">
+                {% for value, title in search_fields.items %}
+                <option value="{{ value }}" {% if search_field == value %}selected{% endif %}>{{ title }}</option>
+                {% endfor %}
+            </select>
+            <div class="flex gap-2">
+                <button type="submit" class="btn-primary shrink-0" style="min-width:120px;height:2.75rem;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                    Search
+                </button>
+                {% if q %}<a href="?type={{ report_type }}" class="btn-secondary shrink-0 inline-flex items-center justify-center" style="height:2.75rem;">Clear Search</a>{% endif %}
+            </div>
+        </div>
+        <p id="reports-search-loading" class="text-xs font-semibold text-emerald-800 mt-2" role="status" hidden>Searching records…</p>
+    </form>
+</div>
+
+{% if search_submitted %}
+<section id="reports-search-results" class="card mb-5" aria-live="polite">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div>
+            <h2 class="font-display text-base font-bold text-ink">Search Results</h2>
+            <p class="text-xs text-muted mt-1">
+                Search: <strong class="text-ink">{{ q }}</strong> · {{ result_count }} matching record{{ result_count|pluralize }} · {{ label }}
+            </p>
+        </div>
+    </div>
+    {% if not result_count %}
+    <div class="rounded-xl bg-sage-50 px-4 py-8 text-center">
+        <p class="text-sm font-semibold text-ink">No matching records found.</p>
+        <p class="text-xs text-muted mt-1">Try another patient name, case number, barangay, animal type, or status.</p>
+    </div>
+    {% else %}
+    <div class="overflow-x-auto rounded-xl border border-line">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-sage-50">
+                    <th class="table-header">Patient</th>
+                    <th class="table-header">Patient ID</th>
+                    <th class="table-header">Sex</th>
+                    <th class="table-header">Case Number</th>
+                    <th class="table-header">Barangay</th>
+                    <th class="table-header">Animal</th>
+                    <th class="table-header">Treatment Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-sage-100">
+                {% for case in case_page %}
+                <tr>
+                    <td class="table-cell font-semibold">{{ case.patient.full_name }}</td>
+                    <td class="table-cell font-mono text-xs">{{ case.patient.patient_number }}</td>
+                    <td class="table-cell">{{ case.patient.get_sex_display }}</td>
+                    <td class="table-cell font-mono text-xs">{{ case.case_number }}</td>
+                    <td class="table-cell">{{ case.report_barangay }}</td>
+                    <td class="table-cell">{{ case.report_animal }}</td>
+                    <td class="table-cell">{{ case.report_status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if case_page.has_other_pages %}
+    <nav class="flex justify-between mt-3 text-xs" aria-label="Search result pages">
+        <span>Page {{ case_page.number }} of {{ case_page.paginator.num_pages }}</span>
+        <span class="flex gap-3">
+            {% if case_page.has_previous %}<a class="font-bold text-emerald-800" href="?type={{ report_type }}&q={{ q|urlencode }}&search_field={{ search_field }}&cases_page={{ case_page.previous_page_number }}">Previous</a>{% endif %}
+            {% if case_page.has_next %}<a class="font-bold text-emerald-800" href="?type={{ report_type }}&q={{ q|urlencode }}&search_field={{ search_field }}&cases_page={{ case_page.next_page_number }}">Next</a>{% endif %}
+        </span>
+    </nav>
+    {% endif %}
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- Reporting period -->
+<div class="card mb-5">
+    <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2 mb-3">
+        <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </span>
+        Reporting Period
+    </h2>
+    <div class="flex flex-wrap gap-2">
+        <a href="?type=daily{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Today</a>
+        <a href="?type=weekly{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">This Week</a>
+        <a href="?type=monthly{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">This Month</a>
+        <a href="?type=all{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'all' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">All Time</a>
+    </div>
+    <p class="text-[11px] font-medium text-muted mt-3">
+        Case statistics use the bite incident date. Inventory results and statistics show the current stock snapshot.
+    </p>
+</div>
+
 <!-- Summary cards -->
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
     <div class="rep-kpi rep-kpi--blue">
@@ -130,41 +234,6 @@
     </div>
 </div>
 
-<!-- Reporting period and search -->
-<div class="card mb-5">
-    <h2 class="font-display text-sm font-bold text-ink flex items-center gap-2 mb-3">
-        <span class="w-8 h-8 rounded-xl bg-emerald-950 text-white flex items-center justify-center">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        </span>
-        Reporting Period
-    </h2>
-
-    <div class="flex flex-wrap gap-2 mb-4">
-        <a href="?type=daily{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'daily' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">Today</a>
-        <a href="?type=weekly{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'weekly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">This Week</a>
-        <a href="?type=monthly{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'monthly' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">This Month</a>
-        <a href="?type=all{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs font-bold border {% if report_type == 'all' %}bg-emerald-950 text-white border-emerald-950{% else %}bg-white text-ink border-line hover:bg-sage-50{% endif %}">All Time</a>
-    </div>
-
-    <form method="GET">
-        <input type="hidden" name="type" value="{{ report_type }}">
-        <label for="reports-search" class="form-label">Search case number or patient</label>
-        <div class="flex flex-col sm:flex-row gap-2">
-            <div class="w-full min-w-0">
-                <input id="reports-search" type="text" name="q" value="{{ q }}" placeholder="e.g., ABC-00001 or Juan Dela Cruz" class="form-input" style="height:2.75rem;">
-            </div>
-            <button type="submit" class="btn-primary shrink-0" style="min-width:120px;height:2.75rem;">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-                Search
-            </button>
-        </div>
-    </form>
-
-    <p class="text-[11px] font-medium text-muted mt-2">
-        Case statistics follow the selected reporting period. Inventory statistics show current stock.
-    </p>
-</div>
-
 <!-- A. Patient and Case Reports -->
 <section class="mb-6">
     <div class="flex items-center justify-between mb-3">
@@ -172,7 +241,7 @@
         <span class="text-[11px] font-semibold text-muted">{{ label }}</span>
     </div>
     <div class="rep-grid rep-grid--4">
-        <a href="{% url 'reports:cases_report' %}?type=daily" class="rep-card rep-card--blue group">
+        <a href="{% url 'reports:cases_report' %}?type=daily{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="rep-card rep-card--blue group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </span>
@@ -180,7 +249,7 @@
             <p class="rep-card__desc">Bite cases recorded today.</p>
             <span class="rep-card__link">View Report →</span>
         </a>
-        <a href="{% url 'reports:cases_report' %}?type=weekly" class="rep-card rep-card--mint group">
+        <a href="{% url 'reports:cases_report' %}?type=weekly{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="rep-card rep-card--mint group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </span>
@@ -188,7 +257,7 @@
             <p class="rep-card__desc">This week's incidents.</p>
             <span class="rep-card__link">View Report →</span>
         </a>
-        <a href="{% url 'reports:cases_report' %}?type=monthly" class="rep-card rep-card--lavender group">
+        <a href="{% url 'reports:cases_report' %}?type=monthly{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="rep-card rep-card--lavender group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             </span>
@@ -196,7 +265,7 @@
             <p class="rep-card__desc">This month's incidents.</p>
             <span class="rep-card__link">View Report →</span>
         </a>
-        <a href="{% url 'reports:patient_treatment_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--peach group">
+        <a href="{% url 'reports:patient_treatment_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="rep-card rep-card--peach group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-3-3"/></svg>
             </span>
@@ -214,7 +283,7 @@
         <span class="text-[11px] font-semibold text-muted">Live stock snapshot</span>
     </div>
     <div class="rep-grid rep-grid--4">
-        <a href="{% url 'reports:vaccine_inventory_report' %}" class="rep-card rep-card--teal group">
+        <a href="{% url 'reports:vaccine_inventory_report' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--teal group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
             </span>
@@ -222,7 +291,7 @@
             <p class="rep-card__desc">One row per vaccine product with batch detail.</p>
             <span class="rep-card__link">View Report →</span>
         </a>
-        <a href="{% url 'reports:medicine_inventory_report' %}" class="rep-card rep-card--periwinkle group">
+        <a href="{% url 'reports:medicine_inventory_report' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--periwinkle group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0H5a2 2 0 01-2-2V9m6 12h10a2 2 0 002-2V9m-6-6v18"/></svg>
             </span>
@@ -238,7 +307,7 @@
             <p class="rep-card__desc">Low, out, expiring and expired stock.</p>
             <span class="rep-card__link">View Report →</span>
         </a>
-        <a href="{% url 'reports:vaccine_report' %}?type={{ report_type }}" class="rep-card rep-card--yellow group">
+        <a href="{% url 'reports:vaccine_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--yellow group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </span>
@@ -256,7 +325,7 @@
         <span class="text-[11px] font-semibold text-muted">Recorded incident data</span>
     </div>
     <div class="rep-grid rep-grid--2">
-        <a href="{% url 'reports:barangay_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--sky group">
+        <a href="{% url 'reports:barangay_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="rep-card rep-card--sky group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
             </span>
@@ -264,7 +333,7 @@
             <p class="rep-card__desc">Ranked incident barangays with percentages.</p>
             <span class="rep-card__link">View Report →</span>
         </a>
-        <a href="{% url 'reports:animal_type_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--sand group">
+        <a href="{% url 'reports:animal_type_report' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}&search_field={{ search_field }}{% endif %}" class="rep-card rep-card--sand group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 5.5a2 2 0 114 0 2 2 0 01-4 0zm11 0a2 2 0 114 0 2 2 0 01-4 0zm-11 8a2 2 0 114 0 2 2 0 01-4 0zm11 0a2 2 0 114 0 2 2 0 01-4 0zM9 13c0 4 6 4 6 0"/></svg>
             </span>
@@ -281,7 +350,7 @@
         <h2 class="text-[11px] font-bold tracking-widest uppercase text-amber-700">D · Follow-up Reports</h2>
     </div>
     <div class="rep-grid rep-grid--2">
-        <a href="{% url 'reports:missed_appointments' %}?type={{ report_type }}" class="rep-card rep-card--rose group">
+        <a href="{% url 'reports:missed_appointments' %}?type={{ report_type }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="rep-card rep-card--rose group">
             <span class="rep-card__icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </span>
@@ -291,4 +360,10 @@
         </a>
     </div>
 </section>
+<script>
+    document.getElementById('global-search-form')?.addEventListener('submit', function () {
+        const indicator = document.getElementById('reports-search-loading');
+        if (indicator) indicator.hidden = false;
+    });
+</script>
 {% endblock %}

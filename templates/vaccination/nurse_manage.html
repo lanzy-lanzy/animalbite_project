@@ -8,6 +8,8 @@
   .manage-modal[hidden] { display: none; }
   .manage-modal__backdrop { position: absolute; inset: 0; background: rgba(6, 61, 46, .55); backdrop-filter: blur(3px); }
   .manage-modal__card { position: relative; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; margin: 0 auto; }
+  .early-warning__title { color: #0D382C; }
+  .early-warning__details { background: #FBF7EC; }
   .dose-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
   .btn-mini { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; }
   .btn-print-schedule { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 9999px; background: #08291F; color: #FFFFFF; font-size: 14px; font-weight: 700; line-height: 1; transition: background-color .15s ease, transform .15s ease; }
@@ -45,6 +47,13 @@
   <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3" role="alert">
     <p class="text-sm font-bold text-amber-900">{% if assessment %}ASSESSMENT DRAFT{% else %}NO ASSESSMENT YET{% endif %}</p>
     <p class="text-xs font-medium text-amber-800 mt-1">A finalized, signed doctor assessment is required before vaccine administration or medicine dispensing. You may still set appointment dates.</p>
+  </div>
+  {% endif %}
+
+  {% if request.user.role == 'nurse' and rig_schedule_review %}
+  <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3" role="alert">
+    <p class="text-sm font-bold text-amber-900">Clinical review required</p>
+    <p class="text-xs font-medium text-amber-800 mt-1">The selected product is identified as rabies immunoglobulin (RIG), while this assessment specifies a multi-dose schedule. Please ask the authorized clinician to confirm the product and regimen before administration. The prescription has not been changed.</p>
   </div>
   {% endif %}
 
@@ -109,14 +118,14 @@
                 <div class="dose-actions">
                   {% if row.can_schedule %}
                   <button type="button" class="btn-mini bg-sage-50 border border-line text-emerald-900 hover:bg-cream-100"
-                          onclick="openScheduleModal('{% url 'vaccination:dose_schedule' row.dose.pk %}', '{{ row.label|escapejs }}', '{{ row.dose.scheduled_date|date:'Y-m-d' }}', '{{ row.expected_date|date:'Y-m-d' }}')">
+                          onclick="openScheduleModal('{% url 'vaccination:dose_schedule' row.dose.pk %}', '{{ row.label|escapejs }}', '{{ row.dose.scheduled_date|date:'Y-m-d' }}')">
                     Set date
                   </button>
                   {% endif %}
                   {% if row.dose.dose_status != 'completed' and row.dose.dose_status != 'cancelled' %}
                   <button type="button" class="btn-mini bg-emerald-950 text-white hover:bg-emerald-900 {% if not row.can_administer %}opacity-40 cursor-not-allowed{% endif %}"
                           {% if row.can_administer %}
-                          onclick="openAdministerModal('{% url 'vaccination:dose_administer' row.dose.pk %}', '{{ row.label|escapejs }}', '{{ prescribed_vaccine|default:row.dose.vaccine_brand|escapejs }}', '{{ row.dose.batch_number|default:assessment.vaccine_lot_number|escapejs }}')"
+                          onclick="openAdministerModal('{% url 'vaccination:dose_administer' row.dose.pk %}', '{% url 'vaccination:dose_early_administration_request' row.dose.pk %}', '{{ row.label|escapejs }}', '{{ prescribed_vaccine|default:row.dose.vaccine_brand|escapejs }}', '{{ row.dose.batch_number|default:assessment.vaccine_lot_number|escapejs }}', '{{ row.dose.scheduled_date|date:'Y-m-d' }}', '{{ row.dose.scheduled_date|date:'F j, Y' }}', '{{ today|date:'Y-m-d' }}', '{{ today|date:'F j, Y' }}', '{{ row.dose.dose_status|escapejs }}')"
                           {% else %}
                           disabled title="A finalized doctor assessment is required"
                           {% endif %}>
@@ -227,14 +236,55 @@
           <p class="text-xs font-bold uppercase tracking-widest text-muted">Dose</p>
           <p id="scheduleDoseLabel" class="text-sm font-bold text-ink"></p>
           <div>
-            <label for="scheduleDate" class="form-label">Scheduled date</label>
+            <label for="scheduleDate" class="form-label">Scheduled Date <span class="text-red-600">*</span></label>
             <input type="date" id="scheduleDate" name="scheduled_date" class="form-input" required>
-            <p id="scheduleProtocolHint" class="text-xs font-medium text-muted mt-1"></p>
           </div>
         </div>
         <div class="flex justify-end gap-2 px-5 py-3 border-t border-line">
           <button type="button" onclick="closeManageModal('scheduleModal')" class="px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Cancel</button>
           <button type="submit" class="px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900">Save Date</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Early administration request modal -->
+<div id="earlyAdministrationModal" class="manage-modal" hidden aria-hidden="true">
+  <div class="manage-modal__backdrop" onclick="closeManageModal('earlyAdministrationModal')"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="manage-modal__card bg-white rounded-2xl border border-line shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="earlyAdministrationModalTitle">
+      <div class="px-5 py-4 border-b border-line">
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 shrink-0 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center" aria-hidden="true">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/></svg>
+          </span>
+          <h3 id="earlyAdministrationModalTitle" class="text-base font-bold early-warning__title">Early Administration Warning</h3>
+        </div>
+      </div>
+      <form id="earlyAdministrationForm" method="post" action="">
+        {% csrf_token %}
+        <div class="px-5 py-4 space-y-4">
+          <p class="text-sm font-medium text-ink">This vaccine dose is not yet scheduled for administration.</p>
+          <div class="early-warning__details rounded-xl border border-amber-200 p-3 space-y-2">
+            <div class="flex items-start justify-between gap-3">
+              <div><p class="manage-label">Patient name</p><p class="manage-value">{{ patient.full_name }}</p></div>
+              <div class="text-right"><p class="manage-label">Dose number</p><p id="earlyDoseLabel" class="manage-value"></p></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><p class="manage-label">Scheduled date</p><p id="earlyScheduledDate" class="manage-value"></p></div>
+              <div><p class="manage-label">Current date</p><p id="earlyCurrentDate" class="manage-value"></p></div>
+            </div>
+          </div>
+          <p class="text-sm font-bold text-ink">Why do you need to administer this vaccine dose before its scheduled date?</p>
+          <div>
+            <label for="earlyAdministrationReason" class="manage-label">Reason for Early Administration <span class="text-red-600">***</span></label>
+            <textarea id="earlyAdministrationReason" name="reason" class="form-input mt-1 min-h-24" rows="4" maxlength="2000" required placeholder="Enter the reason for requesting early administration..."></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 px-5 py-3 border-t border-line">
+          <button type="button" onclick="closeManageModal('earlyAdministrationModal')" class="px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">Cancel</button>
+          <button id="submitEarlyAdministrationReason" type="submit" disabled class="px-4 py-2 rounded-full bg-emerald-950 text-white text-sm font-bold hover:bg-emerald-900 disabled:opacity-40 disabled:cursor-not-allowed">Submit Reason</button>
         </div>
       </form>
     </div>
@@ -334,19 +384,28 @@
     document.body.style.overflow = '';
   }
 
-  function openScheduleModal(action, label, scheduled, expected) {
+  function openScheduleModal(action, label, scheduled) {
     document.getElementById('scheduleForm').action = action;
     document.getElementById('scheduleDoseLabel').textContent = label || '';
     const input = document.getElementById('scheduleDate');
-    input.value = scheduled || expected || '';
-    document.getElementById('scheduleProtocolHint').textContent = expected
-      ? 'Protocol date: ' + expected
-      : 'Choose a date within the approved protocol.';
+    input.value = scheduled || '';
     showManageModal('scheduleModal');
     input.focus({ preventScroll: true });
   }
 
-  function openAdministerModal(action, label, brand, batch) {
+  function openAdministerModal(action, earlyRequestAction, label, brand, batch, scheduledDate, scheduledDateLabel, currentDate, currentDateLabel, status) {
+    if (scheduledDate && scheduledDate > currentDate && status !== 'completed' && status !== 'cancelled') {
+      document.getElementById('earlyAdministrationForm').action = earlyRequestAction;
+      document.getElementById('earlyDoseLabel').textContent = label || '';
+      document.getElementById('earlyScheduledDate').textContent = scheduledDateLabel || '';
+      document.getElementById('earlyCurrentDate').textContent = currentDateLabel || '';
+      const reason = document.getElementById('earlyAdministrationReason');
+      reason.value = '';
+      document.getElementById('submitEarlyAdministrationReason').disabled = true;
+      showManageModal('earlyAdministrationModal');
+      reason.focus({ preventScroll: true });
+      return;
+    }
     document.getElementById('administerForm').action = action;
     document.getElementById('administerDoseLabel').textContent = label || '';
     document.getElementById('administerBrand').value = brand || '';
@@ -355,6 +414,10 @@
     document.getElementById('administerDate').focus({ preventScroll: true });
   }
 
+  document.getElementById('earlyAdministrationReason').addEventListener('input', function () {
+    document.getElementById('submitEarlyAdministrationReason').disabled = !this.value.trim();
+  });
+
   function openDispenseModal(action, medicine, quantity) {
     document.getElementById('dispenseForm').action = action;
     document.getElementById('dispenseMedicine').textContent = medicine || '';
@@ -362,7 +425,7 @@
     showManageModal('dispenseModal');
   }
 
-  ['scheduleForm', 'administerForm', 'dispenseForm'].forEach(function (id) {
+  ['scheduleForm', 'administerForm', 'earlyAdministrationForm', 'dispenseForm'].forEach(function (id) {
     const form = document.getElementById(id);
     if (!form) return;
     form.addEventListener('submit', function () {
@@ -376,7 +439,7 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape') return;
-    ['scheduleModal', 'administerModal', 'dispenseModal'].forEach(closeManageModal);
+    ['scheduleModal', 'administerModal', 'earlyAdministrationModal', 'dispenseModal'].forEach(closeManageModal);
   });
 </script>
 {% endblock %}

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, OuterRef, Subquery, Min
@@ -14,6 +14,7 @@ import re
 from django.utils import timezone
 from .models import VaccinationSchedule, VaccineDose, FollowUpRecord, AnimalObservation, SMSLog
 from .forms import VaccinationScheduleForm, VaccineDoseForm, FollowUpRecordForm, AnimalObservationForm
+from .schedule_utils import prescribed_minimum_date
 from bite_cases.models import AnimalBiteCase
 from audit.models import AuditLog
 
@@ -67,6 +68,17 @@ def _may_set_schedule(user):
     """Only nurses (and admins) may trigger/author a vaccination schedule."""
     role = getattr(user, 'role', '')
     return user.is_authenticated and role in ('nurse', 'admin')
+
+
+def _block_admin_dose_administration(request):
+    """Admins view vaccination records only; the Nurse workflow owns dose updates.
+
+    Enforced server-side so a direct GET/POST to a dose-update endpoint is denied
+    with 403 even though the admin timeline hides the controls.
+    """
+    if getattr(request.user, 'role', '') == 'admin':
+        raise PermissionDenied(
+            'Vaccination dose administration is restricted to the Nurse workflow.')
 
 
 def _schedule_days():
@@ -233,6 +245,7 @@ def my_schedule_detail(request, pk):
 
 @login_required
 def dose_update(request, pk):
+    _block_admin_dose_administration(request)
     dose = get_object_or_404(VaccineDose.objects.select_related('schedule__bite_case'), pk=pk)
     if getattr(request.user, 'role', '') == 'patient':
         messages.error(request, 'Not authorized.')
@@ -1157,7 +1170,7 @@ def _dose_rows_for_management(schedule, assessment_is_final):
     rows = []
     for index, dose in enumerate(schedule.doses.all(), start=1):
         ordinal = ordinals[index - 1] if index <= len(ordinals) else f'{index}th'
-        can_schedule = dose.dose_status not in ('completed', 'cancelled')
+        can_schedule = index > 1 and dose.dose_status not in ('completed', 'cancelled')
         can_administer = (
             assessment_is_final
             and dose.dose_status not in ('completed', 'cancelled')
@@ -1189,7 +1202,9 @@ def nurse_schedule_manage(request, pk):
     )
     bite_case = schedule.bite_case
     patient = bite_case.patient
-    assessment = ClinicalAssessment.objects.filter(bite_case=bite_case).first()
+    assessment = ClinicalAssessment.objects.select_related(
+        'vaccine_inventory',
+    ).filter(bite_case=bite_case).first()
     assessment_is_final = bool(assessment and assessment.is_finalized)
     prescriptions = []
     if assessment:
@@ -1200,16 +1215,40 @@ def nurse_schedule_manage(request, pk):
     doses = list(schedule.doses.all())
     completed = sum(1 for dose in doses if dose.dose_status == 'completed')
     total = len(doses)
+    prescribed_vaccine = ''
+    if assessment and assessment.vaccine_inventory_id:
+        prescribed_vaccine = assessment.vaccine_inventory.vaccine_name
+        if assessment.vaccine_inventory.brand:
+            prescribed_vaccine = (
+                f'{prescribed_vaccine} ({assessment.vaccine_inventory.brand})'
+                if prescribed_vaccine else assessment.vaccine_inventory.brand
+            )
     prescribed_vaccine = (
-        (assessment.vaccine_brand_plan if assessment else '')
+        prescribed_vaccine
+        or (assessment.vaccine_brand_plan if assessment else '')
         or next((d.vaccine_brand for d in doses if d.vaccine_brand), '')
-        or (assessment.vaccine_inventory.brand if assessment and assessment.vaccine_inventory_id else '')
     )
     dose_schedule_label = ''
     if assessment and assessment.dose_protocol:
         dose_schedule_label = f"{len(ClinicalAssessment.protocol_days(assessment.dose_protocol))} Doses"
     elif total:
         dose_schedule_label = f'{total} Dose{"" if total == 1 else "s"}'
+    product_name = ''
+    if assessment:
+        inventory_name = (
+            assessment.vaccine_inventory.vaccine_name
+            if assessment.vaccine_inventory_id
+            else ''
+        )
+        product_name = f'{inventory_name} {assessment.vaccine_brand_plan}'
+    prescribed_dose_count = _prescribed_dose_count(assessment, doses)
+    rig_schedule_review = (
+        prescribed_dose_count > 1
+        and (
+            'rabies immunoglobulin' in product_name.casefold()
+            or product_name.strip().casefold() == 'rig'
+        )
+    )
 
     return render(request, 'vaccination/nurse_manage.html', {
         'schedule': schedule,
@@ -1224,6 +1263,7 @@ def nurse_schedule_manage(request, pk):
         'progress': int((completed / total * 100) if total else 0),
         'prescribed_vaccine': prescribed_vaccine,
         'dose_schedule_label': dose_schedule_label,
+        'rig_schedule_review': rig_schedule_review,
         'today': timezone.localdate(),
     })
 
@@ -1336,16 +1376,6 @@ def nurse_schedule_print(request, pk):
     })
 
 
-def _earliest_protocol_date(dose):
-    """Earliest allowed date for a dose, mirroring VaccineDoseForm.clean()."""
-    first = dose.schedule.doses.order_by('id').first()
-    if not first or first.pk == dose.pk or not first.scheduled_date:
-        return None
-    if dose.protocol_day is None:
-        return first.scheduled_date
-    return first.scheduled_date + timedelta(days=dose.protocol_day)
-
-
 def _send_schedule_set_reminder(dose, user):
     """Text the patient their dose date. Returns (log, reason); never raises.
 
@@ -1385,6 +1415,7 @@ def dose_schedule(request, pk):
 
     Setting or changing the date also texts the patient their appointment.
     """
+    _block_admin_dose_administration(request)
     if not _may_manage_vaccination(request.user):
         messages.error(request, 'Not authorized to schedule doses.')
         return redirect('dashboard:index')
@@ -1398,6 +1429,11 @@ def dose_schedule(request, pk):
     )
     manage_url = redirect('vaccination:nurse_schedule_manage', pk=dose.schedule_id)
 
+    first_dose = dose.schedule.doses.order_by('id').first()
+    if first_dose and first_dose.pk == dose.pk:
+        messages.error(request, "The 1st dose date is set by the doctor's finalized assessment and cannot be changed here.")
+        return manage_url
+
     if dose.dose_status in ('completed', 'cancelled'):
         messages.error(request, 'A completed or cancelled dose cannot be rescheduled.')
         return manage_url
@@ -1409,11 +1445,17 @@ def dose_schedule(request, pk):
         messages.error(request, 'Enter a valid scheduled date.')
         return manage_url
 
-    earliest = _earliest_protocol_date(dose)
-    if earliest and scheduled_date < earliest:
+    minimum = prescribed_minimum_date(dose)
+    if minimum and scheduled_date < minimum['date']:
         messages.error(
             request,
-            'This protocol requires %s or later.' % earliest.strftime('%b %d, %Y'),
+            "The doctor's finalized %s regimen places this dose on Day %d; "
+            'the earliest date is %s.'
+            % (
+                minimum['protocol'],
+                minimum['day'],
+                minimum['date'].strftime('%b %d, %Y'),
+            ),
         )
         return manage_url
 
@@ -1431,7 +1473,7 @@ def dose_schedule(request, pk):
     )
     messages.success(
         request,
-        f'{dose.dose_label} scheduled for {scheduled_date.strftime("%b %d, %Y")}.',
+        'Vaccination schedule updated successfully.',
     )
 
     if date_changed:
@@ -1482,8 +1524,68 @@ def _deduct_one_vial(dose):
 
 @login_required
 @require_POST
+def dose_early_administration_request(request, pk):
+    """Record a pending review request without changing the dose or inventory."""
+    _block_admin_dose_administration(request)
+    if not _may_manage_vaccination(request.user):
+        messages.error(request, 'Not authorized to request early vaccine administration.')
+        return redirect('dashboard:index')
+
+    dose = get_object_or_404(
+        VaccineDose.objects.select_related(
+            'schedule__bite_case__patient',
+        ),
+        pk=pk,
+    )
+    manage_url = redirect('vaccination:nurse_schedule_manage', pk=dose.schedule_id)
+    reason = request.POST.get('reason', '').strip()
+    if not reason:
+        messages.error(request, 'A reason is required to request early administration.')
+        return manage_url
+    if len(reason) > 2000:
+        messages.error(request, 'The reason must be 2000 characters or fewer.')
+        return manage_url
+    if dose.scheduled_date is None:
+        messages.error(request, 'This dose must have a scheduled date before requesting early administration.')
+        return manage_url
+    if dose.dose_status in ('completed', 'cancelled') or dose.actual_date is not None:
+        messages.error(request, 'An administered or cancelled dose cannot have an early administration request.')
+        return manage_url
+
+    today = timezone.localdate()
+    if dose.scheduled_date <= today:
+        messages.error(request, 'Early administration requests are only available for doses scheduled in the future.')
+        return manage_url
+
+    bite_case = dose.schedule.bite_case
+    patient = bite_case.patient
+    requested_at = timezone.localtime()
+    AuditLog.objects.create(
+        user=request.user,
+        action='EARLY_ADMIN_REQUEST',
+        description=(
+            f'Pending authorized review: early administration requested for '
+            f'{dose.dose_label} (dose ID {dose.pk}) for patient {patient.full_name()} '
+            f'in case {bite_case.case_number}; scheduled {dose.scheduled_date}; '
+            f'requested {requested_at.strftime("%Y-%m-%d %H:%M:%S %Z")}. '
+            f'Reason: {reason}. No administration or inventory change was made.'
+        ),
+        target_type='bite_case',
+        target_id=bite_case.pk,
+        ip_address=request.META.get('REMOTE_ADDR'),
+    )
+    messages.success(
+        request,
+        'Your reason has been recorded. This vaccine dose cannot be administered before its scheduled date without the required authorization.',
+    )
+    return manage_url
+
+
+@login_required
+@require_POST
 def dose_administer(request, pk):
     """Confirm actual administration: mark one dose Completed and deduct stock once."""
+    _block_admin_dose_administration(request)
     if not _may_manage_vaccination(request.user):
         messages.error(request, 'Not authorized to record vaccine administration.')
         return redirect('dashboard:index')
@@ -1507,11 +1609,22 @@ def dose_administer(request, pk):
             )
             return manage_url
 
-        if dose.dose_status == 'completed':
+        if dose.dose_status == 'completed' or dose.actual_date is not None:
             messages.info(request, 'This dose has already been recorded as completed.')
             return manage_url
         if dose.dose_status == 'cancelled':
             messages.error(request, 'A cancelled dose cannot be administered.')
+            return manage_url
+        if dose.scheduled_date is None:
+            messages.error(request, 'A scheduled date is required before this dose can be administered.')
+            return manage_url
+
+        today = timezone.localdate()
+        if dose.scheduled_date > today:
+            messages.error(
+                request,
+                'This dose is scheduled for a future date and cannot be administered yet.',
+            )
             return manage_url
 
         raw_date = request.POST.get('actual_date', '').strip()
@@ -1520,8 +1633,14 @@ def dose_administer(request, pk):
         except ValueError:
             messages.error(request, 'Enter a valid administration date.')
             return manage_url
-        if actual_date > timezone.localdate():
+        if actual_date > today:
             messages.error(request, 'Administration date cannot be in the future.')
+            return manage_url
+        if actual_date < dose.scheduled_date:
+            messages.error(
+                request,
+                'Administration date cannot be earlier than the dose scheduled date.',
+            )
             return manage_url
 
         actual_time = None
@@ -1561,4 +1680,3 @@ def dose_administer(request, pk):
         f'{dose.dose_label} recorded as completed for {bite_case.patient.full_name()}.',
     )
     return manage_url
-

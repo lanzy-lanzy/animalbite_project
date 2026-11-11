@@ -1323,14 +1323,20 @@ class DoctorDashboardTests(TestCase):
         response = self.client.get(reverse("doctor:dashboard"))
         self.assertEqual(response.status_code, 302)
 
-    def test_page_renders_real_doctor_name_and_notifications(self):
+    def test_dashboard_drops_the_welcome_banner_but_keeps_notifications(self):
         response = self.client.get(reverse("doctor:dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Welcome back, Dr. Maria Santos!")
+        self.assertNotContains(response, "Welcome back, Dr.")
+        self.assertNotContains(response, "Together for a Rabies-Free Community.")
+        self.assertNotContains(response, "Open Clinical Queue")
+        self.assertNotContains(response, "dash-welcome")
         self.assertContains(response, 'aria-label="Notifications"')
         self.assertEqual(response.context["bell_queue"], 1)
         self.assertEqual(response.context["bell_drafts"], 1)
         self.assertContains(response, "Waiting in queue")
+        for label in ("My Assessments", "My Drafts", "My Finals Today", "Waiting in Queue"):
+            self.assertContains(response, label)
+        self.assertContains(response, "WHO Category Breakdown")
 
     def test_stats_are_scoped_to_the_logged_in_doctor(self):
         response = self.client.get(reverse("doctor:dashboard"))

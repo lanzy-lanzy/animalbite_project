@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}My QR Code - ABTC Patient Portal{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="pp-page-head text-center">
+        <h1 class="pp-page-title">My QR Code</h1>
+        <p class="pp-page-sub">Present this code at the clinic for quick identification on every visit.</p>
+    </div>
+
+    {% if patient %}
+    <div class="pp-qr-card">
+        <div class="pp-info-avatar">
+            {% if patient.profile_image %}
+            <img src="{{ patient.profile_image.url }}" alt="{{ patient.full_name }}">
+            {% else %}
+            {{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}
+            {% endif %}
+        </div>
+        <h2 class="pp-info-name">{{ patient.full_name }}</h2>
+        <p class="pp-info-id">{{ patient.patient_number }}</p>
+        {% if qr_data_uri %}
+        <img class="pp-qr-img" src="{{ qr_data_uri }}" alt="Patient identification QR code for {{ patient.patient_number }}">
+        <div class="pp-qr-actions">
+            <a href="{{ qr_data_uri }}" download="ABTC-QR-{{ patient.patient_number }}.png" class="btn-secondary">Download QR</a>
+            <button type="button" onclick="window.print()" class="btn-primary">Print</button>
+        </div>
+        {% else %}
+        <p class="text-sm text-muted py-6">Your QR code could not be generated right now. Please try again later or ask the clinic staff for assistance.</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="pp-qr-card">
+        <p class="text-sm text-muted py-6">Your patient record is being prepared by the clinic. Your identification QR code will be available once your registration is verified.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

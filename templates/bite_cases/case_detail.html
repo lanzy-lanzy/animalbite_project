@@ -1,7 +1,19 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}{{ case.case_number }} - ABTC System{% endblock %}
+{% block extra_head %}
+{% if request.user.role == 'admin' %}<link rel="stylesheet" href="{% static 'css/patient_detail.css' %}">{% endif %}
+{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="{% if request.user.role == 'admin' %}pd-wrap{% else %}max-w-4xl mx-auto{% endif %}">
+    {% if request.user.role == 'admin' %}
+    <div class="pd-actions no-print">
+        <a href="{% url 'bite_cases:case_list' %}" class="btn-secondary">&larr; Back</a>
+        <div class="pd-actions-right">
+            {% if not case.is_locked and not case.is_archived %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary">Edit</a>{% endif %}
+        </div>
+    </div>
+    {% else %}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div class="flex items-center gap-3">
             <a href="{% url 'bite_cases:case_list' %}" class="p-2 rounded-lg hover:bg-sage-100">&larr; Back</a>
@@ -12,8 +24,9 @@
             {% if not case.is_locked and not case.is_archived and request.user.role != 'nurse' %}<a href="{% url 'bite_cases:case_edit' case.pk %}" class="btn-secondary btn-sm">Edit</a>{% endif %}
         </div>
     </div>
+    {% endif %}
 
-    {% if can_manage_portal %}
+    {% if can_manage_portal and request.user.role != 'admin' %}
     {% if temp_creds %}
     <div class="card mb-6 border-emerald-300 bg-emerald-50">
         <div class="flex items-start gap-3">
@@ -84,6 +97,104 @@
     </div>
     {% endif %}
 
+    {% if request.user.role == 'admin' %}
+    <section class="pd-section" id="bite-incidents" style="margin-top: 0;">
+        <div class="pd-section-head">
+            <span class="pd-section-num">3</span>
+            <h2>Bite Incident Details</h2>
+            <div class="pd-section-meta">
+                <span class="pd-badge pd-badge--gold">1 case</span>
+            </div>
+        </div>
+        <div class="pd-section-body">
+            <div class="pd-case">
+                <div class="pd-case-head">
+                    <div>
+                        <p class="pd-case-eyebrow">Bite Case 1 of 1</p>
+                        <p class="pd-case-number">{{ case.case_number }}</p>
+                    </div>
+                    <div class="pd-case-actions">
+                        <span class="pd-badge pd-badge--gold">{{ case.get_case_status_display }}</span>
+                        <a href="{% url 'patients:patient_detail' case.patient.pk %}#bite-incidents" class="pd-link">View Case &rarr;</a>
+                    </div>
+                </div>
+
+                <div class="pd-grid pd-grid-2">
+                    <div class="pd-tile">
+                        <p class="pd-label">Case Number</p>
+                        <p class="pd-value pd-value--number">{{ case.case_number }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Case Status</p>
+                        <p class="pd-value">{{ case.get_case_status_display }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Date of Incident</p>
+                        <p class="pd-value">{{ case.date_time_bite|date:"F j, Y"|default:"Not recorded" }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Time of Incident</p>
+                        <p class="pd-value">{{ case.date_time_bite|time:"g:i A"|default:"Not recorded" }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Place of Incident</p>
+                        <p class="pd-value {% if not case.place_of_incident %}pd-empty{% endif %}">{{ case.place_of_incident|default:"Not recorded" }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Barangay</p>
+                        <p class="pd-value {% if not case.incident_barangay %}pd-empty{% endif %}">{{ case.incident_barangay|default:"Not recorded" }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Animal Type</p>
+                        <p class="pd-value">{{ case.get_animal_type_display }}{% if case.animal_other %} ({{ case.animal_other }}){% endif %}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Ownership</p>
+                        <p class="pd-value">{{ case.get_animal_ownership_display }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Animal Condition</p>
+                        <p class="pd-value">{{ case.get_animal_condition_display }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Animal Vaccination Status</p>
+                        <p class="pd-value">{{ case.get_animal_vax_status_display }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Exposure Type</p>
+                        <p class="pd-value">{{ case.get_exposure_type_display }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Body Part / Wounds</p>
+                        <p class="pd-value {% if not case.body_part_affected and not case.wound_description %}pd-empty{% endif %}">
+                            {{ case.body_part_affected|default:"Not recorded" }}
+                            {% if case.wound_description %}<span class="pd-subvalue">{{ case.wound_description }}</span>{% endif %}
+                        </p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Number of Wounds</p>
+                        <p class="pd-value">{{ case.number_of_wounds }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Date of Consultation</p>
+                        <p class="pd-value">{{ case.date_time_consultation|date:"F j, Y"|default:"Not recorded" }}</p>
+                    </div>
+                    <div class="pd-tile">
+                        <p class="pd-label">Wound Washed Immediately</p>
+                        <p class="pd-value">{% if case.wound_washed_immediately %}Yes{% else %}No{% endif %}</p>
+                    </div>
+                </div>
+
+                <div class="pd-grid">
+                    <div class="pd-tile">
+                        <p class="pd-label">First Aid Given</p>
+                        <p class="pd-value {% if not case.first_aid_given %}pd-empty{% endif %}">{{ case.first_aid_given|default:"Not recorded" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% else %}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <div class="card">
@@ -106,6 +217,7 @@
                 {% if case.first_aid_given %}<div class="mt-4"><label class="text-xs text-muted uppercase">First Aid Given</label><p class="text-sm">{{ case.first_aid_given }}</p></div>{% endif %}
             </div>
 
+            {% if request.user.role != 'admin' %}
             <!-- Exposure Classification -->
             <div class="card">
                 <div class="flex items-center justify-between mb-4">
@@ -196,8 +308,10 @@
                     <button type="submit" class="btn-primary btn-sm">Add Note</button>
                 </form>
             </div>
+            {% endif %}
         </div>
 
+        {% if request.user.role != 'admin' %}
         <!-- Sidebar -->
         <div class="space-y-6">
             <div class="card">
@@ -243,6 +357,8 @@
             </div>
             {% endif %}
         </div>
+        {% endif %}
     </div>
+    {% endif %}
 </div>
 {% endblock %}

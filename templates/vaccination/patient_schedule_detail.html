@@ -80,7 +80,7 @@
 
                     <div class="flex-1 min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h4 class="font-display text-sm font-bold text-ink">{{ dose.dose_label }}</h4>
+                            <h4 class="font-display text-sm font-bold text-ink">{{ dose.number_label }}</h4>
                             <span class="status-badge status-{{ dose.dose_status }}">{{ dose.get_dose_status_display }}</span>
                             {% if dose.scheduled_date == today %}<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white">Today</span>{% endif %}
                         </div>
@@ -114,7 +114,7 @@
     </div>
 
     <div class="text-center">
-        <a href="{% url 'accounts:patient_portal' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">← Back to My Treatment</a>
+        <a href="{% url 'accounts:patient_portal' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-line text-sm font-bold text-ink hover:bg-sage-50">← Back to My Dashboard</a>
     </div>
 </div>
 {% endblock %}

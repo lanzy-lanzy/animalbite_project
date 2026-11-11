@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}My Bite Records - ABTC Patient Portal{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="pp-page-head">
+        <h1 class="pp-page-title">My Bite Records</h1>
+        <p class="pp-page-sub">Your official bite case history and online registrations.</p>
+    </div>
+
+    <section class="card">
+        <h2 class="text-lg font-bold text-ink mb-4">Bite Case History</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead><tr class="border-b border-line"><th class="table-header">Case Number</th><th class="table-header">Incident Date</th><th class="table-header">Animal Type</th><th class="table-header">Exposure Type</th><th class="table-header">Case Status</th><th class="table-header text-right">Vaccine Schedule</th></tr></thead>
+                <tbody class="divide-y divide-sage-100">
+                {% for case in cases %}
+                    <tr id="case-{{ case.pk }}"><td class="table-cell font-medium">{{ case.case_number }}</td><td class="table-cell">{{ case.date_time_bite|date:'M d, Y' }}</td><td class="table-cell">{{ case.get_animal_type_display }}</td><td class="table-cell">{{ case.get_exposure_type_display }}</td><td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td><td class="table-cell text-right whitespace-nowrap">{% if case.vaccination_schedule %}<a href="{% url 'vaccination:my_schedule_detail' case.vaccination_schedule.pk %}" class="btn-primary btn-xs shrink-0">Vaccine Schedule</a>{% else %}<span class="text-xs font-medium text-muted">&mdash;</span>{% endif %}</td></tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center py-8 text-muted">No official bite case yet. Staff will create it after verifying your online registration.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2 class="text-lg font-bold text-ink mb-4">My Registrations</h2>
+        <div class="space-y-3">
+        {% for record in pre_registrations %}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-line p-4">
+                <div>
+                    <p class="font-semibold">{{ record.pre_registration_number }}</p>
+                    <p class="text-sm text-muted">Submitted {{ record.submitted_at|date:'M d, Y g:i A' }} &middot; {{ record.get_animal_type_display }} {{ record.get_exposure_type_display|lower }}</p>
+                    {% if record.status == 'rejected' %}
+                    <p class="mt-1 text-sm text-red-700 whitespace-pre-line">Reason: {{ record.rejection_reason|default:"No reason was provided." }}</p>
+                    {% endif %}
+                    {% if record.converted_case %}
+                    <p class="mt-1 text-sm"><a href="#case-{{ record.converted_case.pk }}" class="font-semibold text-emerald-800 hover:text-emerald-950 underline underline-offset-2">Converted to case {{ record.converted_case.case_number }}</a></p>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2"><span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span><a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-secondary btn-xs">Slip</a></div>
+            </div>
+        {% empty %}
+            <p class="text-center py-6 text-muted">No online registrations found.</p>
+        {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -6,6 +6,8 @@ created or converted. A nurse (or admin) triggers them explicitly once the
 case has been assessed.
 """
 import datetime
+import re
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -175,7 +177,7 @@ class NurseTriggeredScheduleTests(TestCase):
 
 
 class NurseSchedulingTests(TestCase):
-    """The nurse dates the doctor-created pending doses within protocol."""
+    """The nurse manually dates the doctor-created pending doses."""
 
     def setUp(self):
         self.patient = Patient.objects.create(
@@ -229,10 +231,10 @@ class NurseSchedulingTests(TestCase):
             reverse("vaccination:dose_update", args=[self.second.pk]), payload
         )
 
-    # -------------------------------------------------- pending prefill
-    def test_pending_dose_form_offers_protocol_date(self):
+    # -------------------------------------------------- pending date selection
+    def test_pending_dose_form_does_not_prefill_a_calculated_protocol_date(self):
         form = VaccineDoseForm(instance=self.second)
-        self.assertEqual(form.initial["scheduled_date"], datetime.date(2026, 10, 4))
+        self.assertIsNone(form.initial["scheduled_date"])
         self.assertEqual(form.initial["dose_status"], "scheduled")
         # The doctor's pending dose itself is untouched until the nurse saves.
         self.second.refresh_from_db()
@@ -274,17 +276,16 @@ class NurseSchedulingTests(TestCase):
         self.assertEqual(self.second.dose_status, "scheduled")
 
     # -------------------------------------------------- protocol conflicts
-    def test_date_before_protocol_interval_is_rejected(self):
+    def test_fallback_protocol_offset_does_not_block_manual_date(self):
         self.client.force_login(self.nurse)
         response = self.client.post(
             reverse("vaccination:dose_update", args=[self.second.pk]),
             self._payload(self.second, scheduled_date="2026-10-03"),
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("scheduled_date", response.context["form"].errors)
+        self.assertEqual(response.status_code, 302)
         self.second.refresh_from_db()
-        self.assertIsNone(self.second.scheduled_date)
-        self.assertEqual(self.second.dose_status, "pending")
+        self.assertEqual(self.second.scheduled_date, datetime.date(2026, 10, 3))
+        self.assertEqual(self.second.dose_status, "scheduled")
 
     def test_scheduling_without_a_date_is_rejected(self):
         self.client.force_login(self.nurse)
@@ -747,13 +748,23 @@ class VaccinationRecordsListTests(TestCase):
         self.assertIn("m18 2 4 4", content)
         self.assertLess(content.index("View"), content.index("Administer"))
 
-    def test_admin_actions_keep_manage_and_never_show_administer(self):
+    def test_admin_actions_show_only_view(self):
         self.client.force_login(self.admin)
         content = self.client.get(self.url).content.decode()
 
-        self.assertIn(reverse("vaccination:assessment_detail", args=[self.schedule.pk]), content)
         self.assertIn(reverse("vaccination:schedule_detail", args=[self.schedule.pk]), content)
-        self.assertRegex(content, r">\s*Manage\s*<")
+        self.assertEqual(len(re.findall(r">\s*View\s*<", content)), 2)
+        self.assertEqual(content.count('class="vaccination-view-btn'), 2)
+        self.assertEqual(content.count('<circle cx="12" cy="12" r="2.75"/>'), 2)
+        for style in (
+            "background: #157A61;",
+            "background: #0C543F;",
+            "transform: translateY(-2px);",
+            "transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;",
+        ):
+            self.assertIn(style, content)
+        self.assertNotRegex(content, r">\s*Manage\s*</a>")
+        self.assertNotIn(reverse("vaccination:assessment_detail", args=[self.schedule.pk]), content)
         self.assertNotIn("Administer", content)
         self.assertNotIn("vr-add", content)
         self.assertNotIn("vr-act", content)
@@ -869,7 +880,8 @@ class VaccinationRecordsListTests(TestCase):
 
         response = self.client.get(self.url, follow=True)
         self.assertEqual(response.redirect_chain[-1][0], reverse("accounts:patient_portal"))
-        self.assertNotContains(response, self.patient.patient_number)
+        self.assertContains(response, "My Dashboard")
+        self.assertNotContains(response, "Vaccination Records")
 
 
 class ScheduleOwnershipEnforcementTests(TestCase):
@@ -1132,11 +1144,15 @@ class NurseVaccinationManageTests(TestCase):
         content = response.content.decode()
 
         self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Protocol date:")
+        self.assertNotContains(response, "scheduleProtocolHint")
+        self.assertContains(response, "Scheduled Date")
         for text in ("Administer Vaccine", "Confirm Prescribed Medicines",
                      "Verorab", "Amoxicillin", "10 capsules", "Pending Dispensing"):
             with self.subTest(text=text):
                 self.assertIn(text, content)
         self.assertContains(response, reverse("vaccination:dose_administer", args=[self.first_dose.pk]))
+        self.assertNotContains(response, reverse("vaccination:dose_schedule", args=[self.first_dose.pk]))
         self.assertContains(response, reverse("inventory:prescription_dispense", args=[self.rx.pk]))
 
     def test_other_roles_cannot_open_management(self):
@@ -1145,7 +1161,9 @@ class NurseVaccinationManageTests(TestCase):
             with self.subTest(role=user.role):
                 response = self.client.get(self.url, follow=True)
                 self.assertEqual(response.status_code, 200)
-                self.assertNotIn(self.patient.full_name().encode(), response.content)
+                content = response.content.decode()
+                self.assertNotIn("Confirm Prescribed Medicines", content)
+                self.assertNotIn(reverse("vaccination:dose_administer", args=[self.first_dose.pk]), content)
 
     def test_confirming_administration_completes_dose_and_deducts_once(self):
         actual_date = timezone.localdate()
@@ -1171,6 +1189,99 @@ class NurseVaccinationManageTests(TestCase):
         self.client.post(reverse("vaccination:dose_administer", args=[self.first_dose.pk]), payload)
         self.vaccine.refresh_from_db()
         self.assertEqual((self.vaccine.quantity_available, self.vaccine.quantity_used), (9, 1))
+
+    def test_future_dose_shows_warning_and_records_pending_request_without_administering(self):
+        today = timezone.localdate()
+        scheduled_date = today + datetime.timedelta(days=2)
+        self.first_dose.scheduled_date = scheduled_date
+        self.first_dose.save(update_fields=["scheduled_date"])
+        self.client.force_login(self.nurse)
+
+        page = self.client.get(self.url)
+        self.assertContains(page, "Early Administration Warning")
+        self.assertContains(page, "This vaccine dose is not yet scheduled for administration.")
+        self.assertContains(page, "Why do you need to administer this vaccine dose before its scheduled date?")
+        self.assertContains(page, "Reason for Early Administration")
+        self.assertContains(page, "Submit Reason")
+
+        with patch("vaccination.views.timezone.localdate", return_value=today):
+            response = self.client.post(
+                reverse("vaccination:dose_early_administration_request", args=[self.first_dose.pk]),
+                {"reason": "Urgent clinical travel requirement"},
+                REMOTE_ADDR="192.0.2.10",
+                follow=True,
+            )
+
+        self.first_dose.refresh_from_db()
+        self.vaccine.refresh_from_db()
+        request_log = AuditLog.objects.get(action="EARLY_ADMIN_REQUEST")
+        self.assertContains(
+            response,
+            "Your reason has been recorded. This vaccine dose cannot be administered before its scheduled date without the required authorization.",
+        )
+        self.assertEqual(self.first_dose.dose_status, "scheduled")
+        self.assertEqual(self.first_dose.scheduled_date, scheduled_date)
+        self.assertIsNone(self.first_dose.actual_date)
+        self.assertIsNone(self.first_dose.administered_by)
+        self.assertEqual((self.vaccine.quantity_available, self.vaccine.quantity_used), (10, 0))
+        self.assertEqual(request_log.user, self.nurse)
+        self.assertEqual(request_log.target_type, "bite_case")
+        self.assertEqual(request_log.target_id, self.case.pk)
+        self.assertEqual(request_log.ip_address, "192.0.2.10")
+        self.assertIn("Jose Cruz", request_log.description)
+        self.assertIn(f"dose ID {self.first_dose.pk}", request_log.description)
+        self.assertIn(str(scheduled_date), request_log.description)
+        self.assertIn("Urgent clinical travel requirement", request_log.description)
+        self.assertFalse(AuditLog.objects.filter(action="ADMINISTER_VACCINE").exists())
+
+    def test_future_dose_cannot_be_administered_by_direct_post(self):
+        today = timezone.localdate()
+        self.first_dose.scheduled_date = today + datetime.timedelta(days=2)
+        self.first_dose.save(update_fields=["scheduled_date"])
+        self.client.force_login(self.nurse)
+
+        with patch("vaccination.views.timezone.localdate", return_value=today):
+            response = self.client.post(
+                reverse("vaccination:dose_administer", args=[self.first_dose.pk]),
+                {
+                    "actual_date": today.isoformat(),
+                    "vaccine_brand": "Verorab",
+                    "batch_number": "LOT-V1",
+                },
+                follow=True,
+            )
+
+        self.first_dose.refresh_from_db()
+        self.vaccine.refresh_from_db()
+        self.assertContains(response, "scheduled for a future date and cannot be administered yet")
+        self.assertEqual(self.first_dose.dose_status, "scheduled")
+        self.assertIsNone(self.first_dose.actual_date)
+        self.assertEqual((self.vaccine.quantity_available, self.vaccine.quantity_used), (10, 0))
+        self.assertFalse(AuditLog.objects.filter(action="ADMINISTER_VACCINE").exists())
+
+    def test_administration_date_cannot_precede_the_scheduled_date(self):
+        today = timezone.localdate()
+        self.first_dose.scheduled_date = today - datetime.timedelta(days=1)
+        self.first_dose.save(update_fields=["scheduled_date"])
+        self.client.force_login(self.nurse)
+
+        with patch("vaccination.views.timezone.localdate", return_value=today):
+            response = self.client.post(
+                reverse("vaccination:dose_administer", args=[self.first_dose.pk]),
+                {
+                    "actual_date": (today - datetime.timedelta(days=2)).isoformat(),
+                    "vaccine_brand": "Verorab",
+                    "batch_number": "LOT-V1",
+                },
+                follow=True,
+            )
+
+        self.first_dose.refresh_from_db()
+        self.vaccine.refresh_from_db()
+        self.assertContains(response, "Administration date cannot be earlier than the dose scheduled date")
+        self.assertEqual(self.first_dose.dose_status, "scheduled")
+        self.assertIsNone(self.first_dose.actual_date)
+        self.assertEqual((self.vaccine.quantity_available, self.vaccine.quantity_used), (10, 0))
 
     def test_display_brand_with_the_lot_batch_still_deducts_stock(self):
         ClinicalAssessment.objects.filter(pk=self.assessment.pk).update(
@@ -1219,16 +1330,84 @@ class NurseVaccinationManageTests(TestCase):
         self.assertEqual(self.vaccine.quantity_available, 10)
         self.assertEqual(self.vaccine.quantity_used, 0)
 
-    def test_schedule_date_before_protocol_is_rejected(self):
+    def test_nurse_selected_schedule_date_is_saved_and_displayed_without_stock_change(self):
         pending = self.schedule.doses.exclude(pk=self.first_dose.pk).order_by("id").first()
-        too_early = self.first_dose.scheduled_date + datetime.timedelta(days=1)
+        selected_date = timezone.localdate() + datetime.timedelta(days=30)
         self.client.force_login(self.nurse)
+
         self.client.post(
             reverse("vaccination:dose_schedule", args=[pending.pk]),
+            {"scheduled_date": selected_date.isoformat()},
+        )
+
+        pending.refresh_from_db()
+        self.vaccine.refresh_from_db()
+        response = self.client.get(self.url)
+        self.assertEqual(pending.scheduled_date, selected_date)
+        self.assertEqual(pending.dose_status, "scheduled")
+        self.assertContains(response, selected_date.strftime("%b %d, %Y"))
+        self.assertIn(f"'{selected_date.isoformat()}'", response.content.decode())
+        self.assertEqual((self.vaccine.quantity_available, self.vaccine.quantity_used), (10, 0))
+
+    def test_schedule_date_before_explicit_doctor_regimen_is_rejected_with_specific_reason(self):
+        from .schedule_utils import prescribed_minimum_date
+
+        pending = self.schedule.doses.exclude(pk=self.first_dose.pk).order_by("id").first()
+        too_early = self.first_dose.scheduled_date + datetime.timedelta(days=1)
+        self.assertEqual(
+            prescribed_minimum_date(pending)['date'],
+            self.first_dose.scheduled_date + datetime.timedelta(days=3),
+        )
+        self.client.force_login(self.nurse)
+        response = self.client.post(
+            reverse("vaccination:dose_schedule", args=[pending.pk]),
             {"scheduled_date": too_early.isoformat()},
+            follow=True,
         )
         pending.refresh_from_db()
         self.assertIsNone(pending.scheduled_date)
+        messages = [str(message) for message in response.context["messages"]]
+        self.assertTrue(any("finalized" in message and "Essen" in message for message in messages), messages)
+        self.assertTrue(any("earliest date is Oct 04, 2026" in message for message in messages), messages)
+        self.assertNotContains(response, "This protocol requires")
+
+    def test_fallback_protocol_offset_does_not_block_nurse_selected_date(self):
+        ClinicalAssessment.objects.filter(pk=self.assessment.pk).update(
+            dose_protocol="", dose_schedule_plan="Clinician-directed dates",
+        )
+        pending = self.schedule.doses.exclude(pk=self.first_dose.pk).order_by("id").first()
+        selected_date = self.first_dose.scheduled_date + datetime.timedelta(days=1)
+        self.client.force_login(self.nurse)
+
+        response = self.client.post(
+            reverse("vaccination:dose_schedule", args=[pending.pk]),
+            {"scheduled_date": selected_date.isoformat()},
+            follow=True,
+        )
+
+        pending.refresh_from_db()
+        self.assertEqual(pending.scheduled_date, selected_date)
+        self.assertEqual(pending.dose_status, "scheduled")
+        self.assertContains(response, "Vaccination schedule updated successfully.")
+        self.assertNotContains(response, "This protocol requires")
+
+    def test_nurse_cannot_change_first_dose_date(self):
+        first_date = self.first_dose.scheduled_date
+        self.client.force_login(self.nurse)
+        self.client.post(
+            reverse("vaccination:dose_schedule", args=[self.first_dose.pk]),
+            {"scheduled_date": (first_date + datetime.timedelta(days=5)).isoformat()},
+            follow=True,
+        )
+
+        self.first_dose.refresh_from_db()
+        self.assertEqual(self.first_dose.scheduled_date, first_date)
+        self.assertFalse(
+            AuditLog.objects.filter(
+                action="SCHEDULE_DOSE",
+                description__contains=self.first_dose.dose_label,
+            ).exists()
+        )
 
     def test_confirming_dispensing_deducts_medicine_once(self):
         url = reverse("inventory:prescription_dispense", args=[self.rx.pk])
@@ -1369,6 +1548,23 @@ class NurseVaccinationManageTests(TestCase):
         ).content.decode()
 
         self.assertIn("RIG (Rabies Immunoglobulin) (Imogam)", content)
+
+    def test_manage_page_flags_rig_with_multi_dose_schedule_for_clinical_review(self):
+        rig = VaccineInventory.objects.create(
+            vaccine_name="RIG (Rabies Immunoglobulin)", brand="Imogam",
+            batch_number="RIG-REVIEW", expiration_date=datetime.date(2027, 6, 1),
+            quantity_received=5, quantity_available=5,
+        )
+        ClinicalAssessment.objects.filter(pk=self.assessment.pk).update(
+            vaccine_inventory=rig,
+        )
+        self.client.force_login(self.nurse)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Clinical review required")
+        self.assertContains(response, "rabies immunoglobulin (RIG)")
+        self.assertContains(response, "prescription has not been changed")
 
     def test_print_slip_reflects_updated_dates_without_writing_records(self):
         pending = self.schedule.doses.exclude(pk=self.first_dose.pk).order_by("id").first()
@@ -2038,3 +2234,236 @@ class SmsUpcomingAndManualSendTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(SMSLog.objects.filter(pk=automatic.pk).exists())
         self.assertEqual(SMSLog.objects.filter(dose=self.second).count(), 2)
+
+
+@override_settings(SEMAPHORE_ENABLED=False)
+class AdminScheduleDetailVisibilityTests(TestCase):
+    """Admin schedule detail hides Progress, SMS Reminders and Patient & Case.
+
+    The nurse and doctor clinical views keep every section. This is a
+    visibility-only change: no schedule, dose, or SMS record is touched.
+    """
+
+    def setUp(self):
+        self.admin = U.objects.create_user("adm.sdv", password="pw12345678", role="admin")
+        self.nurse = U.objects.create_user("nur.sdv", password="pw12345678", role="nurse")
+        self.doctor = U.objects.create_user("doc.sdv", password="pw12345678", role="doctor")
+        self.patient = Patient.objects.create(
+            patient_number="PAT-SDV01", first_name="Amara", last_name="Santos",
+            birthdate=datetime.date(1990, 3, 3), contact_number="09170000099",
+        )
+        self.case = AnimalBiteCase.objects.create(
+            case_number="ABC-SDV01", patient=self.patient, created_by=self.nurse,
+            animal_type="dog", exposure_type="bite",
+            date_time_bite=datetime.datetime(2026, 10, 1, 9, 0),
+        )
+        AnimalBiteCase.objects.filter(pk=self.case.pk).update(
+            date_time_consultation=timezone.make_aware(datetime.datetime(2026, 10, 1, 9, 0))
+        )
+        self.case.refresh_from_db()
+        self.schedule, _ = ensure_vaccination_schedule(self.case, created_by=self.nurse)
+        self.url = reverse("vaccination:schedule_detail", args=[self.schedule.pk])
+
+    def _get(self, user):
+        self.client.force_login(user)
+        return self.client.get(self.url).content.decode()
+
+    def test_admin_keeps_header_and_timeline_only(self):
+        html = self._get(self.admin)
+        self.assertIn("Vaccination Schedule", html)
+        self.assertIn(self.case.case_number, html)
+        self.assertIn(self.patient.full_name(), html)
+        self.assertIn("View Case", html)
+        self.assertIn("Vaccination Doses", html)
+        self.assertIn("view only", html)
+        self.assertNotIn("tap to update", html)
+        self.assertNotIn("Workflow:", html)
+        self.assertNotIn(reverse("vaccination:dose_update", args=[self.schedule.doses.first().pk]), html)
+
+    def test_back_button_returns_to_role_specific_records_list(self):
+        pattern = r'<a href="([^"]+)" class="w-9 h-9 rounded-full[^"]*">'
+        admin_html = self._get(self.admin)
+        match = re.search(pattern, admin_html)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), reverse("vaccination:patient_schedule_list"))
+        for user in (self.nurse, self.doctor):
+            with self.subTest(role=user.role):
+                match = re.search(pattern, self._get(user))
+                self.assertIsNotNone(match)
+                self.assertEqual(match.group(1), reverse("vaccination:schedule_list"))
+
+    def test_admin_hides_the_three_sections(self):
+        html = self._get(self.admin)
+        for marker in ("Progress", "stock auto-deducts.", "The patient is texted",
+                       "Send Due Reminders", "Patient & Case", "Antibiotics"):
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, html)
+        self.assertNotIn(self.patient.contact_display, html)
+
+    def test_admin_hides_workflow_footer_and_follow_ups(self):
+        html = self._get(self.admin)
+        self.assertNotIn("Workflow:", html)
+        self.assertNotIn("Doctor sets the dose count", html)
+        self.assertNotIn("Follow-ups →", html)
+        self.assertNotIn(reverse("vaccination:follow_up_list"), html)
+        self.assertIn("Vaccination Doses", html)
+
+    def test_nurse_and_doctor_keep_every_section(self):
+        for user in (self.nurse, self.doctor):
+            with self.subTest(role=user.role):
+                html = self._get(user)
+                for marker in ("Progress", "The patient is texted", "Send Due Reminders",
+                               "Patient & Case", "Antibiotics", "Vaccination Doses",
+                               "Workflow:", "Follow-ups →"):
+                    self.assertIn(marker, html)
+                self.assertIn(reverse("vaccination:follow_up_list"), html)
+
+    def test_viewing_does_not_change_records(self):
+        before = (self.schedule.doses.count(),
+                  SMSLog.objects.filter(dose__schedule=self.schedule).count())
+        self._get(self.admin)
+        self._get(self.nurse)
+        after = (self.schedule.doses.count(),
+                 SMSLog.objects.filter(dose__schedule=self.schedule).count())
+        self.assertEqual(before, after)
+
+    def test_admin_timeline_uses_ordinal_dose_labels(self):
+        html = self._get(self.admin)
+        for label in ("1st Dose", "2nd Dose", "3rd Dose", "4th Dose", "5th Dose"):
+            with self.subTest(label=label):
+                self.assertIn(label, html)
+        for day in ("Day 0", "Day 3", "Day 7", "Day 14", "Day 28"):
+            with self.subTest(day=day):
+                self.assertNotIn(day, html)
+
+    def test_other_roles_keep_day_based_labels(self):
+        for user in (self.nurse, self.doctor):
+            with self.subTest(role=user.role):
+                html = self._get(user)
+                for day in ("Day 0", "Day 3", "Day 7"):
+                    self.assertIn(day, html)
+
+    def test_ordinal_labels_follow_dose_sequence(self):
+        labels = [d.number_label for d in self.schedule.doses.order_by("id")]
+        self.assertEqual(
+            labels, ["1st Dose", "2nd Dose", "3rd Dose", "4th Dose", "5th Dose"])
+
+    def test_label_change_is_presentation_only(self):
+        def snapshot():
+            return [(d.pk, d.dose_label, d.scheduled_date, d.actual_date, d.dose_status)
+                    for d in self.schedule.doses.order_by("id")]
+        before = snapshot()
+        self._get(self.admin)
+        self.assertEqual(snapshot(), before)
+        self.assertEqual(
+            [d.dose_label for d in self.schedule.doses.order_by("id")],
+            ["Day 0", "Day 3", "Day 7", "Day 14", "Day 28"])
+
+
+@override_settings(SEMAPHORE_ENABLED=False)
+class AdminDoseReadOnlyTests(TestCase):
+    """Admin vaccination timeline is view-only; dose-update endpoints deny admin.
+
+    The Nurse workflow keeps full administration rights. A denied admin never
+    changes a dose, stock quantity, or audit trail.
+    """
+
+    def setUp(self):
+        self.admin = U.objects.create_user("adm.ro", password="pw12345678", role="admin")
+        self.nurse = U.objects.create_user("nur.ro", password="pw12345678", role="nurse")
+        self.patient = Patient.objects.create(
+            patient_number="PAT-RO01", first_name="Read", last_name="Only",
+            birthdate=datetime.date(1992, 2, 2), contact_number="09170000077",
+        )
+        self.case = AnimalBiteCase.objects.create(
+            case_number="ABC-RO01", patient=self.patient, created_by=self.nurse,
+            animal_type="dog", exposure_type="bite",
+            date_time_bite=timezone.make_aware(datetime.datetime(2026, 10, 1, 9, 0)),
+        )
+        AnimalBiteCase.objects.filter(pk=self.case.pk).update(
+            date_time_consultation=timezone.make_aware(datetime.datetime(2026, 10, 1, 9, 0))
+        )
+        self.case.refresh_from_db()
+        self.schedule, _ = ensure_vaccination_schedule(self.case, created_by=self.nurse)
+        self.first = self.schedule.doses.order_by("id").first()
+        self.second = self.schedule.doses.order_by("id")[1]
+        self.stock = VaccineInventory.objects.create(
+            vaccine_name="Rabies Vaccine", brand="Verorab", batch_number="LOT-RO",
+            expiration_date=datetime.date(2027, 1, 1),
+            quantity_received=10, quantity_available=10, quantity_used=0,
+        )
+        self.detail_url = reverse("vaccination:schedule_detail", args=[self.schedule.pk])
+
+    def _detail(self, user):
+        self.client.force_login(user)
+        return self.client.get(self.detail_url).content.decode()
+
+    def test_admin_timeline_is_view_only(self):
+        html = self._detail(self.admin)
+        self.assertIn("view only", html)
+        self.assertIn("1st Dose", html)
+        for kept in ("Scheduled", "Actual", "Vaccine · Batch", "Remarks"):
+            with self.subTest(kept=kept):
+                self.assertIn(kept, html)
+        for hidden in ("No SMS yet for this dose", "3-day reminder", "Today reminder",
+                       "tap to update",
+                       "text-[11px] font-medium text-muted text-center hidden sm:block",
+                       reverse("vaccination:dose_update", args=[self.first.pk]),
+                       reverse("vaccination:send_sms_for_dose", args=[self.first.pk])):
+            with self.subTest(hidden=hidden):
+                self.assertNotIn(hidden, html)
+
+    def test_nurse_timeline_keeps_controls(self):
+        html = self._detail(self.nurse)
+        self.assertIn("tap to update", html)
+        self.assertIn("3-day reminder", html)
+        self.assertIn(reverse("vaccination:dose_update", args=[self.first.pk]), html)
+        self.assertIn(reverse("vaccination:send_sms_for_dose", args=[self.first.pk]), html)
+
+    def test_admin_cannot_open_dose_update(self):
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse("vaccination:dose_update", args=[self.first.pk]))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_admin_cannot_post_dose_update(self):
+        self.client.force_login(self.admin)
+        before = self.second.dose_status
+        resp = self.client.post(
+            reverse("vaccination:dose_update", args=[self.second.pk]),
+            {"dose_label": self.second.dose_label, "dose_status": "completed",
+             "scheduled_date": "2026-10-04", "actual_date": "2026-10-04",
+             "vaccine_brand": "Verorab", "batch_number": "LOT-RO", "remarks": ""},
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.second.refresh_from_db()
+        self.assertEqual(self.second.dose_status, before)
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity_available, 10)
+        self.assertFalse(AuditLog.objects.filter(action="UPDATE_DOSE").exists())
+
+    def test_admin_cannot_post_dose_schedule(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(
+            reverse("vaccination:dose_schedule", args=[self.second.pk]),
+            {"scheduled_date": "2026-10-04"},
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.second.refresh_from_db()
+        self.assertIsNone(self.second.scheduled_date)
+
+    def test_admin_cannot_post_dose_administer(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(
+            reverse("vaccination:dose_administer", args=[self.first.pk]),
+            {"vaccine_brand": "Verorab", "batch_number": "LOT-RO"},
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.first.refresh_from_db()
+        self.assertNotEqual(self.first.dose_status, "completed")
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity_available, 10)
+
+    def test_nurse_can_still_open_dose_update(self):
+        self.client.force_login(self.nurse)
+        resp = self.client.get(reverse("vaccination:dose_update", args=[self.first.pk]))
+        self.assertEqual(resp.status_code, 200)

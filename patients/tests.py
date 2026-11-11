@@ -395,16 +395,19 @@ class PatientRegistrationSidebarTests(PatientDeleteTestCase):
         self.assertIn("Scan QR", html)
         self.assertNotIn("Vaccination Schedules", html)
 
-    def test_admin_sidebar_places_register_patient_directly_after_patients(self):
+    def test_admin_sidebar_places_register_patient_directly_after_dashboard(self):
         html = self._page(self.admin)
         links = self._sidebar_links(html)
         list_url = reverse("patients:patient_list")
         create_url = reverse("patients:patient_create")
         self.assertIn(create_url, links)
-        self.assertEqual(links.index(create_url), links.index(list_url) + 1)
+        self.assertEqual(links.index(create_url), links.index(reverse("dashboard:index")) + 1)
         self.assertEqual(
             links.index(create_url) + 1,
-            links.index(reverse("vaccination:patient_schedule_list")))
+            links.index(reverse("pre_registrations:staff_list")))
+        self.assertEqual(
+            links.index(list_url),
+            links.index(reverse("pre_registrations:staff_list")) + 1)
         self.assertIn("Register Patient", html)
 
     def test_active_state_follows_the_open_page(self):
@@ -432,6 +435,28 @@ class PatientRegistrationSidebarTests(PatientDeleteTestCase):
 @override_settings(SEMAPHORE_ENABLED=False)
 class PatientRegistrationFlowTests(TestCase):
     """The sidebar link reuses the original registration route and behaviour."""
+
+    def test_registration_section_headers_share_the_required_design(self):
+        admin = U.objects.create_user("admin.headers", "test-password", role="admin")
+        self.client.force_login(admin)
+        response = self.client.get(reverse("patients:patient_create"))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertEqual(content.count('class="section-head"'), 2)
+        self.assertEqual(content.count('class="section-number">'), 2)
+        self.assertIn('<span class="section-number">1</span> Patient Demographics', content)
+        self.assertIn('<span class="section-number">2</span> Medical Background', content)
+        self.assertEqual(content.count('<span class="hint">Required *</span>'), 2)
+        for style in (
+            "background:#0D382C",
+            "color:#fff !important",
+            "width:34px; height:34px",
+            "background:#D8AD28",
+            "color:#17362B",
+            "padding:14px 20px",
+        ):
+            self.assertIn(style, content)
 
     def test_registration_form_still_creates_a_patient_with_a_generated_id(self):
         admin = U.objects.create_user("admin.reg", password="pw12345678", role="admin")

@@ -1,66 +1,82 @@
 {% extends 'base.html' %}
-{% block title %}My Treatment - ABTC System{% endblock %}
-{% block page_title %}<h1 class="text-lg font-semibold text-ink ml-3">My Treatment</h1>{% endblock %}
+{% block title %}My Dashboard - ABTC Patient Portal{% endblock %}
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+<div class="pp-dashboard">
+    <div class="pp-dash-head">
         <div>
-            <h1 class="text-2xl font-bold text-ink">Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
-            <p class="mt-1 text-sm text-ink/70">Track your bite registrations, treatment history, and vaccine appointments.</p>
+            <h1 class="pp-dash-title">My Dashboard</h1>
+            <p class="pp-dash-sub">Welcome back{% if patient %}, {{ patient.first_name }}{% endif %}. Your bite treatment records and services in one place.</p>
         </div>
-        <a href="{% url 'pre_registrations:patient_report' %}" class="btn-primary">Report another bite</a>
+        <a href="{% url 'pre_registrations:patient_report' %}" class="pp-report-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            Report another bite
+        </a>
     </div>
 
-    <section class="card">
-        <h2 class="text-lg font-bold text-ink mb-4">Scheduled Vaccine Doses</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead><tr class="border-b border-line"><th class="table-header">Date</th><th class="table-header">Dose</th><th class="table-header">Case</th><th class="table-header">Status</th></tr></thead>
-                <tbody class="divide-y divide-sage-100">
-                {% for dose in doses %}
-                    <tr><td class="table-cell font-medium">{% if dose.scheduled_date %}{{ dose.scheduled_date|date:'M d, Y' }}{% else %}<span class="text-amber-700 font-bold">Pending Scheduling</span>{% endif %}</td><td class="table-cell">{{ dose.dose_label }}</td><td class="table-cell">{{ dose.schedule.bite_case.case_number }}</td><td class="table-cell"><span class="status-badge status-{{ dose.dose_status }}">{{ dose.get_dose_status_display }}</span></td></tr>
-                {% empty %}
-                    <tr><td colspan="4" class="text-center py-8 text-muted">No vaccine doses have been scheduled yet.</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="card">
-        <h2 class="text-lg font-bold text-ink mb-4">Bite Case History</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead><tr class="border-b border-line"><th class="table-header">Case</th><th class="table-header">Bite date</th><th class="table-header">Animal</th><th class="table-header">Exposure</th><th class="table-header">Status</th><th class="table-header text-right">Vaccine Schedule</th></tr></thead>
-                <tbody class="divide-y divide-sage-100">
-                {% for case in cases %}
-                    <tr><td class="table-cell font-medium">{{ case.case_number }}</td><td class="table-cell">{{ case.date_time_bite|date:'M d, Y' }}</td><td class="table-cell">{{ case.get_animal_type_display }}</td><td class="table-cell">{{ case.get_exposure_type_display }}</td><td class="table-cell"><span class="status-badge status-{{ case.case_status }}">{{ case.get_case_status_display }}</span></td><td class="table-cell text-right whitespace-nowrap">{% if case.vaccination_schedule %}<a href="{% url 'vaccination:my_schedule_detail' case.vaccination_schedule.pk %}" class="btn-primary btn-xs shrink-0">Vaccine Schedule</a>{% else %}<span class="text-xs font-medium text-muted">—</span>{% endif %}</td></tr>
-                {% empty %}
-                    <tr><td colspan="6" class="text-center py-8 text-muted">No official bite case yet. Staff will create it after verifying your online registration.</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="card">
-        <h2 class="text-lg font-bold text-ink mb-4">My Registrations</h2>
-        <div class="space-y-3">
-        {% for record in pre_registrations %}
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-line p-4">
-                <div>
-                    <p class="font-semibold">{{ record.pre_registration_number }}</p>
-                    <p class="text-sm text-muted">Submitted {{ record.submitted_at|date:'M d, Y g:i A' }} · {{ record.get_animal_type_display }} {{ record.get_exposure_type_display|lower }}</p>
-                    {% if record.status == 'rejected' %}
-                    <p class="mt-1 text-sm text-red-700 whitespace-pre-line">Reason: {{ record.rejection_reason|default:"No reason was provided." }}</p>
+    <div class="pp-dash-grid">
+        <section class="pp-info-card" aria-label="Patient information">
+            {% if patient %}
+            <div class="pp-info-top">
+                <div class="pp-info-avatar">
+                    {% if patient.profile_image %}
+                    <img src="{{ patient.profile_image.url }}" alt="{{ patient.full_name }}">
+                    {% else %}
+                    {{ patient.first_name|first|upper }}{{ patient.last_name|first|upper }}
                     {% endif %}
                 </div>
-                <div class="flex items-center gap-2"><span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span><a href="{% url 'pre_registrations:public_slip' record.pre_registration_number %}" class="btn-secondary btn-xs">Slip</a></div>
+                <h2 class="pp-info-name">{{ patient.full_name }}</h2>
+                <p class="pp-info-id">{{ patient.patient_number }}</p>
             </div>
-        {% empty %}
-            <p class="text-center py-6 text-muted">No online registrations found.</p>
-        {% endfor %}
-        </div>
-    </section>
+            <hr class="pp-info-divider">
+            <div>
+                <div class="pp-info-row"><span class="pp-info-label">Patient ID</span><span class="pp-info-value">{{ patient.patient_number }}</span></div>
+                <div class="pp-info-row"><span class="pp-info-label">Sex</span><span class="pp-info-value">{{ patient.get_sex_display|default:'Not recorded' }}</span></div>
+                <div class="pp-info-row"><span class="pp-info-label">Date of Birth</span><span class="pp-info-value">{{ patient.birthdate|date:'F j, Y'|default:'Not recorded' }}</span></div>
+                <div class="pp-info-row"><span class="pp-info-label">Age</span><span class="pp-info-value">{% if patient_age is not None %}{{ patient_age }}{% else %}Not recorded{% endif %}</span></div>
+                <div class="pp-info-row"><span class="pp-info-label">Address</span><span class="pp-info-value">{{ patient.formatted_address|default:'Not recorded' }}</span></div>
+                <div class="pp-info-row"><span class="pp-info-label">Contact Number</span><span class="pp-info-value">{{ patient.contact_display|default:'Not recorded' }}</span></div>
+            </div>
+            {% else %}
+            <div class="pp-info-top">
+                <div class="pp-info-avatar">{{ request.user.first_name|first|default:request.user.username|first|upper }}</div>
+                <h2 class="pp-info-name">{{ request.user.get_full_name|default:request.user.username }}</h2>
+            </div>
+            <hr class="pp-info-divider">
+            <p class="text-sm text-muted text-center py-4">Your patient record is being prepared by the clinic. Once your registration is verified, your details will appear here.</p>
+            {% endif %}
+        </section>
+
+        <section class="pp-quick-panel" aria-label="Quick access">
+            <p class="pp-quick-eyebrow">Your Portal</p>
+            <h2 class="pp-quick-title">Quick Access</h2>
+            <div class="pp-quick-grid">
+                <a href="{% url 'accounts:patient_bite_records' %}" class="pp-qa-card pp-qa-card--records">
+                    <span class="pp-qa-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></span>
+                    <span class="pp-qa-title">Bite Records</span>
+                    <svg class="pp-qa-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+                <a href="{% url 'accounts:patient_vaccination_schedule' %}" class="pp-qa-card pp-qa-card--schedule">
+                    <span class="pp-qa-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span>
+                    <span class="pp-qa-title">Vaccination Schedule</span>
+                    <svg class="pp-qa-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+                <a href="{% url 'accounts:patient_vaccination_history' %}" class="pp-qa-card pp-qa-card--history">
+                    <span class="pp-qa-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></span>
+                    <span class="pp-qa-title">Vaccination History</span>
+                    <svg class="pp-qa-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+                <a href="{% url 'accounts:patient_qr' %}" class="pp-qa-card pp-qa-card--qr">
+                    <span class="pp-qa-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg></span>
+                    <span class="pp-qa-title">My QR Code</span>
+                    <svg class="pp-qa-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+                <a href="{% url 'accounts:profile' %}" class="pp-qa-card pp-qa-card--profile">
+                    <span class="pp-qa-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span>
+                    <span class="pp-qa-title">My Profile</span>
+                    <svg class="pp-qa-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+        </section>
+    </div>
 </div>
 {% endblock %}

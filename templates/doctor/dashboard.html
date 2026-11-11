@@ -6,62 +6,6 @@
 <style>
     .doctor-dashboard { display: flex; flex-direction: column; gap: 1.25rem; max-width: 1320px; margin: 0 auto; }
 
-    /* ---------- Welcome banner ---------- */
-    .dash-welcome {
-        position: relative;
-        overflow: hidden;
-        border-radius: 1.5rem;
-        padding: 1.6rem 1.5rem;
-        color: #fff;
-        background: linear-gradient(135deg, #0d352b 0%, #08201a 58%, #103c30 100%);
-        box-shadow: 0 26px 60px -34px rgba(8,32,26,.75), inset 0 1px 0 rgba(255,255,255,.10);
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 260px;
-        align-items: center;
-        gap: 1rem;
-    }
-    .dash-welcome::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            radial-gradient(420px 260px at 88% 18%, rgba(201,162,39,.22), transparent 70%),
-            radial-gradient(360px 240px at 8% 104%, rgba(46,153,117,.35), transparent 70%);
-        pointer-events: none;
-    }
-    .dash-welcome-copy { position: relative; z-index: 1; }
-    .dash-welcome-chip {
-        display: inline-flex; align-items: center; gap: .5rem;
-        padding: .32rem .8rem; border-radius: 999px;
-        font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-        color: #f5ebc9; background: rgba(255,255,255,.08); border: 1px solid rgba(201,162,39,.35);
-    }
-    .dash-welcome-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #5cb795; box-shadow: 0 0 0 4px rgba(92,183,149,.18); }
-    .dash-welcome h1 {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: clamp(1.5rem, 2.6vw, 2.15rem);
-        line-height: 1.15; letter-spacing: -.02em;
-        margin: .85rem 0 .35rem; color: #fff;
-    }
-    .dash-welcome-tag {
-        font-family: 'Instrument Serif', serif; font-style: italic;
-        font-size: 1.2rem; color: #ebd79b; margin: 0 0 .55rem;
-    }
-    .dash-welcome-sub { color: rgba(255,255,255,.72); font-size: .88rem; line-height: 1.5; max-width: 54ch; margin: 0; }
-    .dash-welcome-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.15rem; }
-    .dash-btn {
-        display: inline-flex; align-items: center; gap: .45rem;
-        padding: .55rem 1rem; border-radius: .8rem;
-        font-size: .8rem; font-weight: 700; text-decoration: none;
-        transition: transform .15s ease, background .15s ease;
-    }
-    .dash-btn-light { background: #f5ebc9; color: #08201a; box-shadow: 0 10px 22px -14px rgba(0,0,0,.6); }
-    .dash-btn-light:hover { transform: translateY(-1px); background: #fff; }
-    .dash-btn-ghost { color: #fff; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.06); }
-    .dash-btn-ghost:hover { background: rgba(255,255,255,.14); }
-    .dash-welcome-art { position: relative; z-index: 1; display: flex; justify-content: center; }
-    .dash-welcome-art svg { width: 100%; max-width: 240px; height: auto; }
-
     /* ---------- Stat cards ---------- */
     .dash-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .9rem; }
     .dash-stat {
@@ -217,8 +161,6 @@
         .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 900px) {
-        .dash-welcome { grid-template-columns: 1fr; }
-        .dash-welcome-art { display: none; }
         .dash-who { grid-template-columns: 1fr; }
     }
     @media (max-width: 600px) {
@@ -227,51 +169,13 @@
         .dash-card-head { flex-direction: column; gap: .6rem; }
     }
     @media (prefers-reduced-motion: reduce) {
-        .dash-btn:hover, .dash-month:hover { transform: none; }
+        .dash-month:hover { transform: none; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="doctor-dashboard">
-
-    <!-- Welcome banner -->
-    <section class="dash-welcome">
-        <div class="dash-welcome-copy">
-            <span class="dash-welcome-chip"><span class="dot"></span> Doctor Portal · {{ today|date:"l, F j, Y" }}</span>
-            <h1>Welcome back, Dr. {{ request.user.get_full_name|default:request.user.username }}!</h1>
-            <p class="dash-welcome-tag">Together for a Rabies-Free Community.</p>
-            <p class="dash-welcome-sub">Your clinical assessments, drafts and queue are ready. You only see and manage your own clinical work.</p>
-            <div class="dash-welcome-actions">
-                <a href="{% url 'doctor:queue' %}" class="dash-btn dash-btn-light">
-                    Open Clinical Queue
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7"/></svg>
-                </a>
-                <a href="{% url 'doctor:assessment_list' %}" class="dash-btn dash-btn-ghost">My Assessments</a>
-            </div>
-        </div>
-        <div class="dash-welcome-art" aria-hidden="true">
-            <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="dashShield" x1="58" y1="22" x2="162" y2="152" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#1f7b5e"/><stop offset="1" stop-color="#0d352b"/>
-                    </linearGradient>
-                    <linearGradient id="dashGold" x1="99" y1="58" x2="143" y2="124" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#f5ebc9"/><stop offset="1" stop-color="#c9a227"/>
-                    </linearGradient>
-                </defs>
-                <circle cx="110" cy="90" r="82" fill="rgba(255,255,255,.05)"/>
-                <circle cx="110" cy="90" r="64" fill="none" stroke="rgba(201,162,39,.35)" stroke-width="1.5" stroke-dasharray="4 6"/>
-                <path d="M110 22l52 20v42c0 31-21 56-52 68-31-12-52-37-52-68V42l52-20z" fill="url(#dashShield)" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
-                <path d="M99 58h22v22h22v22h-22v22H99v-22H77V80h22V58z" fill="url(#dashGold)"/>
-                <path d="M40 132h34l10-18 12 30 12-22 8 10h34" stroke="#93d2b7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                <g fill="rgba(255,255,255,.85)">
-                    <ellipse cx="171" cy="52" rx="7" ry="9"/>
-                    <circle cx="158" cy="44" r="4.5"/><circle cx="170" cy="39" r="4.5"/><circle cx="182" cy="44" r="4.5"/>
-                </g>
-            </svg>
-        </div>
-    </section>
 
     <!-- Statistics -->
     <section class="dash-stats" aria-label="My statistics">

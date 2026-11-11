@@ -1,4 +1,5 @@
 import datetime
+import csv
 import re
 
 from unittest.mock import patch
@@ -8,7 +9,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from bite_cases.models import AnimalBiteCase
+from bite_cases.models import AnimalBiteCase, ExposureClassification
 from inventory.models import MedicineInventory, VaccineInventory
 from patients.models import Patient
 from vaccination.models import VaccinationSchedule, VaccineDose
@@ -289,13 +290,38 @@ class PatientReportTests(TestCase):
 
     def test_reports_center_hides_removed_controls(self):
         self._login()
-        response = self.client.get(reverse('reports:reports_index'))
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'Maria', 'type': 'all'})
         for text in ('Custom Range', 'Start date', 'End date',
                      'name="barangay"', 'name="animal"', 'name="status"',
                      '>Clear<', '>Apply<'):
             self.assertNotContains(response, text)
         self.assertContains(response, 'Reporting Period')
-        self.assertContains(response, 'Search case number or patient')
+        self.assertContains(response, 'Search All Records')
+        self.assertContains(
+            response,
+            'Search name, barangay, sex, animal, case number...')
+        column_headers = (
+            b'class="table-header">Patient</th>',
+            b'class="table-header">Patient ID</th>',
+            b'class="table-header">Sex</th>',
+            b'class="table-header">Case Number</th>',
+            b'class="table-header">Barangay</th>',
+            b'class="table-header">Animal</th>',
+            b'class="table-header">Treatment Status</th>',
+        )
+        header_positions = [response.content.index(header)
+                            for header in column_headers]
+        self.assertEqual(header_positions, sorted(header_positions))
+        self.assertLess(
+            header_positions[0],
+            response.content.index(b'Reporting Period'))
+        self.assertLess(
+            response.content.index(b'Search All Records'),
+            response.content.index(b'Reporting Period'))
+        self.assertLess(
+            response.content.index(b'Reporting Period'),
+            response.content.index(b'Total Patients'))
 
     def test_existing_reports_still_open(self):
         self._login()
@@ -303,6 +329,236 @@ class PatientReportTests(TestCase):
             with self.subTest(url=name):
                 self.assertEqual(
                     self.client.get(reverse(f'reports:{name}')).status_code, 200)
+
+
+class GlobalReportSearchTests(TestCase):
+
+    def setUp(self):
+        self.nurse = make_user('global.search.nurse', 'nurse')
+        self.male = make_patient('PAT-G0001', 'Aiden', 'Cruz')
+        self.male.sex = 'male'
+        self.male.middle_name = 'Luis'
+        self.male.save(update_fields=['sex', 'middle_name'])
+        self.male.barangay = self._barangay('San Pedro')
+        self.male.save(update_fields=['barangay'])
+        self.female = make_patient('PAT-G0002', 'Maria', 'Santos')
+        self.female.barangay = self._barangay('San Isidro')
+        self.female.save(update_fields=['barangay'])
+        today = timezone.localdate()
+        self.male_case = make_case(
+            'ABC-G0001', self.male,
+            datetime.datetime.combine(today, datetime.time(10, 0)),
+            barangay='San Pedro', animal='dog', created_by=self.nurse)
+        self.female_case = make_case(
+            'ABC-G0002', self.female,
+            datetime.datetime.combine(today, datetime.time(11, 0)),
+            barangay='San Isidro', animal='cat', status='new',
+            created_by=self.nurse)
+        self.client.force_login(self.nurse)
+
+    @staticmethod
+    def _barangay(name):
+        from patients.models import Barangay
+        barangay, _ = Barangay.objects.get_or_create(name=name)
+        return barangay
+
+    def test_sex_search_is_exact_and_case_insensitive(self):
+        url = reverse('reports:reports_index')
+        for keyword in ('Male', 'male', 'MALE'):
+            with self.subTest(keyword=keyword):
+                response = self.client.get(url, {'q': keyword, 'type': 'all'})
+                self.assertEqual(response.context['summary']['total_patients'], 1)
+                self.assertEqual(response.context['summary']['total_cases'], 1)
+                self.assertEqual(
+                    [case.case_number for case in response.context['case_page']],
+                    ['ABC-G0001'])
+
+        response = self.client.get(url, {'q': 'Female', 'type': 'all'})
+        self.assertEqual(response.context['summary']['total_patients'], 1)
+        self.assertEqual(
+            [case.case_number for case in response.context['case_page']],
+            ['ABC-G0002'])
+
+    def test_patient_report_export_uses_exact_sex_search(self):
+        response = self.client.get(
+            reverse('reports:patient_treatment_report'),
+            {'q': 'male', 'type': 'all', 'export': 'csv'})
+        body = response.content.decode()
+        self.assertIn('ABC-G0001', body)
+        self.assertNotIn('ABC-G0002', body)
+
+    def test_global_search_matches_names_case_barangay_animal_and_status(self):
+        url = reverse('reports:reports_index')
+        cases = {
+            'Aiden Luis Cruz': 'ABC-G0001',
+            'ABC-G0002': 'ABC-G0002',
+            'San Pedro': 'ABC-G0001',
+            'Dog': 'ABC-G0001',
+            'Under Treatment': 'ABC-G0001',
+        }
+        for query, matching_case in cases.items():
+            with self.subTest(query=query):
+                response = self.client.get(
+                    url, {'q': query, 'type': 'all'})
+                self.assertEqual(
+                    [case.case_number for case in response.context['case_page']],
+                    [matching_case])
+
+    def test_search_field_limits_results_to_the_selected_field(self):
+        self.female.first_name = self.male_case.case_number
+        self.female.save(update_fields=['first_name'])
+        url = reverse('reports:reports_index')
+
+        patient_name = self.client.get(url, {
+            'q': self.male_case.case_number,
+            'search_field': 'patient_name',
+            'type': 'all',
+        })
+        self.assertEqual(patient_name.context['result_count'], 1)
+        self.assertEqual(
+            [case.case_number for case in patient_name.context['case_page']],
+            [self.female_case.case_number])
+
+        case_number = self.client.get(url, {
+            'q': self.male_case.case_number,
+            'search_field': 'case_number',
+            'type': 'all',
+        })
+        self.assertEqual(case_number.context['result_count'], 1)
+        self.assertEqual(
+            [case.case_number for case in case_number.context['case_page']],
+            [self.male_case.case_number])
+
+        export = self.client.get(
+            reverse('reports:patient_treatment_report'),
+            {'q': self.male_case.case_number, 'search_field': 'patient_name',
+             'type': 'all', 'export': 'csv'})
+        lines = export.content.decode().splitlines()
+        self.assertEqual(
+            lines[0],
+            'Patient,Patient ID,Sex,Case Number,Barangay,Animal,Treatment Status')
+        rows = list(csv.reader(lines))
+        self.assertEqual(
+            [row[3] for row in rows[1:]], [self.female_case.case_number])
+
+    def test_exact_barangay_match_is_case_insensitive_and_not_a_substring(self):
+        self.male_case.incident_barangay = 'Balugo'
+        self.male_case.save(update_fields=['incident_barangay'])
+        self.female_case.incident_barangay = 'Balugo East'
+        self.female_case.save(update_fields=['incident_barangay'])
+        url = reverse('reports:reports_index')
+
+        for value in ('Balugo', 'balugo', 'BALUGO'):
+            with self.subTest(value=value):
+                response = self.client.get(url, {
+                    'q': value, 'search_field': 'barangay', 'type': 'all'})
+                self.assertEqual(response.context['result_count'], 1)
+                self.assertEqual(
+                    [case.case_number for case in response.context['case_page']],
+                    [self.male_case.case_number])
+                self.assertContains(response, '<td class="table-cell">Balugo</td>')
+
+        all_fields = self.client.get(url, {'q': 'balugo', 'type': 'all'})
+        self.assertEqual(all_fields.context['result_count'], 1)
+        self.assertEqual(
+            [case.case_number for case in all_fields.context['case_page']],
+            [self.male_case.case_number])
+
+    def test_patient_name_returns_each_case_for_that_patient(self):
+        make_case(
+            'ABC-G0003', self.male,
+            datetime.datetime.combine(
+                timezone.localdate(), datetime.time(12, 0)),
+            barangay='San Pedro', animal='cat', created_by=self.nurse)
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'aIdEn', 'search_field': 'patient_name', 'type': 'all'})
+        self.assertEqual(response.context['result_count'], 2)
+        self.assertEqual(
+            {case.case_number for case in response.context['case_page']},
+            {'ABC-G0001', 'ABC-G0003'})
+
+    def test_clear_search_resets_field_and_keeps_reporting_period(self):
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'male', 'search_field': 'sex', 'type': 'monthly'})
+        self.assertContains(response, 'value="sex" selected')
+        self.assertContains(response, 'href="?type=monthly"')
+        self.assertContains(response, '?type=weekly')
+        self.assertContains(response, 'search_field=sex')
+
+    def test_reporting_period_filters_matching_cases_by_incident_date(self):
+        older_date = timezone.localdate() - datetime.timedelta(days=45)
+        old_case = make_case(
+            'ABC-G0003', self.male, datetime.datetime.combine(
+                older_date, datetime.time(9, 0)),
+            barangay='San Pedro', created_by=self.nurse)
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'Male', 'type': 'monthly'})
+        self.assertEqual(response.context['summary']['total_cases'], 1)
+        self.assertContains(response, self.male_case.case_number)
+        self.assertNotContains(response, old_case.case_number)
+
+    def test_category_and_vaccination_search_use_related_records(self):
+        ExposureClassification.objects.create(
+            bite_case=self.male_case, category='category_iii')
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'WHO Category III', 'type': 'all'})
+        self.assertContains(response, self.male_case.case_number)
+        self.assertNotContains(response, self.female_case.case_number)
+
+        older_date = timezone.localdate() - datetime.timedelta(days=45)
+        treated_case = make_case(
+            'ABC-G0003', self.male, datetime.datetime.combine(
+                older_date, datetime.time(9, 0)),
+            barangay='San Pedro', created_by=self.nurse)
+        schedule = VaccinationSchedule.objects.create(
+            bite_case=treated_case, created_by=self.nurse)
+        VaccineDose.objects.create(
+            schedule=schedule, dose_label='Dose 1', vaccine_brand='Rabivax Z',
+            dose_status='scheduled', scheduled_date=timezone.localdate())
+
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'Rabivax Z', 'type': 'monthly'})
+        self.assertEqual(response.context['summary']['total_cases'], 1)
+        self.assertEqual(
+            [case.case_number for case in response.context['case_page']],
+            [treated_case.case_number])
+
+    def test_inventory_search_returns_actual_batches_without_changing_snapshot(self):
+        expiry = timezone.localdate() + datetime.timedelta(days=365)
+        vaccine = VaccineInventory.objects.create(
+            vaccine_name='Rabies Vaccine', brand='Brand X',
+            batch_number='VX-G0001', expiration_date=expiry,
+            quantity_received=20, quantity_available=12,
+            source_supplier='Acme Supply')
+        medicine = MedicineInventory.objects.create(
+            medicine_name='Amoxicillin', generic_name='Amoxicillin',
+            strength='500 mg', dosage_form='capsule', batch_number='MX-G0001',
+            expiration_date=expiry, quantity_received=20,
+            quantity_available=12, source_supplier='Acme Supply')
+        baseline = self.client.get(reverse('reports:reports_index'), {
+            'type': 'all'}).context['inventory']
+
+        response = self.client.get(
+            reverse('reports:vaccine_inventory_report'), {'q': 'Rabies Vaccine'})
+        self.assertEqual(len(response.context['products']), 1)
+        self.assertIn(vaccine, response.context['products'][0]['batches'])
+
+        response = self.client.get(
+            reverse('reports:medicine_inventory_report'), {'q': 'Amoxicillin'})
+        self.assertEqual(len(response.context['products']), 1)
+        self.assertIn(medicine, response.context['products'][0]['batches'])
+        current_snapshot = self.client.get(
+            reverse('reports:reports_index'), {'type': 'all'}
+        ).context['inventory']
+        self.assertEqual(current_snapshot, baseline)
+
+    def test_empty_search_results_are_explicit(self):
+        response = self.client.get(reverse('reports:reports_index'), {
+            'q': 'not-a-real-record', 'type': 'all'})
+        self.assertContains(response, 'No matching records found.')
+        self.assertContains(
+            response,
+            'Try another patient name, case number, barangay, animal type, or status.')
 
 
 class DistributionTests(TestCase):

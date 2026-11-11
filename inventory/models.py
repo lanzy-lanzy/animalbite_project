@@ -1,10 +1,25 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from datetime import date
 
 class VaccineInventory(models.Model):
+    DOSAGE_FORMS = [
+        ('tablet', 'Tablet'),
+        ('capsule', 'Capsule'),
+        ('syrup', 'Syrup'),
+        ('injectable', 'Injectable'),
+        ('drops', 'Drops'),
+        ('ointment', 'Ointment / Cream'),
+        ('other', 'Other'),
+    ]
+
     vaccine_name = models.CharField(max_length=200)
-    brand = models.CharField(max_length=200)
+    brand = models.CharField(max_length=200, blank=True)
+    strength = models.CharField(max_length=100, blank=True)
+    dosage_form = models.CharField(
+        max_length=20, choices=DOSAGE_FORMS, default='injectable')
+    unit = models.CharField(max_length=50, default='vial')
     batch_number = models.CharField(max_length=100)
     expiration_date = models.DateField()
     quantity_received = models.IntegerField(default=0)
@@ -26,7 +41,7 @@ class VaccineInventory(models.Model):
         return f"{self.vaccine_name} ({self.brand}) - Batch: {self.batch_number}"
 
     def is_expired(self):
-        return self.expiration_date < date.today()
+        return self.expiration_date < timezone.localdate()
 
     def is_low_stock(self):
         return self.quantity_available <= self.reorder_level
@@ -107,7 +122,7 @@ class MedicineInventory(models.Model):
         return ' '.join(parts)
 
     def is_expired(self):
-        return self.expiration_date < date.today()
+        return self.expiration_date < timezone.localdate()
 
     def is_out_of_stock(self):
         return self.quantity_available <= 0
@@ -145,6 +160,7 @@ class MedicineStockMovement(models.Model):
         ('stock_in', 'Stock In'),
         ('dispense', 'Dispensed'),
         ('adjustment', 'Adjustment'),
+        ('expired_pull_out', 'Expired Stock Pull Out'),
     ]
 
     medicine = models.ForeignKey(MedicineInventory, on_delete=models.CASCADE, related_name='movements')
@@ -172,7 +188,11 @@ class MedicineStockMovement(models.Model):
 
 
 class VaccineStockMovement(models.Model):
-    MOVEMENT_TYPES = [('stock_in', 'Stock In'), ('stock_out', 'Stock Out')]
+    MOVEMENT_TYPES = [
+        ('stock_in', 'Stock In'),
+        ('stock_out', 'Stock Out'),
+        ('expired_pull_out', 'Expired Stock Pull Out'),
+    ]
 
     vaccine = models.ForeignKey(VaccineInventory, on_delete=models.CASCADE, related_name='movements')
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)

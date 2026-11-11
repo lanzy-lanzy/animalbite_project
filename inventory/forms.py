@@ -9,18 +9,41 @@ from .models import (
 )
 
 class VaccineInventoryForm(forms.ModelForm):
+    quantity_received = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input', 'min': 1, 'placeholder': 'e.g., 25',
+        }),
+    )
+
     class Meta:
         model = VaccineInventory
-        exclude = ['quantity_available', 'quantity_used', 'date_received', 'created_by']
+        fields = [
+            'vaccine_name', 'brand', 'strength', 'dosage_form', 'unit',
+            'batch_number', 'expiration_date', 'quantity_received',
+            'reorder_level', 'source_supplier', 'remarks',
+        ]
         widgets = {
-            'vaccine_name': forms.TextInput(attrs={'class': 'form-input'}),
-            'brand': forms.TextInput(attrs={'class': 'form-input'}),
-            'batch_number': forms.TextInput(attrs={'class': 'form-input'}),
+            'vaccine_name': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'e.g., Anti-Rabies Vaccine',
+            }),
+            'brand': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'e.g., Verorab',
+            }),
+            'strength': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'e.g., 0.5 mL',
+            }),
+            'dosage_form': forms.Select(attrs={'class': 'form-input'}),
+            'unit': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'vial / dose / unit / ampoule',
+            }),
+            'batch_number': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'e.g., LOT-2026-01',
+            }),
             'expiration_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
-            'quantity_received': forms.NumberInput(attrs={'class': 'form-input'}),
             'reorder_level': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
             'source_supplier': forms.TextInput(attrs={'class': 'form-input'}),
-            'remarks': forms.Textarea(attrs={'rows': 3, 'class': 'form-textarea'}),
+            'remarks': forms.Textarea(attrs={'rows': 3, 'class': 'form-input'}),
         }
 
 
@@ -105,6 +128,9 @@ class VaccineAddStockForm(forms.Form):
         candidates = VaccineInventory.objects.filter(
             vaccine_name__iexact=self.vaccine.vaccine_name,
             brand__iexact=self.vaccine.brand,
+            strength__iexact=self.vaccine.strength,
+            dosage_form=self.vaccine.dosage_form,
+            unit__iexact=self.vaccine.unit,
             batch_number__iexact=batch_number,
         )
         if candidates.exclude(expiration_date=expiration_date).exists():
@@ -143,6 +169,9 @@ class VaccineAddStockForm(forms.Form):
                     batch = VaccineInventory.objects.create(
                         vaccine_name=self.vaccine.vaccine_name,
                         brand=self.vaccine.brand,
+                        strength=self.vaccine.strength,
+                        dosage_form=self.vaccine.dosage_form,
+                        unit=self.vaccine.unit,
                         batch_number=data['batch_number'],
                         expiration_date=data['expiration_date'],
                         quantity_received=quantity,

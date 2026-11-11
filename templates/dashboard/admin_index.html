@@ -1,0 +1,743 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Dashboard — ABTC System{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-3">
+    <div class="hidden sm:flex w-8 h-8 rounded-full bg-emerald-900 text-white items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    </div>
+    <div>
+        <h1 class="text-[15px] font-bold text-ink leading-none">Dashboard</h1>
+        <p class="text-xs font-medium text-muted hidden sm:block">Municipal Health Office · ABTC</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .admin-dash { background: #F8F9F5; margin: -1rem; }
+    @media (min-width: 1024px) { .admin-dash { margin: -1.5rem; } }
+    .admin-dash .stat-card {
+        display: block;
+        background: #FFFFFF;
+        border: 1px solid #E5E9E1;
+        border-radius: 18px;
+        padding: 1.1rem 1.25rem;
+        box-shadow: 0 1px 2px rgba(8,41,31,.05), 0 10px 24px -18px rgba(8,41,31,.25);
+        transition: box-shadow .25s ease;
+        animation: dash-rise .5s cubic-bezier(.16,1,.3,1) both;
+        animation-delay: var(--d, 0ms);
+    }
+    .admin-dash .stat-card:hover {
+        box-shadow: 0 2px 4px rgba(8,41,31,.06), 0 18px 34px -16px rgba(8,41,31,.32);
+    }
+    .admin-dash .stat-eyebrow { color: #9AA59E; }
+    @media (min-width: 1536px) {
+        .admin-dash .stat-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    }
+    .admin-dash .stat-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7A877E; margin-top: .9rem; }
+    .admin-dash .stat-value { font-family: "Space Grotesk", sans-serif; font-size: 1.9rem; font-weight: 700; line-height: 1.1; color: #08291F; margin-top: .15rem; font-variant-numeric: tabular-nums; }
+    .admin-dash .stat-sub { font-size: 11.5px; font-weight: 500; color: #7A877E; margin-top: .35rem; }
+    .admin-dash .stat-icon { width: 2.4rem; height: 2.4rem; border-radius: .8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: none; }
+    .admin-dash .chart-card {
+        background: #FFFFFF;
+        border: 1px solid #E5E9E1;
+        border-radius: 18px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 2px rgba(8,41,31,.05), 0 10px 24px -18px rgba(8,41,31,.25);
+        animation: dash-rise .5s cubic-bezier(.16,1,.3,1) both;
+        animation-delay: var(--d, 0ms);
+        min-width: 0;
+    }
+    .admin-dash .chart-title { font-size: .95rem; font-weight: 700; color: #08291F; letter-spacing: -.01em; }
+    .admin-dash .chart-sub { font-size: 11px; font-weight: 500; color: #7A877E; margin-top: 1px; }
+    .admin-dash .chart-icon { width: 2rem; height: 2rem; border-radius: .65rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .admin-dash .chart-box { position: relative; height: 290px; }
+    .admin-dash .chart-empty {
+        position: absolute; inset: 0; display: flex; flex-direction: column; gap: .5rem;
+        align-items: center; justify-content: center; text-align: center;
+        color: #7A877E; font-size: .85rem; font-weight: 500;
+    }
+    .admin-dash .chip {
+        font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+        color: #157A61; background: rgba(21,122,97,.08); border: 1px solid rgba(21,122,97,.18);
+        padding: .3rem .65rem; border-radius: 999px; white-space: nowrap;
+    }
+    .admin-dash .legend-chip { display: inline-flex; align-items: center; gap: .4rem; font-size: 11px; font-weight: 600; color: #37473F; }
+    .admin-dash #inventory-legend { column-gap: 1rem; row-gap: .25rem; }
+    .admin-dash .legend-dot { width: .6rem; height: .6rem; border-radius: 999px; display: inline-block; }
+    .admin-dash .dash-section { display: flex; align-items: center; gap: .75rem; margin-bottom: .9rem; }
+    .admin-dash .dash-section h2 { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #08291F; white-space: nowrap; }
+    .admin-dash .dash-section::after { content: ''; flex: 1; height: 1px; background: #E5E9E1; }
+    @keyframes dash-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+        .admin-dash .stat-card, .admin-dash .chart-card { animation: none !important; }
+    }
+</style>
+
+<div class="admin-dash p-4 lg:p-6 space-y-6">
+    <!-- ============ SECTION 1 — STATISTICS ============ -->
+    <section aria-label="Statistics">
+        <div class="stat-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="stat-card" style="--d:0ms">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="stat-icon" style="background:rgba(21,122,97,.12);color:#157A61;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest stat-eyebrow mt-1">All time</span>
+                </div>
+                <p class="stat-label">Total Cases</p>
+                <p class="stat-value">{{ total_cases }}</p>
+                <p class="stat-sub">{{ this_week }} this week · {{ this_month }} this month</p>
+            </div>
+            <div class="stat-card" style="--d:60ms">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="stat-icon" style="background:rgba(192,139,48,.14);color:#C08B30;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l2.5 2.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest stat-eyebrow mt-1">Today</span>
+                </div>
+                <p class="stat-label">New Today</p>
+                <p class="stat-value">{{ new_today }}</p>
+                <p class="stat-sub">{% if new_today %}For triage and assessment{% else %}No new cases yet today{% endif %}</p>
+            </div>
+            <div class="stat-card" style="--d:120ms">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="stat-icon" style="background:rgba(21,122,97,.12);color:#157A61;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest stat-eyebrow mt-1">Ongoing</span>
+                </div>
+                <p class="stat-label">Active Cases</p>
+                <p class="stat-value">{{ active_cases }}</p>
+                <p class="stat-sub">{% if total_cases %}{% widthratio active_cases total_cases 100 %}% of all cases{% else %}No cases recorded{% endif %}</p>
+            </div>
+            <div class="stat-card" style="--d:180ms">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="stat-icon" style="background:rgba(34,117,137,.12);color:#227589;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest stat-eyebrow mt-1">Closed</span>
+                </div>
+                <p class="stat-label">Completed</p>
+                <p class="stat-value">{{ completed_cases }}</p>
+                <p class="stat-sub">Marked completed</p>
+            </div>
+            <div class="stat-card" style="--d:240ms">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="stat-icon" style="background:rgba(154,114,189,.13);color:#9A72BD;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest stat-eyebrow mt-1">Schedule</span>
+                </div>
+                <p class="stat-label">Upcoming Doses</p>
+                <p class="stat-value">{{ upcoming_doses }}</p>
+                <p class="stat-sub">Scheduled from today</p>
+            </div>
+            <div class="stat-card" style="--d:300ms">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="stat-icon" style="background:rgba(209,74,74,.12);color:#D14A4A;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest stat-eyebrow mt-1">Follow-up</span>
+                </div>
+                <p class="stat-label">Missed Doses</p>
+                <p class="stat-value">{{ missed_doses }}</p>
+                <p class="stat-sub">{% if missed_doses %}Follow-up required{% else %}No missed doses{% endif %}</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SECTION 2 — CASE STATISTICS ============ -->
+    <section aria-label="Case statistics">
+        <div class="dash-section"><h2>Case Statistics</h2></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="chart-card" style="--d:150ms">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="chart-icon" style="background:rgba(21,122,97,.12);color:#157A61;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="chart-title">Cases by Barangay</h3>
+                        <p class="chart-sub">Recorded bite cases · highest first</p>
+                    </div>
+                    <span class="chip ml-auto">All time</span>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart-barangay" role="img" aria-label="Bar graph of bite cases per barangay"></canvas>
+                    <div class="chart-empty" hidden>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        No bite cases recorded yet.
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card" style="--d:220ms">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="chart-icon" style="background:rgba(192,139,48,.14);color:#C08B30;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="chart-title">Cases by Animal Type</h3>
+                        <p class="chart-sub">Distribution of recorded animal types</p>
+                    </div>
+                    <span class="chip ml-auto">All time</span>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart-animal" role="img" aria-label="Pie chart of bite cases by animal type"></canvas>
+                    <div class="chart-empty" hidden>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                        No animal data recorded yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+            <div class="chart-card" style="--d:290ms">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="chart-icon" style="background:rgba(34,117,137,.12);color:#227589;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h5m5 0v5h-5m0-5l-6 6-4-4-6 6"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="chart-title">Monthly Bite Cases</h3>
+                        <p class="chart-sub">Incidents per month · last 6 months</p>
+                    </div>
+                    <span class="chip ml-auto">6 months</span>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart-monthly" role="img" aria-label="Line graph of monthly bite cases"></canvas>
+                    <div class="chart-empty" hidden>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h5m5 0v5h-5m0-5l-6 6-4-4-6 6"/></svg>
+                        No bite cases in the last 6 months.
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card" style="--d:360ms">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="chart-icon" style="background:rgba(154,114,189,.13);color:#9A72BD;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="chart-title">Treatment Status</h3>
+                        <p class="chart-sub">Workflow-aware status of all cases</p>
+                    </div>
+                    <span class="chip ml-auto">All time</span>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart-treatment" role="img" aria-label="Donut chart of treatment statuses"></canvas>
+                    <div class="chart-empty" hidden>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        No cases recorded yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SECTION 3 — INVENTORY AND VACCINATION ============ -->
+    <section aria-label="Inventory and vaccination">
+        <div class="dash-section"><h2>Inventory &amp; Vaccination</h2></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="chart-card" style="--d:200ms">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="chart-icon" style="background:rgba(21,122,97,.12);color:#157A61;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="chart-title">Inventory Stock Levels</h3>
+                        <p class="chart-sub">Usable stock · expired batches excluded</p>
+                    </div>
+                    <span class="chip ml-auto">Live</span>
+                </div>
+                <div class="flex flex-wrap mb-3" id="inventory-legend">
+                    <span class="legend-chip"><span class="legend-dot" style="background:#157A61"></span>Vaccine</span>
+                    <span class="legend-chip"><span class="legend-dot" style="background:#9A72BD"></span>RIG</span>
+                    <span class="legend-chip"><span class="legend-dot" style="background:#C08B30"></span>Other Biologic</span>
+                    <span class="legend-chip"><span class="legend-dot" style="background:#227589"></span>Medicine</span>
+                </div>
+                <div class="chart-box" id="inventory-box">
+                    <canvas id="chart-inventory" role="img" aria-label="Horizontal bar graph of inventory stock levels"></canvas>
+                    <div class="chart-empty" hidden>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        No inventory products recorded yet.
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card" style="--d:270ms">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="chart-icon" style="background:rgba(192,139,48,.14);color:#C08B30;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="chart-title">Vaccination Dose Status</h3>
+                        <p class="chart-sub">Doses per month · last 6 months</p>
+                    </div>
+                    <span class="chip ml-auto">6 months</span>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart-doses" role="img" aria-label="Stacked bar graph of vaccination dose statuses"></canvas>
+                    <div class="chart-empty" hidden>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        No vaccination doses recorded yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SECTION 4 — RECENT CASES ============ -->
+    <section aria-label="Recent cases">
+        <div class="dash-section"><h2>Recent Cases</h2></div>
+        <div class="chart-card" style="--d:120ms">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="chart-icon" style="background:rgba(8,41,31,.08);color:#08291F;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    </span>
+                    <h3 class="chart-title">Latest Recorded Bite Cases</h3>
+                </div>
+                <a href="{% url 'bite_cases:case_list' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-900 px-3 py-1.5 rounded-full hover:bg-emerald-950 transition-colors">
+                    View all
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+            <div class="space-y-2.5">
+                {% for case in recent_cases %}
+                <a href="{% url 'bite_cases:case_detail' case.pk %}" class="group flex items-center gap-4 p-3.5 rounded-2xl border border-transparent hover:border-line hover:bg-sage-50 transition-all">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-950 text-white flex items-center justify-center font-bold text-sm shrink-0 group-hover:scale-[1.02] transition-transform">
+                        {{ case.patient.full_name|first|upper }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-bold text-ink truncate">{{ case.case_number }}</p>
+                            <span class="hidden sm:inline-flex w-1 h-1 rounded-full bg-line"></span>
+                            <p class="hidden sm:block text-xs font-medium text-muted truncate">{{ case.patient.full_name }}</p>
+                        </div>
+                        <p class="text-xs font-medium text-muted flex items-center gap-1.5 mt-0.5">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white border border-line text-[11px]">{{ case.get_animal_type_display }}</span>
+                            <span class="hidden sm:inline">{{ case.get_exposure_type_display|default:case.exposure_type }}</span>
+                            <span class="hidden sm:inline opacity-40">·</span>
+                            <span>{{ case.created_at|date:'M d, Y' }}</span>
+                        </p>
+                    </div>
+                    <span class="status-badge status-{{ case.case_status }} shrink-0">{{ case.get_case_status_display }}</span>
+                    <svg class="hidden sm:block w-4 h-4 text-sage-400 group-hover:text-ink group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                {% empty %}
+                <div class="text-center py-12">
+                    <div class="w-14 h-14 rounded-2xl bg-sage-50 border border-line flex items-center justify-center mx-auto text-muted">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <p class="text-sm font-semibold text-ink mt-3">No recent cases</p>
+                    <p class="text-xs text-muted mt-1">New bite cases will appear here</p>
+                    <a href="{% url 'bite_cases:case_create' %}" class="inline-flex mt-4 btn-primary btn-sm">Create first case</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <p class="text-center text-xs font-medium text-muted pt-1">Last updated {% now "F j, Y g:i A" %} · Charts reflect saved records and refresh on every page load.</p>
+</div>
+{{ chart_data|json_script:"dashboard-chart-data" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+    const dataEl = document.getElementById('dashboard-chart-data');
+    if (!dataEl) return;
+    const DATA = JSON.parse(dataEl.textContent);
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const PALETTE = ['#157A61', '#227589', '#C08B30', '#9A72BD', '#D14A4A', '#4E9F8A', '#7A6AA8', '#B85C38', '#3D8A9E', '#8FA35C'];
+    const ANIMAL_COLORS = { Dog: '#157A61', Cat: '#C08B30', Monkey: '#9A72BD', Bat: '#227589', Other: '#D14A4A' };
+    const STATUS_COLORS = {
+        'New Case': '#C08B30', 'Under Treatment': '#157A61', 'Completed': '#227589',
+        'Missed Appointment': '#D14A4A', 'Referred': '#9A72BD', 'Archived': '#9AA5B1'
+    };
+    const CATEGORY_COLORS = { Vaccine: '#157A61', RIG: '#9A72BD', Biologic: '#C08B30', Medicine: '#227589' };
+    const DOSE_COLORS = { 'Completed': '#157A61', 'Scheduled': '#C08B30', 'Missed': '#D14A4A', 'Pending Scheduling': '#C7CFC9' };
+    const GRID = 'rgba(8,41,31,.06)';
+    const TICK = '#7A877E';
+
+    function showEmpty(id) {
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+        canvas.hidden = true;
+        const empty = canvas.parentElement.querySelector('.chart-empty');
+        if (empty) empty.hidden = false;
+    }
+
+    if (!window.Chart) {
+        ['chart-barangay', 'chart-animal', 'chart-monthly', 'chart-treatment', 'chart-inventory', 'chart-doses'].forEach(function (id) {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+            canvas.hidden = true;
+            const empty = canvas.parentElement.querySelector('.chart-empty');
+            if (empty) { empty.hidden = false; empty.textContent = 'Charts could not be loaded. Please refresh the page.'; }
+        });
+        return;
+    }
+
+    Chart.defaults.font.family = "'Figtree', sans-serif";
+    Chart.defaults.color = TICK;
+
+    const TOOLTIP = {
+        backgroundColor: '#FFFFFF', titleColor: '#08291F', bodyColor: '#37473F',
+        borderColor: '#E5E9E1', borderWidth: 1, padding: 12, cornerRadius: 10,
+        titleFont: { weight: '700', size: '12' }, bodyFont: { size: '12' },
+        boxPadding: 4, usePointStyle: true
+    };
+    const LEGEND = {
+        position: 'bottom',
+        labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14, color: '#37473F', font: { size: '11', weight: '600' } }
+    };
+
+    const valueLabels = {
+        id: 'valueLabels',
+        afterDatasetsDraw(chart, args, opts) {
+            if (!opts || !opts.display) return;
+            const ctx = chart.ctx;
+            chart.data.datasets.forEach(function (ds, di) {
+                const meta = chart.getDatasetMeta(di);
+                if (meta.hidden) return;
+                meta.data.forEach(function (el, i) {
+                    const value = ds.data[i];
+                    if (value == null) return;
+                    const text = opts.formatter ? opts.formatter(value, i) : String(value);
+                    if (!text) return;
+                    ctx.save();
+                    ctx.font = "600 11px Figtree, sans-serif";
+                    ctx.fillStyle = '#4A5A51';
+                    if (opts.axis === 'y') {
+                        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                        ctx.fillText(text, el.x + 6, el.y);
+                    } else {
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                        ctx.fillText(text, el.x, el.y - 6);
+                    }
+                    ctx.restore();
+                });
+            });
+        }
+    };
+    Chart.register(valueLabels);
+
+    const centerText = {
+        id: 'centerText',
+        afterDraw(chart, args, opts) {
+            if (!opts || !opts.display) return;
+            const area = chart.chartArea;
+            if (!area) return;
+            const x = (area.left + area.right) / 2;
+            const y = (area.top + area.bottom) / 2;
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = "700 26px 'Space Grotesk', sans-serif";
+            ctx.fillStyle = '#08291F';
+            ctx.fillText(String(opts.total), x, y - 8);
+            ctx.font = "600 9px Figtree, sans-serif";
+            ctx.fillStyle = '#7A877E';
+            ctx.fillText('TOTAL CASES', x, y + 14);
+            ctx.restore();
+        }
+    };
+    Chart.register(centerText);
+
+    function pct(count, total) {
+        return total ? (count * 100 / total).toFixed(1) : '0.0';
+    }
+
+    function countedLegend(chart, counts, total) {
+        const meta = chart.getDatasetMeta(0);
+        return chart.data.labels.map(function (label, i) {
+            const style = meta.controller.getStyle(i);
+            return {
+                text: label + ' · ' + counts[i] + ' (' + pct(counts[i], total) + '%)',
+                fillStyle: style.backgroundColor,
+                strokeStyle: style.borderColor,
+                lineWidth: style.borderWidth,
+                pointStyle: 'circle',
+                hidden: !chart.getDataVisibility(i),
+                datasetIndex: 0,
+                index: i
+            };
+        });
+    }
+
+    function wrapLabel(text, max) {
+        const lines = [];
+        let line = '';
+        text.split(' ').forEach(function (word) {
+            if (line && (line + ' ' + word).length > max) { lines.push(line); line = word; }
+            else { line = line ? line + ' ' + word : word; }
+        });
+        if (line) lines.push(line);
+        return lines;
+    }
+
+    // ---------- 1. Cases by Barangay — vertical bars ----------
+    if (!DATA.barangay.total) {
+        showEmpty('chart-barangay');
+    } else {
+        new Chart(document.getElementById('chart-barangay'), {
+            type: 'bar',
+            data: {
+                labels: DATA.barangay.labels,
+                datasets: [{
+                    data: DATA.barangay.counts,
+                    backgroundColor: DATA.barangay.labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; }),
+                    hoverBackgroundColor: DATA.barangay.labels.map(function (_, i) { return PALETTE[i % PALETTE.length] + 'CC'; }),
+                    borderRadius: 8, maxBarThickness: 46
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: REDUCED ? false : { duration: 800, easing: 'easeOutQuart' },
+                layout: { padding: { top: 18 } },
+                plugins: {
+                    legend: { display: false },
+                    valueLabels: { display: true, axis: 'x' },
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        callbacks: {
+                            title: function (items) { return 'Barangay: ' + items[0].label; },
+                            label: function (item) { return 'Total Cases: ' + item.parsed.y; }
+                        }
+                    })
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#37473F', font: { size: 11, weight: '600' }, maxRotation: 45 } },
+                    y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+
+    // ---------- 2. Cases by Animal Type — pie ----------
+    if (!DATA.animal.total) {
+        showEmpty('chart-animal');
+    } else {
+        new Chart(document.getElementById('chart-animal'), {
+            type: 'pie',
+            data: {
+                labels: DATA.animal.labels,
+                datasets: [{
+                    data: DATA.animal.counts,
+                    backgroundColor: DATA.animal.labels.map(function (name) { return ANIMAL_COLORS[name] || PALETTE[DATA.animal.labels.indexOf(name) % PALETTE.length]; }),
+                    borderColor: '#FFFFFF', borderWidth: 2, hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: REDUCED ? false : { duration: 800, easing: 'easeOutQuart', animateRotate: true },
+                plugins: {
+                    legend: Object.assign({}, LEGEND, {
+                        labels: Object.assign({}, LEGEND.labels, {
+                            generateLabels: function (chart) { return countedLegend(chart, DATA.animal.counts, DATA.animal.total); }
+                        })
+                    }),
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        callbacks: {
+                            label: function (item) {
+                                return [' ' + item.parsed + ' Cases', ' ' + pct(item.parsed, DATA.animal.total) + '%'];
+                            }
+                        }
+                    })
+                }
+            }
+        });
+    }
+
+    // ---------- 3. Monthly Bite Cases — progressive line ----------
+    const monthlyTotal = DATA.monthly.counts.reduce(function (a, b) { return a + b; }, 0);
+    if (!monthlyTotal) {
+        showEmpty('chart-monthly');
+    } else {
+        const pointCount = DATA.monthly.labels.length;
+        const totalDuration = 900;
+        const delayBetween = totalDuration / Math.max(pointCount, 1);
+        const previousY = function (ctx) {
+            if (ctx.index === 0) return ctx.chart.scales.y.getPixelForValue(0);
+            return ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.index - 1].getProps(['y'], true).y;
+        };
+        const progressive = {
+            x: {
+                type: 'number', easing: 'linear', duration: delayBetween, from: NaN,
+                delay: function (ctx) {
+                    if (ctx.type !== 'data' || ctx.xStarted) return 0;
+                    ctx.xStarted = true;
+                    return ctx.index * delayBetween;
+                }
+            },
+            y: {
+                type: 'number', easing: 'linear', duration: delayBetween, from: previousY,
+                delay: function (ctx) {
+                    if (ctx.type !== 'data' || ctx.yStarted) return 0;
+                    ctx.yStarted = true;
+                    return ctx.index * delayBetween;
+                }
+            }
+        };
+        new Chart(document.getElementById('chart-monthly'), {
+            type: 'line',
+            data: {
+                labels: DATA.monthly.labels,
+                datasets: [{
+                    data: DATA.monthly.counts,
+                    borderColor: '#0D382C', backgroundColor: 'rgba(21,122,97,.08)', fill: true,
+                    tension: 0.35, borderWidth: 2.5,
+                    pointBackgroundColor: '#BFE3D4', pointBorderColor: '#157A61', pointBorderWidth: 2,
+                    pointRadius: 4, pointHoverRadius: 6, pointHoverBackgroundColor: '#157A61'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: REDUCED ? false : progressive,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        callbacks: {
+                            title: function (items) { return items[0].label; },
+                            label: function (item) { return 'Total Bite Cases: ' + item.parsed.y; }
+                        }
+                    })
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#37473F', font: { size: 11, weight: '600' } } },
+                    y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+
+    // ---------- 4. Treatment Status — donut ----------
+    if (!DATA.treatment.total) {
+        showEmpty('chart-treatment');
+    } else {
+        new Chart(document.getElementById('chart-treatment'), {
+            type: 'doughnut',
+            data: {
+                labels: DATA.treatment.labels,
+                datasets: [{
+                    data: DATA.treatment.counts,
+                    backgroundColor: DATA.treatment.labels.map(function (name) { return STATUS_COLORS[name] || '#9AA5B1'; }),
+                    borderColor: '#FFFFFF', borderWidth: 2, hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '62%',
+                animation: REDUCED ? false : { duration: 800, easing: 'easeOutQuart', animateRotate: true },
+                plugins: {
+                    centerText: { display: true, total: DATA.treatment.total },
+                    legend: Object.assign({}, LEGEND, {
+                        labels: Object.assign({}, LEGEND.labels, {
+                            generateLabels: function (chart) { return countedLegend(chart, DATA.treatment.counts, DATA.treatment.total); }
+                        })
+                    }),
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        callbacks: {
+                            label: function (item) {
+                                return [' ' + item.parsed + ' Cases', ' ' + pct(item.parsed, DATA.treatment.total) + '%'];
+                            }
+                        }
+                    })
+                }
+            }
+        });
+    }
+
+    // ---------- 5. Inventory Stock Levels — horizontal bars ----------
+    const rows = DATA.inventory.rows;
+    if (!rows.length) {
+        showEmpty('chart-inventory');
+        document.getElementById('inventory-legend').hidden = true;
+    } else {
+        document.getElementById('inventory-box').style.height = Math.max(250, rows.length * 40 + 50) + 'px';
+        new Chart(document.getElementById('chart-inventory'), {
+            type: 'bar',
+            data: {
+                labels: rows.map(function (r) { return r.name; }),
+                datasets: [{
+                    data: rows.map(function (r) { return r.quantity; }),
+                    backgroundColor: rows.map(function (r) { return CATEGORY_COLORS[r.category] || '#157A61'; }),
+                    hoverBackgroundColor: rows.map(function (r) { return (CATEGORY_COLORS[r.category] || '#157A61') + 'CC'; }),
+                    borderRadius: 6, maxBarThickness: 24
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                animation: REDUCED ? false : { duration: 800, easing: 'easeOutQuart' },
+                layout: { padding: { right: 90 } },
+                plugins: {
+                    legend: { display: false },
+                    valueLabels: {
+                        display: true, axis: 'y',
+                        formatter: function (value, i) {
+                            const row = rows[i];
+                            const base = value + ' ' + row.unit;
+                            return row.status === 'Available' ? base : base + ' · ' + row.status;
+                        }
+                    },
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        callbacks: {
+                            title: function (items) { return items[0].label; },
+                            label: function (item) {
+                                const row = rows[item.dataIndex];
+                                return [' Available: ' + row.quantity + ' ' + row.unit, ' Stock Status: ' + row.status, ' Low-stock threshold: ' + row.threshold + ' ' + row.unit];
+                            }
+                        }
+                    })
+                },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { precision: 0 } },
+                    y: { grid: { display: false }, ticks: { autoSkip: false, color: '#37473F', font: { size: 11, weight: '600' }, callback: function (value, i) { return wrapLabel(rows[i].name, 20); } } }
+                }
+            }
+        });
+    }
+
+    // ---------- 6. Vaccination Dose Status — stacked bars ----------
+    const doseTotal = DATA.doses.series.reduce(function (sum, s) {
+        return sum + s.data.reduce(function (a, b) { return a + b; }, 0);
+    }, 0);
+    if (!doseTotal) {
+        showEmpty('chart-doses');
+    } else {
+        new Chart(document.getElementById('chart-doses'), {
+            type: 'bar',
+            data: {
+                labels: DATA.doses.labels,
+                datasets: DATA.doses.series.map(function (s) {
+                    return {
+                        label: s.label, data: s.data,
+                        backgroundColor: DOSE_COLORS[s.label] || '#9AA5B1',
+                        hoverBackgroundColor: (DOSE_COLORS[s.label] || '#9AA5B1') + 'CC',
+                        borderRadius: 4, maxBarThickness: 38, stack: 'doses'
+                    };
+                })
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: REDUCED ? false : { duration: 800, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: LEGEND,
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        callbacks: {
+                            title: function (items) { return items[0].label; },
+                            label: function (item) { return ' ' + item.dataset.label + ': ' + item.parsed.y + ' Doses'; }
+                        }
+                    })
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false }, ticks: { color: '#37473F', font: { size: 11, weight: '600' }, maxRotation: 45 } },
+                    y: { stacked: true, beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

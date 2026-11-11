@@ -1,0 +1,67 @@
+<section class="vd-section">
+    <div class="vd-section-head"><span aria-hidden="true">⚠</span> Expired Stock Batches</div>
+    <div class="vd-section-body vd-expired-batches">
+        {% for batch in expired_batches %}
+        <article class="vd-expired-card">
+            <div class="vd-expired-card-heading">
+                <div>
+                    <h3 class="vd-expired-batch">{{ batch.batch_number }}</h3>
+                    <p class="vd-expired-meta">Expiration: {{ batch.expiration_date|date:'M j, Y' }}</p>
+                    <p class="vd-expired-meta">Remaining physical stock: {{ batch.quantity_available }} {{ batch.unit }}</p>
+                </div>
+                {% if batch.pull_out_state == 'Pulled Out' %}
+                <span class="status-badge bg-green-100 text-green-800">Pulled Out</span>
+                {% else %}
+                <span class="status-badge bg-red-100 text-red-800">Pending Pull Out</span>
+                {% endif %}
+            </div>
+            {% if batch.pull_out_state == 'Pending Pull Out' %}
+            <button type="button" class="vd-pull-out-button"
+                    data-pull-out-open="pull-out-modal-{{ batch.pk }}">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7h18M8 7V4h8v3m-9 0 1 13h8l1-13M10 11v5m4-5v5"/>
+                </svg>
+                Pull Out Expired Stock
+            </button>
+            <dialog class="vd-pull-out-modal" id="pull-out-modal-{{ batch.pk }}"
+                    aria-labelledby="pull-out-title-{{ batch.pk }}">
+                <form method="post" class="vd-pull-out-form"
+                      action="{% if module == 'vaccine' %}{% url 'inventory:vaccine_pull_out' batch.pk %}{% else %}{% url 'inventory:medicine_pull_out' batch.pk %}{% endif %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="submission_token" value="{{ batch.pull_out_token }}">
+                    <h2 id="pull-out-title-{{ batch.pk }}">Pull Out Expired Stock</h2>
+                    <dl class="vd-pull-out-details">
+                        <div><dt>Product Name</dt><dd>{% if module == 'vaccine' %}{{ batch.vaccine_name }}{% else %}{{ batch.medicine_name }}{% if batch.strength %} {{ batch.strength }}{% endif %}{% endif %}</dd></div>
+                        <div><dt>Batch Number</dt><dd>{{ batch.batch_number }}</dd></div>
+                        <div><dt>Expiration Date</dt><dd>{{ batch.expiration_date|date:'M j, Y' }}</dd></div>
+                        <div><dt>Remaining Physical Stock</dt><dd>{{ batch.quantity_available }} {{ batch.unit }}</dd></div>
+                        <div><dt>Pull-Out Date</dt><dd>{{ today|date:'M j, Y' }}</dd></div>
+                        <div><dt>Authorized Personnel</dt><dd>{{ request.user.get_full_name|default:request.user.username }}</dd></div>
+                    </dl>
+                    <label class="vd-modal-label" for="pull-out-quantity-{{ batch.pk }}">Pull-Out Quantity *</label>
+                    <input class="vd-modal-input" id="pull-out-quantity-{{ batch.pk }}"
+                           name="quantity" type="number" min="1"
+                           max="{{ batch.quantity_available }}"
+                           value="{{ batch.quantity_available }}" required>
+                    <label class="vd-modal-label" for="pull-out-reason-{{ batch.pk }}">Reason *</label>
+                    <input class="vd-modal-input" id="pull-out-reason-{{ batch.pk }}"
+                           name="reason" type="text" maxlength="100"
+                           value="Expired Stock" required>
+                    <label class="vd-modal-label" for="pull-out-remarks-{{ batch.pk }}">Remarks</label>
+                    <textarea class="vd-modal-input vd-modal-textarea"
+                              id="pull-out-remarks-{{ batch.pk }}" name="remarks"
+                              maxlength="2000" rows="3"></textarea>
+                    <div class="vd-modal-actions">
+                        <button type="button" class="vd-modal-cancel"
+                                data-pull-out-close>Cancel</button>
+                        <button type="submit" class="vd-modal-confirm">Confirm Pull Out</button>
+                    </div>
+                </form>
+            </dialog>
+            {% endif %}
+        </article>
+        {% empty %}
+        <div class="vd-expired-empty">No expired stock batches require pull-out.</div>
+        {% endfor %}
+    </div>
+</section>

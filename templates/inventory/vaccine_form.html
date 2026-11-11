@@ -9,23 +9,60 @@
     <div class="card">
         <form method="POST" class="space-y-4">
             {% csrf_token %}
+            {% if form.non_field_errors %}<div class="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{{ form.non_field_errors|join:" " }}</div>{% endif %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="form-label">Vaccine Name *</label>{{ form.vaccine_name }}</div>
-                <div><label class="form-label">Brand *</label>{{ form.brand }}</div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label class="form-label">Batch Number *</label>{{ form.batch_number }}</div>
-                <div><label class="form-label">Expiration Date *</label>{{ form.expiration_date }}</div>
-                <div><label class="form-label">Quantity Received *</label>{{ form.quantity_received }}</div>
+                <div>
+                    <label class="form-label" for="{{ form.vaccine_name.id_for_label }}">Vaccine Name *</label>{{ form.vaccine_name }}
+                    {% for error in form.vaccine_name.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.brand.id_for_label }}">Generic / Brand Name</label>{{ form.brand }}
+                    {% for error in form.brand.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="form-label">Reorder Level</label>{{ form.reorder_level }}
-                    <p class="text-xs text-muted mt-1">Alerts trigger when usable stock reaches this level.</p>
+                    <label class="form-label" for="{{ form.strength.id_for_label }}">Strength</label>{{ form.strength }}
+                    {% for error in form.strength.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.dosage_form.id_for_label }}">Dosage Form *</label>{{ form.dosage_form }}
+                    {% for error in form.dosage_form.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.unit.id_for_label }}">Unit of Measurement *</label>{{ form.unit }}
+                    {% for error in form.unit.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
             </div>
-            <div><label class="form-label">Source/Supplier</label>{{ form.source_supplier }}</div>
-            <div><label class="form-label">Remarks</label>{{ form.remarks }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="form-label" for="{{ form.batch_number.id_for_label }}">Lot / Batch Number *</label>{{ form.batch_number }}
+                    {% for error in form.batch_number.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.expiration_date.id_for_label }}">Expiration Date *</label>{{ form.expiration_date }}
+                    {% for error in form.expiration_date.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.quantity_received.id_for_label }}">Quantity Received *</label>{{ form.quantity_received }}
+                    {% for error in form.quantity_received.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="{{ form.reorder_level.id_for_label }}">Reorder Level</label>{{ form.reorder_level }}
+                    {% for error in form.reorder_level.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    <p class="text-xs text-muted mt-1">Stock at or below this level is flagged Low Stock.</p>
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.source_supplier.id_for_label }}">Source / Supplier</label>{{ form.source_supplier }}
+                    {% for error in form.source_supplier.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.remarks.id_for_label }}">Remarks</label>{{ form.remarks }}
+                {% for error in form.remarks.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
             <div class="flex gap-2 pt-4">
                 <button type="submit" class="btn-primary">Save</button>
                 <a href="{% url 'inventory:vaccine_list' %}" class="btn-secondary">Cancel</a>
